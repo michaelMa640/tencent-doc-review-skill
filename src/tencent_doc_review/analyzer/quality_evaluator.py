@@ -12,7 +12,7 @@
 输出：总体评分 + 维度评分 + 改进建议
 
 Usage:
-    evaluator = QualityEvaluator(deepseek_client)
+    evaluator = QualityEvaluator(llm_client)
     
     # 完整质量评估
     report = await evaluator.evaluate(text, context)
@@ -220,7 +220,7 @@ class QualityEvaluator:
     提供文章质量的多维度评估功能。
     
     Usage:
-        evaluator = QualityEvaluator(deepseek_client)
+        evaluator = QualityEvaluator(llm_client)
         
         # 完整质量评估
         report = await evaluator.evaluate(text, context)
@@ -237,17 +237,20 @@ class QualityEvaluator:
     
     def __init__(
         self,
-        deepseek_client: LLMClient,
-        config: Optional[Dict[str, Any]] = None
+        llm_client: Optional[LLMClient] = None,
+        config: Optional[Dict[str, Any]] = None,
+        deepseek_client: Optional[LLMClient] = None,
     ):
         """
         初始化质量评估器
         
         Args:
-            deepseek_client: DeepSeek API 客户端
+            llm_client: LLM 客户端
             config: 配置参数
         """
-        self.llm = deepseek_client
+        self.llm = llm_client or deepseek_client
+        if self.llm is None:
+            raise ValueError("An llm_client is required")
         self.config = config or {}
         
         # 可配置参数
@@ -708,7 +711,7 @@ class QualityEvaluator:
 
 async def evaluate_quality(
     text: str,
-    deepseek_client: LLMClient,
+    llm_client: LLMClient,
     context: Optional[Dict[str, Any]] = None
 ) -> QualityReport:
     """
@@ -716,29 +719,29 @@ async def evaluate_quality(
     
     Args:
         text: 待评估文本
-        deepseek_client: DeepSeek 客户端
+        llm_client: LLM 客户端
         context: 上下文
         
     Returns:
         质量评估报告
     """
-    evaluator = QualityEvaluator(deepseek_client)
+    evaluator = QualityEvaluator(llm_client=llm_client)
     return await evaluator.evaluate(text, context)
 
 
 async def quick_quality_score(
     text: str,
-    deepseek_client: LLMClient
+    llm_client: LLMClient
 ) -> float:
     """
     便捷函数：快速获取质量分数
     
     Args:
         text: 待评估文本
-        deepseek_client: DeepSeek 客户端
+        llm_client: LLM 客户端
         
     Returns:
         质量分数 (0-100)
     """
-    evaluator = QualityEvaluator(deepseek_client)
+    evaluator = QualityEvaluator(llm_client=llm_client)
     return await evaluator.quick_score(text)

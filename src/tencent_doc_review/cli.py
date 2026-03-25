@@ -42,9 +42,22 @@ def doctor() -> None:
 @click.option("--template-file", "template_file", type=click.Path(exists=True))
 @click.option("--output", "output_path", type=click.Path())
 @click.option("--format", "output_format", type=click.Choice(["markdown", "json"]), default="markdown")
-def analyze(input_file: str, template_file: Optional[str], output_path: Optional[str], output_format: str) -> None:
+@click.option("--provider", "provider", type=str)
+@click.option("--api-key", "api_key", type=str)
+@click.option("--base-url", "base_url", type=str)
+@click.option("--model", "model", type=str)
+def analyze(
+    input_file: str,
+    template_file: Optional[str],
+    output_path: Optional[str],
+    output_format: str,
+    provider: Optional[str],
+    api_key: Optional[str],
+    base_url: Optional[str],
+    model: Optional[str],
+) -> None:
     """Analyze a local document file."""
-    asyncio.run(_analyze(input_file, template_file, output_path, output_format))
+    asyncio.run(_analyze(input_file, template_file, output_path, output_format, provider, api_key, base_url, model))
 
 
 async def _analyze(
@@ -52,17 +65,21 @@ async def _analyze(
     template_file: Optional[str],
     output_path: Optional[str],
     output_format: str,
+    provider: Optional[str],
+    api_key: Optional[str],
+    base_url: Optional[str],
+    model: Optional[str],
 ) -> None:
     settings = get_settings()
     client = create_llm_client(
-        provider=settings.llm_provider,
-        api_key=settings.llm_api_key or settings.deepseek_api_key,
-        base_url=settings.llm_base_url or settings.deepseek_base_url,
-        model=settings.llm_model or settings.deepseek_model,
+        provider=provider or settings.llm_provider,
+        api_key=api_key or settings.llm_api_key or settings.deepseek_api_key,
+        base_url=base_url or settings.llm_base_url or settings.deepseek_base_url,
+        model=model or settings.llm_model or settings.deepseek_model,
         timeout=settings.request_timeout,
     )
 
-    analyzer = DocumentAnalyzer(deepseek_client=client)
+    analyzer = DocumentAnalyzer(llm_client=client)
     result = await analyzer.analyze(
         document_text=_read_text(input_file) or "",
         template_text=_read_text(template_file),

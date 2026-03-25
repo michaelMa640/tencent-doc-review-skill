@@ -510,17 +510,17 @@ src/tencent_doc_review/
 - [x] 确保本地文件读取稳定
 - [x] 确保 Markdown / JSON 报告输出稳定
 - [x] 补主流程异常处理
-- [ ] 用真实 LLM provider 再验证一次主链路
-- [ ] 补主链路回归测试
+- [x] 用真实 LLM provider 再验证一次主链路
+- [x] 补主链路回归测试
 - 执行情况: [Phase2-主链路打通](执行情况-v2/Phase2-主链路打通.md)
 
 ### Phase 3: LLM 抽象层稳定化
 
-- [ ] 统一内部命名为 `llm_client`
-- [ ] 固化 provider 工厂
-- [ ] 保持 `deepseek` 可用
-- [ ] 保持 `openai` provider 骨架可切换
-- 执行情况: 待开始
+- [x] 统一内部命名为 `llm_client`
+- [x] 固化 provider 工厂
+- [x] 保持 `deepseek` 可用
+- [x] 保持 `openai` provider 骨架可切换
+- 执行情况: [Phase3-LLM抽象层稳定化](执行情况-v2/Phase3-LLM抽象层稳定化.md)
 
 ### Phase 4: 审核结果模型统一
 

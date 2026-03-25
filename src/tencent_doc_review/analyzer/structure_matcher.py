@@ -73,8 +73,15 @@ class StructureMatchResult:
 class StructureMatcher:
     """Simple heading-based structure matcher."""
 
-    def __init__(self, deepseek_client: LLMClient, config: Optional[Dict[str, Any]] = None) -> None:
-        self.llm = deepseek_client
+    def __init__(
+        self,
+        llm_client: Optional[LLMClient] = None,
+        config: Optional[Dict[str, Any]] = None,
+        deepseek_client: Optional[LLMClient] = None,
+    ) -> None:
+        self.llm = llm_client or deepseek_client
+        if self.llm is None:
+            raise ValueError("An llm_client is required")
         self.config = config or {}
 
     async def match(
@@ -204,17 +211,17 @@ class StructureMatcher:
 async def match_structure(
     document_text: str,
     template_text: str,
-    deepseek_client: LLMClient,
+    llm_client: LLMClient,
     context: Optional[Dict[str, Any]] = None,
 ) -> StructureMatchResult:
-    matcher = StructureMatcher(deepseek_client)
+    matcher = StructureMatcher(llm_client=llm_client)
     return await matcher.match(document_text, template_text, context)
 
 
 async def parse_document_structure(
     text: str,
-    deepseek_client: LLMClient,
+    llm_client: LLMClient,
     context: Optional[Dict[str, Any]] = None,
 ) -> Section:
-    matcher = StructureMatcher(deepseek_client)
+    matcher = StructureMatcher(llm_client=llm_client)
     return await matcher.parse_document(text, context)

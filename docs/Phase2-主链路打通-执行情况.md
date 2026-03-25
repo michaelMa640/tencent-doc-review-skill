@@ -2,7 +2,7 @@
 
 - 阶段: Phase 2
 - 日期: 2026-03-25
-- 状态: 进行中
+- 状态: 已完成
 
 ## 本阶段目标
 
@@ -16,8 +16,8 @@
 - [x] 确保本地文件读取稳定
 - [x] 确保 Markdown / JSON 报告输出链路可用
 - [x] 补主流程最小异常处理
-- [ ] 用真实 LLM provider 再验证一次主链路
-- [ ] 补主链路回归测试
+- [x] 用真实 LLM provider 再验证一次主链路
+- [x] 补主链路回归测试
 
 ## 本次完成内容
 
@@ -54,19 +54,57 @@
 - Markdown 报告生成正常
 - 结构、质量、事实三个模块都参与了结果聚合
 
+### 4. 自动化回归测试
+
+已新增 `tests/unit/test_phase2_cli_flow.py`，覆盖以下场景：
+
+- `mock` provider 工厂创建
+- CLI 生成 Markdown 报告
+- CLI 生成 JSON 报告
+
+执行结果：
+
+- `python -m unittest tests.unit.test_phase2_cli_flow` 通过
+- `python -m compileall src/tencent_doc_review` 通过
+
+### 5. 真实 provider 联调
+
+已使用 `.env` 中的真实 DeepSeek 配置完成联调验证。
+
+联调前补充了两项必要修正：
+
+- 在 fallback 配置路径中增加 `.env` 文件读取逻辑，避免缺少 `pydantic-settings` 时无法加载本地配置
+- 安装 `httpx`，补齐真实 HTTP 调用依赖
+
+联调方式：
+
+- 使用 `deepseek` provider
+- 读取本地测试文章与模板
+- 输出临时 Markdown 报告 `tests/.tmp/real-provider-check/report.md`
+
+联调结果：
+
+- 真实 provider 请求已成功发出并返回
+- 主链路可以在真实 DeepSeek 配置下完成执行
+- 报告文件生成成功
+- 当前事实核查与质量评估的提示词/解析质量仍需后续优化，但不影响 Phase 2 完成
+
 ## 当前结论
 
-Phase 2 已经完成“主链路跑通”的关键目标，但还不算彻底完成。
+Phase 2 已完成当前代码范围内的收尾目标：
 
-剩余工作：
+- 主链路可运行
+- 本地输入稳定
+- Markdown / JSON 输出稳定
+- CLI 已支持 provider / api-key / base-url / model 覆盖参数
+- 自动化回归测试已补齐
 
-- 用真实 LLM provider 再验证一次
-- 补主链路自动化测试
+Phase 2 的计划项现已全部完成。
 
 ## 下一步建议
 
-继续留在 Phase 2 收尾，优先完成：
+进入 Phase 3，继续做 LLM 抽象层稳定化：
 
-1. 使用真实 provider 验证一次 CLI
-2. 为 CLI 主链路补自动化测试
-3. 再进入 Phase 3 做 LLM 抽象层稳定化
+1. 统一内部命名为 `llm_client`
+2. 固化 provider 工厂与接口边界
+3. 清理分析器中的历史命名和耦合

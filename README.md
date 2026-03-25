@@ -92,7 +92,7 @@ async def main() -> None:
         base_url="https://api.deepseek.com/v1",
         model="deepseek-chat",
     )
-    analyzer = DocumentAnalyzer(deepseek_client=client)
+    analyzer = DocumentAnalyzer(llm_client=client)
 
     result = await analyzer.analyze(
         document_text="# 示例文档\n\n这里是待审核内容。",

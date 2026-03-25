@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 try:
@@ -48,31 +49,47 @@ if BaseSettings is not None:
 
 else:
 
+    def _load_env_file() -> dict[str, str]:
+        values: dict[str, str] = {}
+        env_path = Path(".env")
+        if not env_path.exists():
+            return values
+
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            values[key.strip()] = value.strip().strip('"').strip("'")
+        return values
+
+    _ENV_FILE_VALUES = _load_env_file()
+
+    def _get_env(name: str, default: str = "") -> str:
+        return os.getenv(name, _ENV_FILE_VALUES.get(name, default))
+
     @dataclass
     class Settings:
         """Fallback settings loader when pydantic-settings is unavailable."""
 
-        tencent_docs_token: str = os.getenv("TENCENT_DOCS_TOKEN", "")
-        tencent_docs_client_id: str = os.getenv("TENCENT_DOCS_CLIENT_ID", "")
-        tencent_docs_open_id: str = os.getenv("TENCENT_DOCS_OPEN_ID", "")
-        tencent_docs_base_url: str = os.getenv("TENCENT_DOCS_BASE_URL", "https://docs.qq.com/openapi")
+        tencent_docs_token: str = _get_env("TENCENT_DOCS_TOKEN", "")
+        tencent_docs_client_id: str = _get_env("TENCENT_DOCS_CLIENT_ID", "")
+        tencent_docs_open_id: str = _get_env("TENCENT_DOCS_OPEN_ID", "")
+        tencent_docs_base_url: str = _get_env("TENCENT_DOCS_BASE_URL", "https://docs.qq.com/openapi")
 
-        llm_provider: str = os.getenv("LLM_PROVIDER", "deepseek")
-        llm_api_key: str = os.getenv("LLM_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
-        llm_base_url: str = os.getenv(
-            "LLM_BASE_URL",
-            os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
-        )
-        llm_model: str = os.getenv("LLM_MODEL", os.getenv("DEEPSEEK_MODEL", "deepseek-chat"))
+        llm_provider: str = _get_env("LLM_PROVIDER", "deepseek")
+        llm_api_key: str = _get_env("LLM_API_KEY", _get_env("DEEPSEEK_API_KEY", ""))
+        llm_base_url: str = _get_env("LLM_BASE_URL", _get_env("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"))
+        llm_model: str = _get_env("LLM_MODEL", _get_env("DEEPSEEK_MODEL", "deepseek-chat"))
 
-        deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
-        deepseek_base_url: str = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
-        deepseek_model: str = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        deepseek_api_key: str = _get_env("DEEPSEEK_API_KEY", "")
+        deepseek_base_url: str = _get_env("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+        deepseek_model: str = _get_env("DEEPSEEK_MODEL", "deepseek-chat")
 
-        search_api_key: Optional[str] = os.getenv("SEARCH_API_KEY")
-        batch_size: int = int(os.getenv("BATCH_SIZE", "5"))
-        request_timeout: int = int(os.getenv("REQUEST_TIMEOUT", "30"))
-        log_level: str = os.getenv("LOG_LEVEL", "INFO")
+        search_api_key: Optional[str] = _get_env("SEARCH_API_KEY") or None
+        batch_size: int = int(_get_env("BATCH_SIZE", "5"))
+        request_timeout: int = int(_get_env("REQUEST_TIMEOUT", "30"))
+        log_level: str = _get_env("LOG_LEVEL", "INFO")
 
 
 _settings: Optional[Settings] = None

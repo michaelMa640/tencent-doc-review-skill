@@ -8,7 +8,7 @@
 4. 提供可信度评估和修改建议
 
 Usage:
-    checker = FactChecker(deepseek_client, search_client)
+    checker = FactChecker(llm_client, search_client)
     results = await checker.check(text, context)
     
     for result in results:
@@ -237,7 +237,7 @@ class FactChecker:
     4. 生成结构化核查结果
     
     Usage:
-        checker = FactChecker(deepseek_client, search_client)
+        checker = FactChecker(llm_client, search_client)
         
         # 完整核查流程
         results = await checker.check(text, context)
@@ -251,19 +251,22 @@ class FactChecker:
     
     def __init__(
         self,
-        deepseek_client: LLMClient,
+        llm_client: Optional[LLMClient] = None,
         search_client: Optional[SearchClient] = None,
-        config: Optional[Dict[str, Any]] = None
+        config: Optional[Dict[str, Any]] = None,
+        deepseek_client: Optional[LLMClient] = None,
     ):
         """
         初始化事实核查器
         
         Args:
-            deepseek_client: DeepSeek API 客户端（必需）
+            llm_client: LLM 客户端（必需）
             search_client: 搜索客户端（可选，用于验证）
             config: 配置参数
         """
-        self.llm = deepseek_client
+        self.llm = llm_client or deepseek_client
+        if self.llm is None:
+            raise ValueError("An llm_client is required")
         self.search = search_client or SearchClient()  # 使用占位实现
         self.config = config or {}
         
@@ -782,7 +785,7 @@ class FactChecker:
 
 async def check_facts(
     text: str,
-    deepseek_client: LLMClient,
+    llm_client: LLMClient,
     search_client: Optional[SearchClient] = None,
     context: Optional[Dict[str, Any]] = None
 ) -> List[FactCheckResult]:
@@ -791,7 +794,7 @@ async def check_facts(
     
     Args:
         text: 需要核查的文本
-        deepseek_client: DeepSeek 客户端
+        llm_client: LLM 客户端
         search_client: 搜索客户端（可选）
         context: 上下文
         
@@ -799,7 +802,7 @@ async def check_facts(
         核查结果列表
     """
     checker = FactChecker(
-        deepseek_client=deepseek_client,
+        llm_client=llm_client,
         search_client=search_client
     )
     
@@ -812,17 +815,17 @@ async def check_facts(
 
 async def extract_claims_only(
     text: str,
-    deepseek_client: LLMClient
+    llm_client: LLMClient
 ) -> List[Claim]:
     """
     便捷函数：仅提取声明，不验证
     
     Args:
         text: 输入文本
-        deepseek_client: DeepSeek 客户端
+        llm_client: LLM 客户端
         
     Returns:
         声明列表
     """
-    checker = FactChecker(deepseek_client=deepseek_client)
+    checker = FactChecker(llm_client=llm_client)
     return await checker.extract_claims(text)

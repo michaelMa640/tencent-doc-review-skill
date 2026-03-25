@@ -162,24 +162,29 @@ class DocumentAnalyzer:
 
     def __init__(
         self,
-        deepseek_client: LLMClient,
+        llm_client: Optional[LLMClient] = None,
         mcp_client: Optional[TencentDocMCPClient] = None,
         config: Optional[Dict[str, Any]] = None,
+        deepseek_client: Optional[LLMClient] = None,
     ) -> None:
-        self.llm_client = deepseek_client
+        resolved_llm_client = llm_client or deepseek_client
+        if resolved_llm_client is None:
+            raise ValueError("An llm_client is required")
+
+        self.llm_client = resolved_llm_client
         self.mcp_client = mcp_client
         self.config = config or {}
         self.fact_checker = FactChecker(
-            deepseek_client=deepseek_client,
+            llm_client=resolved_llm_client,
             search_client=None,
             config=self.config.get("fact_check_config", {}),
         )
         self.structure_matcher = StructureMatcher(
-            deepseek_client=deepseek_client,
+            llm_client=resolved_llm_client,
             config=self.config.get("structure_match_config", {}),
         )
         self.quality_evaluator = QualityEvaluator(
-            deepseek_client=deepseek_client,
+            llm_client=resolved_llm_client,
             config=self.config.get("quality_eval_config", {}),
         )
 
@@ -405,12 +410,12 @@ class DocumentAnalyzer:
 
 async def analyze_document(
     document_text: str,
-    deepseek_client: LLMClient,
+    llm_client: LLMClient,
     template_text: Optional[str] = None,
     mcp_client: Optional[TencentDocMCPClient] = None,
     **kwargs: Any,
 ) -> AnalysisResult:
-    analyzer = DocumentAnalyzer(deepseek_client, mcp_client)
+    analyzer = DocumentAnalyzer(llm_client=llm_client, mcp_client=mcp_client)
     return await analyzer.analyze(
         document_text=document_text,
         template_text=template_text,
