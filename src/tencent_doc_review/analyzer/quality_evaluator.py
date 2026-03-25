@@ -29,7 +29,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from ..deepseek_client import DeepSeekClient
+from ..llm.base import LLMClient
 
 
 class QualityDimension(Enum):
@@ -237,7 +237,7 @@ class QualityEvaluator:
     
     def __init__(
         self,
-        deepseek_client: DeepSeekClient,
+        deepseek_client: LLMClient,
         config: Optional[Dict[str, Any]] = None
     ):
         """
@@ -708,7 +708,7 @@ class QualityEvaluator:
 
 async def evaluate_quality(
     text: str,
-    deepseek_client: DeepSeekClient,
+    deepseek_client: LLMClient,
     context: Optional[Dict[str, Any]] = None
 ) -> QualityReport:
     """
@@ -728,7 +728,7 @@ async def evaluate_quality(
 
 async def quick_quality_score(
     text: str,
-    deepseek_client: DeepSeekClient
+    deepseek_client: LLMClient
 ) -> float:
     """
     便捷函数：快速获取质量分数

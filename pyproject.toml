@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tencent-doc-review"
 version = "0.1.0"
-description = "基于LLM的智能文章审核批注工具 - 腾讯文档集成版"
+description = "LLM-based review toolkit for Tencent Docs articles"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Dev Claw", email = "dev@example.com"}
+    {name = "Michael Ma", email = "michaelma640@163.com"}
 ]
 keywords = [
     "llm",
@@ -19,8 +19,7 @@ keywords = [
     "fact-checking",
     "quality-assessment",
     "ai",
-    "deepseek",
-    "mcp"
+    "deepseek"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -34,7 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Text Processing :: Linguistic"
 ]
 
 dependencies = [
@@ -46,7 +45,7 @@ dependencies = [
     "click>=8.0.0",
     "rich>=13.0.0",
     "tqdm>=4.65.0",
-    "aiofiles>=23.0.0",
+    "aiofiles>=23.0.0"
 ]
 
 [project.optional-dependencies]
@@ -58,12 +57,12 @@ dev = [
     "isort>=5.12.0",
     "mypy>=1.5.0",
     "flake8>=6.1.0",
-    "pre-commit>=3.3.0",
+    "pre-commit>=3.3.0"
 ]
 docs = [
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.2.0",
-    "mkdocstrings[python]>=0.22.0",
+    "mkdocstrings[python]>=0.22.0"
 ]
 
 [project.scripts]
@@ -71,15 +70,17 @@ tencent-doc-review = "tencent_doc_review.cli:main"
 tdr = "tencent_doc_review.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/tencent-doc-review"
-Documentation = "https://github.com/yourusername/tencent-doc-review#readme"
-Repository = "https://github.com/yourusername/tencent-doc-review.git"
-"Bug Tracker" = "https://github.com/yourusername/tencent-doc-review/issues"
-Changelog = "https://github.com/yourusername/tencent-doc-review/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/michaelMa640/tencent-doc-review-skill"
+Documentation = "https://github.com/michaelMa640/tencent-doc-review-skill#readme"
+Repository = "https://github.com/michaelMa640/tencent-doc-review-skill.git"
+"Bug Tracker" = "https://github.com/michaelMa640/tencent-doc-review-skill/issues"
+Changelog = "https://github.com/michaelMa640/tencent-doc-review-skill/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-packages = ["tencent_doc_review"]
 package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 tencent_doc_review = ["py.typed", "*.yaml", "*.json"]
@@ -96,7 +97,7 @@ addopts = "-v --tb=short"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
-    "performance: marks tests as performance tests",
+    "performance: marks tests as performance tests"
 ]
 
 [tool.black]
@@ -105,7 +106,6 @@ target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
-  # directories
   \.eggs
   | \.git
   | \.hg
@@ -145,7 +145,7 @@ omit = [
     "*/tests/*",
     "*/test_*",
     "*/venv/*",
-    "*/.venv/*",
+    "*/.venv/*"
 ]
 
 [tool.coverage.report]
@@ -157,7 +157,7 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
+    "@(abc\\.)?abstractmethod"
 ]
 fail_under = 80
 

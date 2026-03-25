@@ -35,7 +35,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..deepseek_client import DeepSeekClient
+from ..llm.base import LLMClient
 from ..mcp_client import TencentDocMCPClient, Comment, DocumentInfo
 from .fact_checker import FactChecker, FactCheckResult, check_facts
 from .structure_matcher import StructureMatcher, StructureMatchResult, match_structure
@@ -251,7 +251,7 @@ class DocumentAnalyzer:
     
     def __init__(
         self,
-        deepseek_client: DeepSeekClient,
+        deepseek_client: LLMClient,
         mcp_client: Optional[TencentDocMCPClient] = None,
         config: Optional[Dict[str, Any]] = None
     ):
@@ -794,7 +794,7 @@ class DocumentAnalyzer:
 
 async def analyze_document(
     document_text: str,
-    deepseek_client: DeepSeekClient,
+    deepseek_client: LLMClient,
     template_text: Optional[str] = None,
     mcp_client: Optional[TencentDocMCPClient] = None,
     **kwargs

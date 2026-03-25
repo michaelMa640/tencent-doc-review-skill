@@ -40,7 +40,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 FROM python:3.11-slim as production
 
 # 设置元数据
-LABEL maintainer="Dev Claw <dev@example.com>"
+LABEL maintainer="Michael Ma <michaelma640@163.com>"
 LABEL description="腾讯文档智能审核批注工具 - 基于LLM的文章审核系统"
 LABEL version="0.1.0"
 

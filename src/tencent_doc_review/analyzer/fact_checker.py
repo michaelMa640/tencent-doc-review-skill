@@ -25,7 +25,7 @@ import asyncio
 
 from loguru import logger
 
-from ..deepseek_client import DeepSeekClient
+from ..llm.base import LLMClient
 
 
 class VerificationStatus(Enum):
@@ -251,7 +251,7 @@ class FactChecker:
     
     def __init__(
         self,
-        deepseek_client: DeepSeekClient,
+        deepseek_client: LLMClient,
         search_client: Optional[SearchClient] = None,
         config: Optional[Dict[str, Any]] = None
     ):
@@ -782,7 +782,7 @@ class FactChecker:
 
 async def check_facts(
     text: str,
-    deepseek_client: DeepSeekClient,
+    deepseek_client: LLMClient,
     search_client: Optional[SearchClient] = None,
     context: Optional[Dict[str, Any]] = None
 ) -> List[FactCheckResult]:
@@ -812,7 +812,7 @@ async def check_facts(
 
 async def extract_claims_only(
     text: str,
-    deepseek_client: DeepSeekClient
+    deepseek_client: LLMClient
 ) -> List[Claim]:
     """
     便捷函数：仅提取声明，不验证
