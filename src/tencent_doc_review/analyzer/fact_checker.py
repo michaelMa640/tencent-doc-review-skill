@@ -25,6 +25,7 @@ import asyncio
 
 from loguru import logger
 
+from ..llm.providers.mock import MockLLMClient as MockDeepSeekClient
 from ..llm.base import LLMClient
 
 
@@ -48,6 +49,9 @@ class ClaimType(Enum):
     QUOTATION = "quotation"            # 引用
     NUMBER = "number"                  # 数字/数量
     OTHER = "other"                    # 其他
+
+
+ClaimType.OPINION = ClaimType.OTHER
 
 
 @dataclass
@@ -147,10 +151,18 @@ class Claim:
         context: 上下文信息
     """
     text: str
-    type: ClaimType
+    type: ClaimType = ClaimType.OTHER
+    claim_type: Optional[ClaimType] = None
+    confidence: float = 0.0
+    needs_verification: bool = True
     entities: List[Dict[str, Any]] = field(default_factory=list)
     position: Dict[str, Any] = field(default_factory=dict)
     context: str = ""
+
+    def __post_init__(self) -> None:
+        if self.claim_type is not None:
+            self.type = self.claim_type
+        self.claim_type = self.type
 
 
 class SearchClient:
@@ -293,9 +305,17 @@ class FactChecker:
             核查结果列表
         """
         logger.info(f"Starting fact check for text ({len(text)} chars)")
+
+        if not text.strip():
+            logger.warning("Empty text provided for fact check")
+            return []
         
         # Step 1: 提取声明
-        claims = await self.extract_claims(text, context)
+        try:
+            claims = await self.extract_claims(text, context)
+        except Exception as e:
+            logger.error(f"Claim extraction failed: {e}")
+            return []
         logger.info(f"Extracted {len(claims)} claims")
         
         if not claims:
@@ -342,6 +362,9 @@ class FactChecker:
         Returns:
             声明列表
         """
+        if not text.strip():
+            return []
+
         # 构建提示词
         prompt = self._build_extraction_prompt(text, context)
         
@@ -351,7 +374,7 @@ class FactChecker:
             content = analysis.content if hasattr(analysis, 'content') else str(analysis)
         except Exception as e:
             logger.error(f"LLM analysis failed: {e}")
-            return []
+            raise
         
         # 解析结果
         claims = self._parse_claims_from_response(content, text)
@@ -417,18 +440,26 @@ class FactChecker:
         
         try:
             # 提取 JSON 部分
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if not json_match:
+            payload = None
+            array_match = re.search(r'\[.*\]', response, re.DOTALL)
+            object_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if array_match:
+                payload = json.loads(array_match.group())
+            elif object_match:
+                payload = json.loads(object_match.group())
+            else:
                 logger.warning("No JSON found in LLM response")
                 return []
-            
-            data = json.loads(json_match.group())
-            
-            if "claims" not in data or not isinstance(data["claims"], list):
-                logger.warning("Invalid JSON structure: missing 'claims' array")
+
+            if isinstance(payload, list):
+                claim_items = payload
+            elif isinstance(payload, dict) and isinstance(payload.get("claims"), list):
+                claim_items = payload["claims"]
+            else:
+                logger.warning("Invalid JSON structure: missing claims payload")
                 return []
-            
-            for item in data["claims"]:
+
+            for item in claim_items:
                 try:
                     # 映射类型
                     type_str = item.get("type", "其他").upper()
@@ -747,7 +778,8 @@ class FactChecker:
         self,
         texts: List[str],
         context: Optional[Dict[str, Any]] = None,
-        max_concurrency: int = 3
+        max_concurrency: int = 3,
+        progress_callback: Optional[Any] = None,
     ) -> List[List[FactCheckResult]]:
         """
         批量核查多个文本
@@ -762,11 +794,13 @@ class FactChecker:
         """
         semaphore = asyncio.Semaphore(max_concurrency)
         
-        async def check_with_limit(text: str) -> List[FactCheckResult]:
+        async def check_with_limit(index: int, text: str) -> List[FactCheckResult]:
             async with semaphore:
+                if progress_callback:
+                    progress_callback(index + 1, len(texts), f"Checking text {index + 1}")
                 return await self.check(text, context)
-        
-        tasks = [check_with_limit(text) for text in texts]
+
+        tasks = [check_with_limit(index, text) for index, text in enumerate(texts)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # 处理异常

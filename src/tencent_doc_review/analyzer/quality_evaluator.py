@@ -34,13 +34,21 @@ from ..llm.base import LLMClient
 
 class QualityDimension(Enum):
     """质量评估维度枚举"""
-    COMPLETENESS = "completeness"           # 内容完整性
-    CLARITY = "clarity"                     # 逻辑清晰度
-    ARGUMENTATION = "argumentation"         # 论证充分性
+    COMPLETENESS = "content_completeness"   # 内容完整性
+    CLARITY = "logical_clarity"             # 逻辑清晰度
+    ARGUMENTATION = "argumentation_quality" # 论证充分性
     DATA_ACCURACY = "data_accuracy"         # 数据准确性
-    LANGUAGE = "language"                   # 语言表达
-    FORMAT = "format"                       # 格式规范
+    LANGUAGE = "language_expression"        # 语言表达
+    FORMAT = "format_compliance"            # 格式规范
     OVERALL = "overall"                     # 总体评估
+
+
+EvaluationDimension = QualityDimension
+EvaluationDimension.CONTENT_COMPLETENESS = QualityDimension.COMPLETENESS
+EvaluationDimension.LOGICAL_CLARITY = QualityDimension.CLARITY
+EvaluationDimension.ARGUMENTATION_QUALITY = QualityDimension.ARGUMENTATION
+EvaluationDimension.LANGUAGE_EXPRESSION = QualityDimension.LANGUAGE
+EvaluationDimension.FORMAT_COMPLIANCE = QualityDimension.FORMAT
 
 
 class QualityLevel(Enum):
@@ -50,6 +58,9 @@ class QualityLevel(Enum):
     SATISFACTORY = "satisfactory"           # 合格 (70-79)
     NEEDS_IMPROVEMENT = "needs_improvement" # 待改进 (60-69)
     POOR = "poor"                           # 不合格 (<60)
+
+
+QualityLevel.CRITICAL = QualityLevel.POOR
 
 
 @dataclass
@@ -112,6 +123,20 @@ class QualityReport:
     priority_improvements: List[str] = field(default_factory=list)
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def strengths(self) -> List[str]:
+        items: List[str] = []
+        for score in self.dimension_scores:
+            items.extend(score.strengths)
+        return items
+
+    @property
+    def weaknesses(self) -> List[str]:
+        items: List[str] = []
+        for score in self.dimension_scores:
+            items.extend(score.weaknesses)
+        return items
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -293,17 +318,43 @@ class QualityEvaluator:
             完整质量评估报告
         """
         logger.info(f"Starting quality evaluation ({len(text)} chars)")
-        
+
+        selected_dimensions = dimensions or [
+            QualityDimension.COMPLETENESS,
+            QualityDimension.CLARITY,
+            QualityDimension.ARGUMENTATION,
+            QualityDimension.DATA_ACCURACY,
+            QualityDimension.LANGUAGE,
+            QualityDimension.FORMAT,
+        ]
+
+        if not text.strip():
+            return QualityReport(
+                overall_score=0.0,
+                overall_level=QualityLevel.POOR,
+                dimension_scores=[
+                    DimensionScore(
+                        dimension=dimension,
+                        score=0.0,
+                        level=QualityLevel.POOR,
+                        weaknesses=["Document is empty"],
+                        suggestions=["Provide document content before evaluation."],
+                    )
+                    for dimension in selected_dimensions
+                ],
+                weighted_average=0.0,
+                summary="Document is empty and cannot be meaningfully evaluated.",
+                detailed_analysis="No content provided.",
+                priority_improvements=["Provide document content before evaluation."],
+                metadata={
+                    "text_length": 0,
+                    "evaluated_dimensions": [d.value for d in selected_dimensions],
+                    "evaluation_version": "1.0",
+                },
+            )
+
         # 确定评估维度
-        if dimensions is None:
-            dimensions = [
-                QualityDimension.COMPLETENESS,
-                QualityDimension.CLARITY,
-                QualityDimension.ARGUMENTATION,
-                QualityDimension.DATA_ACCURACY,
-                QualityDimension.LANGUAGE,
-                QualityDimension.FORMAT,
-            ]
+        dimensions = selected_dimensions
         
         # 评估各维度
         dimension_scores = []
@@ -376,6 +427,16 @@ class QualityEvaluator:
         Returns:
             维度评分
         """
+        stripped = text.strip()
+        if stripped and len(stripped) < 50 and dimension == QualityDimension.COMPLETENESS:
+            return DimensionScore(
+                dimension=dimension,
+                score=40.0,
+                level=QualityLevel.POOR,
+                weaknesses=["Content is too short to be complete."],
+                suggestions=["Expand the document with essential sections and supporting details."],
+            )
+
         # 构建评估提示
         prompt = self._build_dimension_prompt(text, dimension, context)
         

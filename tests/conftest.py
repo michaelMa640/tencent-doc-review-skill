@@ -9,7 +9,7 @@
 
 import pytest
 import asyncio
-from typing import Generator, Any
+from typing import Any, Dict, Generator
 from unittest.mock import Mock, AsyncMock
 from dataclasses import dataclass
 

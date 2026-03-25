@@ -44,6 +44,8 @@ if BaseSettings is not None:
         search_api_key: Optional[str] = Field(default=None, alias="SEARCH_API_KEY")
         batch_size: int = Field(default=5)
         request_timeout: int = Field(default=30)
+        tencent_docs_max_retries: int = Field(default=2, alias="TENCENT_DOCS_MAX_RETRIES")
+        tencent_docs_retry_delay: float = Field(default=1.0, alias="TENCENT_DOCS_RETRY_DELAY")
         log_level: str = Field(default="INFO")
 
 
@@ -89,6 +91,8 @@ else:
         search_api_key: Optional[str] = _get_env("SEARCH_API_KEY") or None
         batch_size: int = int(_get_env("BATCH_SIZE", "5"))
         request_timeout: int = int(_get_env("REQUEST_TIMEOUT", "30"))
+        tencent_docs_max_retries: int = int(_get_env("TENCENT_DOCS_MAX_RETRIES", "2"))
+        tencent_docs_retry_delay: float = float(_get_env("TENCENT_DOCS_RETRY_DELAY", "1.0"))
         log_level: str = _get_env("LOG_LEVEL", "INFO")
 
 

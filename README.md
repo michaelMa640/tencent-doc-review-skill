@@ -31,6 +31,18 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
+标准构建包:
+
+```bash
+python -m build
+```
+
+安装后可先检查本地配置:
+
+```bash
+tencent-doc-review doctor
+```
+
 ## 环境变量
 
 ```bash
@@ -75,6 +87,28 @@ tencent-doc-review analyze --input-file article.md --template-file template.md -
 ```bash
 tencent-doc-review analyze --input-file article.md --format json --output report.json
 ```
+
+输出 HTML:
+
+```bash
+tencent-doc-review analyze --input-file article.md --format html --output report.html
+```
+
+分析腾讯文档:
+
+```bash
+tencent-doc-review analyze --doc-id 300000000$abc123 --template-doc-id 300000000$tpl456 --output report.md
+```
+
+分析腾讯文档并将审核建议追加写回文档末尾:
+
+```bash
+tencent-doc-review analyze --doc-id 300000000$abc123 --template-doc-id 300000000$tpl456 --writeback-mode append --output report.md
+```
+
+## 发布说明
+
+发布与 Docker 用法见 [docs/Release-Guide.md](docs/Release-Guide.md)。
 
 ## Python 用法
 

@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
 
+from ..domain import ReviewIssue, ReviewReport, aggregate_review_issues, build_review_report
 from ..llm.base import LLMClient
 from ..mcp_client import Comment, TencentDocMCPClient
 from .fact_checker import FactCheckResult, FactChecker
@@ -84,6 +85,8 @@ class AnalysisResult:
     fact_check_results: List[FactCheckResult] = field(default_factory=list)
     structure_match_result: Optional[StructureMatchResult] = None
     quality_report: Optional[QualityReport] = None
+    review_issues: List[ReviewIssue] = field(default_factory=list)
+    review_report: Optional[ReviewReport] = None
     summary: str = ""
     recommendations: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -97,6 +100,8 @@ class AnalysisResult:
             "fact_check_results": [item.to_dict() for item in self.fact_check_results],
             "structure_match_result": self.structure_match_result.to_dict() if self.structure_match_result else None,
             "quality_report": self.quality_report.to_dict() if self.quality_report else None,
+            "review_issues": [item.to_dict() for item in self.review_issues],
+            "review_report": self.review_report.to_dict() if self.review_report else None,
             "summary": self.summary,
             "recommendations": self.recommendations,
             "metadata": self.metadata,
@@ -152,6 +157,12 @@ class AnalysisResult:
             lines.extend(["## Recommendations", ""])
             for item in self.recommendations:
                 lines.append(f"- {item}")
+            lines.append("")
+
+        if self.review_issues:
+            lines.extend(["## Unified Issues", ""])
+            for item in self.review_issues:
+                lines.append(f"- [{item.severity.value}] {item.issue_type.value}: {item.title}")
             lines.append("")
 
         return "\n".join(lines).strip() + "\n"
@@ -241,6 +252,25 @@ class DocumentAnalyzer:
         recommendations = self._generate_recommendations(
             fact_check_results, structure_match_result, quality_report
         )
+        review_issues = aggregate_review_issues(
+            fact_check_results or [],
+            structure_match_result,
+            quality_report,
+        )
+        metadata = {
+            "document_length": len(document_text),
+            "has_template": template_text is not None,
+            "analysis_config": config.to_dict(),
+        }
+        review_report = build_review_report(
+            summary=summary,
+            recommendations=recommendations,
+            issues=review_issues,
+            fact_check_results=fact_check_results or [],
+            structure_match_result=structure_match_result,
+            quality_report=quality_report,
+            metadata=metadata,
+        )
 
         return AnalysisResult(
             document_id=document_id,
@@ -249,13 +279,11 @@ class DocumentAnalyzer:
             fact_check_results=fact_check_results or [],
             structure_match_result=structure_match_result,
             quality_report=quality_report,
+            review_issues=review_issues,
+            review_report=review_report,
             summary=summary,
             recommendations=recommendations,
-            metadata={
-                "document_length": len(document_text),
-                "has_template": template_text is not None,
-                "analysis_config": config.to_dict(),
-            },
+            metadata=metadata,
         )
 
     async def analyze_custom(
@@ -312,7 +340,7 @@ class DocumentAnalyzer:
         if self.mcp_client is None:
             raise ValueError("TencentDoc client is required for Tencent Docs analysis")
 
-        document_text = await self.mcp_client.get_document_content(file_id)
+        document_info, document_text = await self.mcp_client.get_document_bundle(file_id)
         template_text = None
         if template_file_id:
             template_text = await self.mcp_client.get_document_content(template_file_id)
@@ -321,7 +349,7 @@ class DocumentAnalyzer:
             document_text=document_text,
             template_text=template_text,
             document_id=file_id,
-            document_title=file_id,
+            document_title=document_info.title or file_id,
             config=config,
         )
         await self._add_annotations_to_doc(file_id, result)
@@ -410,12 +438,13 @@ class DocumentAnalyzer:
 
 async def analyze_document(
     document_text: str,
-    llm_client: LLMClient,
+    llm_client: Optional[LLMClient] = None,
     template_text: Optional[str] = None,
     mcp_client: Optional[TencentDocMCPClient] = None,
+    deepseek_client: Optional[LLMClient] = None,
     **kwargs: Any,
 ) -> AnalysisResult:
-    analyzer = DocumentAnalyzer(llm_client=llm_client, mcp_client=mcp_client)
+    analyzer = DocumentAnalyzer(llm_client=llm_client, deepseek_client=deepseek_client, mcp_client=mcp_client)
     return await analyzer.analyze(
         document_text=document_text,
         template_text=template_text,

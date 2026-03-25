@@ -53,6 +53,15 @@ class StructureMatchResult:
     document_sections: List[Section] = field(default_factory=list)
     template_sections: List[Section] = field(default_factory=list)
 
+    @property
+    def extra_sections(self) -> List[Section]:
+        matched_titles = {
+            match.document_section.title
+            for match in self.section_matches
+            if match.document_section is not None
+        }
+        return [section for section in self.document_sections if section.title not in matched_titles]
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "overall_score": self.overall_score,
@@ -89,6 +98,7 @@ class StructureMatcher:
         document_text: str,
         template_text: str,
         context: Optional[Dict[str, Any]] = None,
+        matching_mode: Optional[str] = None,
     ) -> StructureMatchResult:
         template_root = await self.parse_template(template_text, context)
         document_root = await self.parse_document(document_text, context)
@@ -129,6 +139,12 @@ class StructureMatcher:
             document_sections=document_sections,
             template_sections=template_sections,
         )
+
+    async def _parse_structure_llm(self, text: str, is_template: bool = False) -> Section:
+        return self._parse_headings(text, is_template=is_template)
+
+    def _fallback_parse(self, text: str, is_template: bool = False) -> Section:
+        return self._parse_headings(text, is_template=is_template)
 
     async def parse_template(
         self,
