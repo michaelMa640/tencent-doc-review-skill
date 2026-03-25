@@ -1,0 +1,48 @@
+# Include the README
+include README.md
+
+# Include the license file
+include LICENSE
+
+# Include the changelog
+include CHANGELOG.md
+
+# Include configuration files
+include pyproject.toml
+include setup.cfg
+
+# Include requirements files
+include requirements.txt
+include requirements-dev.txt
+
+# Include the Makefile (if exists)
+include Makefile
+
+# Include documentation
+recursive-include docs *.md *.rst *.txt *.py *.yaml *.json
+
+# Include examples
+recursive-include examples *.py *.md *.txt *.yaml *.json
+
+# Include configuration templates
+recursive-include config *.yaml *.json *.example
+
+# Exclude tests from distribution
+prune tests
+prune .github
+prune .git
+prune .pytest_cache
+prune .mypy_cache
+prune .coverage
+prune htmlcov
+prune dist
+prune build
+prune *.egg-info
+
+# Global excludes
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude *.so

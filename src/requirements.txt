@@ -1,0 +1,20 @@
+# 腾讯文档审核批注工具依赖
+
+# HTTP 客户端
+httpx>=0.25.0
+
+# 异步支持
+asyncio>=3.4.3
+
+# 配置管理
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# 日志
+loguru>=0.7.0
+
+# 腾讯文档 MCP (通过 mcporter 调用，这里只需要 HTTP 客户端)
+# 实际 MCP 调用通过 mcporter CLI 或直接使用 HTTP
+
+# 可选：用于本地缓存
+# diskcache>=5.6.0
