@@ -492,3 +492,71 @@ src/tencent_doc_review/
 - Open API 频率控制: https://docs.qq.com/open/document/app/openapi/v2/frequency_control.html
 - 应用权限说明: https://docs.qq.com/open/document/app/scope.html
 - MCP 概述: https://docs.qq.com/open/document/mcp/
+
+## 19. Phase 任务清单
+
+### Phase 1: MVP 定义与收口
+
+- [x] 明确 MVP 目标边界
+- [x] 明确 MVP 非目标
+- [x] 固定主链路为 `CLI -> 本地文件 -> LLM -> 报告`
+- [x] 补充 `.env.example`
+- [x] 更新 README 的 MVP 使用说明
+- 执行情况: [Phase1-MVP定义与收口](执行情况-v2/Phase1-MVP定义与收口.md)
+
+### Phase 2: 主链路打通
+
+- [x] 跑通 `tencent-doc-review analyze`
+- [x] 确保本地文件读取稳定
+- [x] 确保 Markdown / JSON 报告输出稳定
+- [x] 补主流程异常处理
+- [ ] 用真实 LLM provider 再验证一次主链路
+- [ ] 补主链路回归测试
+- 执行情况: [Phase2-主链路打通](执行情况-v2/Phase2-主链路打通.md)
+
+### Phase 3: LLM 抽象层稳定化
+
+- [ ] 统一内部命名为 `llm_client`
+- [ ] 固化 provider 工厂
+- [ ] 保持 `deepseek` 可用
+- [ ] 保持 `openai` provider 骨架可切换
+- 执行情况: 待开始
+
+### Phase 4: 审核结果模型统一
+
+- [ ] 统一 issue / result / report 数据结构
+- [ ] 统一严重级别
+- [ ] 统一建议格式
+- [ ] 统一序列化逻辑
+- 执行情况: 待开始
+
+### Phase 5: 测试与稳定性
+
+- [ ] 修正并更新核心测试
+- [ ] 覆盖 CLI 主链路
+- [ ] 覆盖 provider 工厂
+- [ ] 覆盖报告输出
+- 执行情况: 待开始
+
+### Phase 6: 腾讯文档读取接入
+
+- [ ] 验证腾讯文档读取接口
+- [ ] 实现正文读取
+- [ ] 统一本地输入与腾讯文档输入
+- [ ] 补限流与错误处理
+- 执行情况: 待开始
+
+### Phase 7: 结果写回策略
+
+- [ ] 实现固定区块写回
+- [ ] 保留批注适配层
+- [ ] 明确原生批注为后续增强项
+- 执行情况: 待开始
+
+### Phase 8: 发布与交付
+
+- [ ] 清理打包配置
+- [ ] 补安装文档
+- [ ] 补示例命令
+- [ ] 整理 Docker 路径
+- 执行情况: 待开始

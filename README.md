@@ -15,7 +15,7 @@
 ## LLM 架构
 
 - 分析器依赖统一 LLM 接口
-- 当前内置 provider: `deepseek`
+- 当前内置 provider: `deepseek`, `openai`, `mock`
 - 后续可以继续增加 `openai`、`qwen`、`claude` 等 provider
 - `deepseek_client.py` 现在是兼容导出层，不再是唯一的架构入口
 
@@ -48,6 +48,12 @@ TENCENT_DOCS_TOKEN=your_access_token
 TENCENT_DOCS_CLIENT_ID=your_client_id
 TENCENT_DOCS_OPEN_ID=your_open_id
 TENCENT_DOCS_BASE_URL=https://docs.qq.com/openapi
+```
+
+本地不依赖真实 API 的链路验证可用：
+
+```bash
+LLM_PROVIDER=mock
 ```
 
 ## CLI
@@ -116,6 +122,7 @@ src/tencent_doc_review/
     factory.py
     providers/
       deepseek.py
+      openai.py
   analyzer/
     document_analyzer.py
     fact_checker.py
