@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -49,6 +50,29 @@ def doctor() -> None:
     click.echo(f"  TENCENT_DOCS_TOKEN: {'set' if settings.tencent_docs_token else 'missing'}")
     click.echo(f"  TENCENT_DOCS_CLIENT_ID: {'set' if settings.tencent_docs_client_id else 'missing'}")
     click.echo(f"  TENCENT_DOCS_OPEN_ID: {'set' if settings.tencent_docs_open_id else 'missing'}")
+
+
+@main.command("debug-doc")
+@click.option("--doc-id", "doc_id", required=True, type=str)
+def debug_doc(doc_id: str) -> None:
+    """Print a safe summary of the Tencent Docs API response structure."""
+    asyncio.run(_debug_doc(doc_id))
+
+
+@main.command("debug-converter")
+@click.option("--encoded-id", "encoded_id", required=True, type=str)
+def debug_converter(encoded_id: str) -> None:
+    """Print a safe summary of the Tencent Docs converter response."""
+    asyncio.run(_debug_converter(encoded_id))
+
+
+@main.command("list-files")
+@click.option("--folder-id", "folder_id", type=str)
+@click.option("--encoded-id", "encoded_id", type=str)
+@click.option("--format", "output_format", type=click.Choice(["table", "json"]), default="table")
+def list_files(folder_id: Optional[str], encoded_id: Optional[str], output_format: str) -> None:
+    """List Tencent Docs files or resolve an encoded URL id into a real fileId."""
+    asyncio.run(_list_files(folder_id, encoded_id, output_format))
 
 
 @main.command("analyze")
@@ -156,3 +180,62 @@ async def _analyze(
         if doc_client is not None:
             await doc_client.close()
         await client.close()
+
+
+async def _debug_doc(doc_id: str) -> None:
+    doc_client = _create_tencent_doc_client()
+    try:
+        payload = await doc_client.debug_document_response(doc_id)
+        click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+    finally:
+        await doc_client.close()
+
+
+async def _debug_converter(encoded_id: str) -> None:
+    doc_client = _create_tencent_doc_client()
+    try:
+        payload = await doc_client.debug_converter_response(encoded_id)
+        click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+    finally:
+        await doc_client.close()
+
+
+async def _list_files(folder_id: Optional[str], encoded_id: Optional[str], output_format: str) -> None:
+    if bool(folder_id) == bool(encoded_id):
+        raise click.UsageError("Provide exactly one of --folder-id or --encoded-id.")
+
+    doc_client = _create_tencent_doc_client()
+    try:
+        if encoded_id:
+            file_id = await doc_client.convert_encoded_id_to_file_id(encoded_id)
+            payload = {
+                "encoded_id": encoded_id,
+                "file_id": file_id,
+                "analyze_command": f'tencent-doc-review analyze --doc-id "{file_id}" --output report.md',
+            }
+            click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+            return
+
+        items = await doc_client.list_documents(folder_id or "")
+        if output_format == "json":
+            payload = [
+                {
+                    "file_id": item.file_id,
+                    "title": item.title,
+                    "type": item.doc_type,
+                    "url": item.url,
+                }
+                for item in items
+            ]
+            click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+            return
+
+        if not items:
+            click.echo("No files returned.")
+            return
+
+        click.echo("file_id\ttype\ttitle")
+        for item in items:
+            click.echo(f"{item.file_id}\t{item.doc_type or '-'}\t{item.title or '-'}")
+    finally:
+        await doc_client.close()

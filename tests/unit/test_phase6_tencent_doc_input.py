@@ -33,7 +33,7 @@ class _FakeAsyncClient:
         self._responses = list(responses)
         self.calls = 0
 
-    async def request(self, method, url, headers=None, json=None):
+    async def request(self, method, url, headers=None, json=None, params=None):
         self.calls += 1
         response = self._responses.pop(0)
         if isinstance(response, Exception):

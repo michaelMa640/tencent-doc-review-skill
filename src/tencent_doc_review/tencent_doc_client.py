@@ -23,6 +23,15 @@ class DocumentInfo:
 
 
 @dataclass
+class DriveItem:
+    file_id: str
+    title: str = ""
+    item_type: str = ""
+    url: Optional[str] = None
+    parent_id: Optional[str] = None
+
+
+@dataclass
 class Comment:
     content: str
     position: Dict[str, Any] = field(default_factory=dict)
@@ -99,10 +108,62 @@ class TencentDocClient:
             info.title = file_id
         return info, content
 
+    async def debug_document_response(self, file_id: str) -> Dict[str, Any]:
+        metadata_payload = await self._request_json("GET", f"/drive/v2/files/{file_id}/metadata")
+        content_payload = await self._request_json("GET", f"/doc/v3/{file_id}")
+        extracted_document = self._extract_document_payload(content_payload)
+        extracted_text = self._extract_text(extracted_document)
+        return {
+            "file_id": file_id,
+            "metadata_summary": self._summarize_payload(metadata_payload),
+            "content_summary": self._summarize_payload(content_payload),
+            "extracted_document_summary": self._summarize_payload(extracted_document),
+            "extracted_text_length": len(extracted_text),
+            "extracted_text_preview": extracted_text[:200],
+        }
+
     async def list_documents(self, folder_id: str) -> List[DocumentInfo]:
-        raise NotImplementedError(
-            "Folder listing is not implemented yet. Wire this to the official file APIs before using it."
+        payload = await self._request_json("GET", f"/drive/v2/folders/{folder_id}")
+        items = self._extract_drive_items(payload)
+        return [
+            DocumentInfo(
+                file_id=item.file_id,
+                title=item.title,
+                doc_type=item.item_type or "doc",
+                url=item.url,
+            )
+            for item in items
+        ]
+
+    async def convert_encoded_id_to_file_id(self, encoded_id: str) -> str:
+        payload = await self._request_json(
+            "GET",
+            "/drive/v2/util/converter",
+            params={"type": 2, "value": encoded_id},
         )
+        data = payload.get("data") or {}
+        file_id = data.get("fileID") or data.get("fileId") or payload.get("fileID") or payload.get("fileId")
+        if not file_id:
+            details = self._extract_error_fields(payload)
+            raise TencentDocRequestError(
+                "Tencent Docs converter did not return a fileID"
+                f" (ret={details.get('ret')}, msg={details.get('msg')}, "
+                f"code={details.get('code')}, message={details.get('message')})"
+            )
+        return file_id
+
+    async def debug_converter_response(self, encoded_id: str) -> Dict[str, Any]:
+        payload = await self._request_json(
+            "GET",
+            "/drive/v2/util/converter",
+            params={"type": 2, "value": encoded_id},
+        )
+        return {
+            "encoded_id": encoded_id,
+            "summary": self._summarize_payload(payload),
+            "error_fields": self._extract_error_fields(payload),
+            "data_keys": list((payload.get("data") or {}).keys()) if isinstance(payload.get("data"), dict) else [],
+        }
 
     async def add_comment(self, file_id: str, comment: Comment) -> bool:
         result = await self.add_comments_batch(file_id, [comment])
@@ -134,6 +195,7 @@ class TencentDocClient:
         separator = "\n\n" if existing_content.strip() else ""
         updated_content = f"{existing_content.rstrip()}{separator}{block_markdown.strip()}\n"
         result = await self.update_document_content(file_id, updated_content)
+        result["mode"] = "append"
         result["title"] = info.title
         result["appended"] = True
         return result
@@ -166,7 +228,13 @@ class TencentDocClient:
             self._client = httpx.AsyncClient(timeout=self.timeout)
         return self._client
 
-    async def _request_json(self, method: str, path: str, json_body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def _request_json(
+        self,
+        method: str,
+        path: str,
+        json_body: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         self._ensure_configured()
         if httpx is None:
             raise ModuleNotFoundError("httpx is required to call the Tencent Docs API")
@@ -180,6 +248,7 @@ class TencentDocClient:
                     f"{self.base_url}{path}",
                     headers=self._headers(),
                     json=json_body,
+                    params=params,
                 )
                 self._raise_for_status(response)
                 return response.json()
@@ -233,6 +302,72 @@ class TencentDocClient:
         for child in node.get("children") or []:
             if isinstance(child, dict):
                 self._walk_node(child, chunks)
+
+    def _summarize_payload(self, payload: Any, depth: int = 0) -> Any:
+        if depth >= 2:
+            if isinstance(payload, dict):
+                return f"<dict keys={list(payload.keys())[:10]}>"
+            if isinstance(payload, list):
+                return f"<list len={len(payload)}>"
+            if isinstance(payload, str):
+                return f"<str len={len(payload)}>"
+            return payload
+
+        if isinstance(payload, dict):
+            summary: Dict[str, Any] = {}
+            for key, value in list(payload.items())[:15]:
+                if isinstance(value, str):
+                    summary[key] = f"<str len={len(value)}>"
+                else:
+                    summary[key] = self._summarize_payload(value, depth + 1)
+            return summary
+
+        if isinstance(payload, list):
+            return [self._summarize_payload(item, depth + 1) for item in payload[:5]]
+
+        return payload
+
+    def _extract_drive_items(self, payload: Dict[str, Any]) -> List[DriveItem]:
+        candidates = []
+        for key in ("data", "files", "list", "entries", "children"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                candidates = value
+                break
+            if isinstance(value, dict):
+                for nested_key in ("files", "list", "entries", "children", "items"):
+                    nested = value.get(nested_key)
+                    if isinstance(nested, list):
+                        candidates = nested
+                        break
+            if candidates:
+                break
+
+        items: List[DriveItem] = []
+        for raw in candidates:
+            if not isinstance(raw, dict):
+                continue
+            file_id = raw.get("fileID") or raw.get("fileId") or raw.get("id")
+            if not file_id:
+                continue
+            items.append(
+                DriveItem(
+                    file_id=file_id,
+                    title=raw.get("title", "") or raw.get("name", ""),
+                    item_type=raw.get("type", "") or raw.get("fileType", ""),
+                    url=raw.get("url"),
+                    parent_id=raw.get("parentID") or raw.get("parentId"),
+                )
+            )
+        return items
+
+    def _extract_error_fields(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "ret": payload.get("ret"),
+            "msg": payload.get("msg"),
+            "code": payload.get("code"),
+            "message": payload.get("message"),
+        }
 
 
 TencentDocMCPClient = TencentDocClient

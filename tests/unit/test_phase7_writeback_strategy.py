@@ -31,6 +31,14 @@ class _FakeWritebackClient:
         self.append_calls.append((file_id, block_markdown))
         return {"success": True, "mode": "append", "file_id": file_id}
 
+    async def debug_document_response(self, file_id: str):
+        return {
+            "file_id": file_id,
+            "content_summary": {"data": {"document": "<dict keys=['type', 'children']>"}},
+            "extracted_text_length": 12,
+            "extracted_text_preview": "示例文档内容",
+        }
+
     async def add_comments_batch(self, file_id, comments):
         return {"success": False}
 
@@ -97,6 +105,25 @@ class Phase7WritebackStrategyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertIn("Writeback mode: append", result.output)
         self.assertEqual(len(fake_client.append_calls), 1)
+
+    def test_cli_debug_doc_prints_summary(self):
+        from tencent_doc_review.cli import main
+
+        runner = CliRunner()
+        fake_client = _FakeWritebackClient()
+        with patch("tencent_doc_review.cli._create_tencent_doc_client", return_value=fake_client):
+            result = runner.invoke(
+                main,
+                [
+                    "debug-doc",
+                    "--doc-id",
+                    "doc-123",
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertIn('"file_id": "doc-123"', result.output)
+        self.assertIn('"extracted_text_length": 12', result.output)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ from .config import Settings, get_settings
 from .deepseek_client import DeepSeekClient
 from .domain import ReviewIssue, ReviewIssueType, ReviewReport, ReviewSeverity
 from .llm import LLMClient, LLMResponse, SUPPORTED_PROVIDERS, UsageInfo, create_llm_client
-from .tencent_doc_client import TencentDocClient, TencentDocMCPClient
+from .tencent_doc_client import DriveItem, TencentDocClient, TencentDocMCPClient
 
 __all__ = [
     "Settings",
@@ -21,6 +21,7 @@ __all__ = [
     "UsageInfo",
     "SUPPORTED_PROVIDERS",
     "create_llm_client",
+    "DriveItem",
     "TencentDocClient",
     "TencentDocMCPClient",
     "DeepSeekClient",
