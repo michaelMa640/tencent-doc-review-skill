@@ -1,4 +1,4 @@
-"""Write review annotations back into a `.docx` file."""
+"""Write review annotations back into a `.docx` file as native Word comments."""
 
 from __future__ import annotations
 
@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from docx import Document
-from docx.shared import RGBColor
+from docx.document import Document as DocumentObject
+from docx.text.run import Run
 
 
 @dataclass
@@ -33,12 +34,7 @@ class AnnotatedWordDocument:
 
 
 class WordAnnotator:
-    """Apply visible inline markers and an annotation appendix to `.docx` files.
-
-    `python-docx` currently does not expose a stable high-level Word comment API.
-    For the MVP we use an explicit in-document annotation block so the exported
-    `.docx` remains reviewable on both Windows and macOS.
-    """
+    """Apply review annotations as native Word comments."""
 
     def annotate(
         self,
@@ -54,45 +50,43 @@ class WordAnnotator:
             output.unlink()
 
         document = Document(source)
-        annotations_by_paragraph = {item.paragraph_index: [] for item in annotations}
-        for item in annotations:
-            annotations_by_paragraph[item.paragraph_index].append(item)
 
-        for index, paragraph in enumerate(document.paragraphs):
-            paragraph_annotations = annotations_by_paragraph.get(index, [])
-            if not paragraph_annotations:
-                continue
-            run = paragraph.add_run(f" [审核标记:{len(paragraph_annotations)}]")
-            run.font.color.rgb = self._severity_color(paragraph_annotations[0].severity)
-
-        document.add_page_break()
-        document.add_heading("AI 审核批注", level=1)
-        if document_title:
-            document.add_paragraph(f"文档标题: {document_title}")
-
-        if not annotations:
-            document.add_paragraph("未生成批注。")
-        else:
-            for idx, annotation in enumerate(annotations, start=1):
-                document.add_heading(f"{idx}. {annotation.title}", level=2)
-                document.add_paragraph(f"段落索引: {annotation.paragraph_index}")
-                document.add_paragraph(f"严重级别: {annotation.severity}")
-                if annotation.source_excerpt:
-                    document.add_paragraph(f"命中原文: {annotation.source_excerpt}")
-                document.add_paragraph(annotation.comment)
+        for annotation in annotations:
+            paragraph = self._resolve_paragraph(document, annotation.paragraph_index)
+            anchor_run = self._resolve_anchor_run(paragraph)
+            document.add_comment(
+                runs=anchor_run,
+                text=self._build_comment_text(annotation),
+                author="AI Review",
+                initials="AI",
+            )
 
         document.save(output)
         return AnnotatedWordDocument(
             source_path=source,
             output_path=output,
             annotation_count=len(annotations),
-            metadata={"document_title": document_title or source.stem},
+            metadata={
+                "document_title": document_title or source.stem,
+                "comment_mode": "native",
+            },
         )
 
-    def _severity_color(self, severity: str) -> RGBColor:
-        normalized = severity.lower()
-        if normalized == "high":
-            return RGBColor(0xC0, 0x00, 0x00)
-        if normalized == "low":
-            return RGBColor(0x00, 0x66, 0x33)
-        return RGBColor(0xB4, 0x5F, 0x06)
+    def _resolve_paragraph(self, document: DocumentObject, paragraph_index: int):
+        paragraphs = document.paragraphs
+        if not paragraphs:
+            return document.add_paragraph("")
+        if 0 <= paragraph_index < len(paragraphs):
+            return paragraphs[paragraph_index]
+        return paragraphs[0]
+
+    def _resolve_anchor_run(self, paragraph) -> Run:
+        if paragraph.runs:
+            return paragraph.runs[0]
+        return paragraph.add_run(" ")
+
+    def _build_comment_text(self, annotation: WordAnnotation) -> str:
+        parts = [f"[{annotation.severity.upper()}] {annotation.title}", annotation.comment]
+        if annotation.source_excerpt:
+            parts.append(f"命中原文：{annotation.source_excerpt}")
+        return "\n".join(part for part in parts if part)

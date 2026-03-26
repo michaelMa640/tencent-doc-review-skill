@@ -1,7 +1,8 @@
 import shutil
 import sys
-import uuid
 import unittest
+import uuid
+import zipfile
 from pathlib import Path
 
 from docx import Document
@@ -41,7 +42,7 @@ class PhaseCWordAnnotationFlowTests(unittest.TestCase):
         self.assertTrue(parsed.paragraphs[0].is_heading)
         self.assertEqual(parsed.paragraphs[1].text, "第一段内容。")
 
-    def test_word_annotator_exports_annotated_docx(self):
+    def test_word_annotator_exports_native_comments(self):
         source_path = self._create_sample_docx()
         output_path = self.tmpdir / "annotated.docx"
 
@@ -69,12 +70,16 @@ class PhaseCWordAnnotationFlowTests(unittest.TestCase):
 
         self.assertTrue(output_path.exists())
         self.assertEqual(result.annotation_count, 2)
+        self.assertEqual(result.metadata["comment_mode"], "native")
 
         rendered = Document(output_path)
-        texts = [paragraph.text for paragraph in rendered.paragraphs]
-        self.assertTrue(any("审核标记" in text for text in texts))
-        self.assertTrue(any("AI 审核批注" in text for text in texts))
-        self.assertTrue(any("这里需要补充数据来源。" in text for text in texts))
+        self.assertEqual(len(rendered.comments), 2)
+        self.assertIn("AI Review", [comment.author for comment in rendered.comments])
+        self.assertTrue(any("这里需要补充数据来源。" in comment.text for comment in rendered.comments))
+
+        with zipfile.ZipFile(output_path) as package:
+            names = set(package.namelist())
+            self.assertIn("word/comments.xml", names)
 
 
 if __name__ == "__main__":

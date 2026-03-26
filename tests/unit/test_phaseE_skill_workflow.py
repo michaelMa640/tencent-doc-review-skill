@@ -56,6 +56,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
                     path_hint="/review-results",
                 ),
                 download_directory=str(tmpdir),
+                llm_provider="mock",
             )
 
             response = await SkillPipeline().run(client, request)
@@ -65,6 +66,8 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(response.annotated_word_path.endswith("-annotated.docx"))
             self.assertEqual(response.target_location.folder_id, "folder-456")
             self.assertTrue(response.metadata["used_text_fallback"])
+            self.assertGreater(response.metadata["annotation_count"], 0)
+            self.assertIn("markdown", response.generated_reports)
             self.assertEqual(client.last_reference.metadata["preferred_download_dir"], str(tmpdir))
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -93,6 +96,8 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
                 "folder-456",
                 "--target-path",
                 "/review-results",
+                "--provider",
+                "mock",
             ],
         )
 

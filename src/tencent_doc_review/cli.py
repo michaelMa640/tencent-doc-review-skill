@@ -25,6 +25,7 @@ from .access import (
 from .analyzer.document_analyzer import DocumentAnalyzer
 from .llm.factory import create_llm_client
 from .skill import SkillRequest, SkillRuntimeInfo
+from .templates import get_default_review_template_path, read_default_review_template
 from .tencent_doc_client import TencentDocClient
 from .workflows import SkillPipeline
 from .writers import DocAppendWriter, ReportGenerator
@@ -115,6 +116,7 @@ def skill_info() -> None:
 @click.option("--doc-id", "doc_id", type=str)
 @click.option("--template-file", "template_file", type=click.Path(exists=True))
 @click.option("--template-doc-id", "template_doc_id", type=str)
+@click.option("--default-template", "default_template", is_flag=True, help="Use the built-in default review template.")
 @click.option("--output", "output_path", type=click.Path())
 @click.option("--format", "output_format", type=click.Choice(["markdown", "json", "html"]), default="markdown")
 @click.option("--writeback-mode", "writeback_mode", type=click.Choice(["none", "append"]), default="none")
@@ -127,6 +129,7 @@ def analyze(
     doc_id: Optional[str],
     template_file: Optional[str],
     template_doc_id: Optional[str],
+    default_template: bool,
     output_path: Optional[str],
     output_format: str,
     writeback_mode: str,
@@ -142,6 +145,7 @@ def analyze(
             doc_id,
             template_file,
             template_doc_id,
+            default_template,
             output_path,
             output_format,
             writeback_mode,
@@ -173,6 +177,7 @@ def analyze(
 )
 @click.option("--bridge-executable", "bridge_executable", default="", type=str)
 @click.option("--bridge-args", "bridge_args", default="", type=str)
+@click.option("--provider", "provider", default="", type=str, help="LLM provider used during review.")
 def skill_run(
     doc_id: str,
     title: str,
@@ -184,6 +189,7 @@ def skill_run(
     mcp_client_name: Optional[str],
     bridge_executable: str,
     bridge_args: str,
+    provider: str,
 ) -> None:
     """Run the shared skill workflow with a local MCP client implementation."""
     asyncio.run(
@@ -198,6 +204,7 @@ def skill_run(
             mcp_client_name=mcp_client_name,
             bridge_executable=bridge_executable,
             bridge_args=bridge_args,
+            provider=provider,
         )
     )
 
@@ -207,6 +214,7 @@ async def _analyze(
     doc_id: Optional[str],
     template_file: Optional[str],
     template_doc_id: Optional[str],
+    default_template: bool,
     output_path: Optional[str],
     output_format: str,
     writeback_mode: str,
@@ -219,8 +227,12 @@ async def _analyze(
         raise click.UsageError("Provide exactly one of --input-file or --doc-id.")
     if template_file and template_doc_id:
         raise click.UsageError("Provide at most one of --template-file or --template-doc-id.")
+    if default_template and (template_file or template_doc_id):
+        raise click.UsageError("Do not combine --default-template with --template-file or --template-doc-id.")
     if writeback_mode != "none" and not doc_id:
         raise click.UsageError("Writeback is only supported with --doc-id.")
+
+    resolved_template_text = read_default_review_template() if default_template else None
 
     settings = get_settings()
     client = create_llm_client(
@@ -240,6 +252,7 @@ async def _analyze(
             result = await analyzer.analyze_from_tencent_doc(
                 file_id=doc_id,
                 template_file_id=template_doc_id,
+                template_text=resolved_template_text,
             )
             if writeback_mode == "append":
                 writeback_result = await DocAppendWriter().write(doc_client, doc_id, result)
@@ -247,7 +260,7 @@ async def _analyze(
             analyzer = DocumentAnalyzer(llm_client=client)
             result = await analyzer.analyze(
                 document_text=_read_text(input_file) or "",
-                template_text=_read_text(template_file),
+                template_text=_read_text(template_file) if template_file else resolved_template_text,
                 document_title=Path(input_file or "").name,
             )
 
@@ -258,6 +271,8 @@ async def _analyze(
             click.echo(f"Saved analysis to {output_path}")
         else:
             click.echo(rendered)
+        if default_template:
+            click.echo(f"Template: built-in default ({get_default_review_template_path()})")
         if writeback_result is not None:
             click.echo(f"Writeback mode: {writeback_result.get('mode', 'append')}")
     finally:
@@ -336,6 +351,7 @@ async def _skill_run(
     mcp_client_name: Optional[str],
     bridge_executable: str,
     bridge_args: str,
+    provider: str,
 ) -> None:
     settings = reload_settings()
     client = _create_skill_mcp_client(
@@ -355,6 +371,7 @@ async def _skill_run(
             display_name=target_path or target_folder_id,
         ),
         download_directory=download_dir,
+        llm_provider=provider or settings.llm_provider,
     )
     try:
         response = await SkillPipeline().run(client, request)

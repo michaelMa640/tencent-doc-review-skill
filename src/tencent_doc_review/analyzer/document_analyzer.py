@@ -335,19 +335,20 @@ class DocumentAnalyzer:
         self,
         file_id: str,
         template_file_id: Optional[str] = None,
+        template_text: Optional[str] = None,
         config: Optional[AnalysisConfig] = None,
     ) -> AnalysisResult:
         if self.mcp_client is None:
             raise ValueError("TencentDoc client is required for Tencent Docs analysis")
 
         document_info, document_text = await self.mcp_client.get_document_bundle(file_id)
-        template_text = None
+        resolved_template_text = template_text
         if template_file_id:
-            template_text = await self.mcp_client.get_document_content(template_file_id)
+            resolved_template_text = await self.mcp_client.get_document_content(template_file_id)
 
         result = await self.analyze(
             document_text=document_text,
-            template_text=template_text,
+            template_text=resolved_template_text,
             document_id=file_id,
             document_title=document_info.title or file_id,
             config=config,

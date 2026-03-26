@@ -36,7 +36,12 @@ from .document import (
     WordParser,
 )
 from .skill import SkillRequest, SkillResponse, SkillRuntimeInfo
-from .templates import get_default_review_template_path, read_default_review_template
+from .templates import (
+    get_default_review_rules_path,
+    get_default_review_template_path,
+    read_default_review_rules,
+    read_default_review_template,
+)
 from .workflows import SkillPipeline, SkillPipelineArtifacts
 from .domain import ReviewIssue, ReviewIssueType, ReviewReport, ReviewSeverity
 from .llm import LLMClient, LLMResponse, SUPPORTED_PROVIDERS, UsageInfo, create_llm_client
@@ -73,7 +78,9 @@ __all__ = [
     "SkillRequest",
     "SkillResponse",
     "SkillRuntimeInfo",
+    "get_default_review_rules_path",
     "get_default_review_template_path",
+    "read_default_review_rules",
     "read_default_review_template",
     "WordAnnotation",
     "WordAnnotator",

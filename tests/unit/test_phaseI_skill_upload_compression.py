@@ -64,6 +64,7 @@ class PhaseISkillUploadCompressionTests(unittest.IsolatedAsyncioTestCase):
                 source_document=TencentDocReference(doc_id="doc-oversized", title="Oversized Demo"),
                 target_location=UploadTarget(folder_id="folder-456", space_type="personal_space"),
                 max_upload_size_bytes=300_000,
+                llm_provider="mock",
             )
 
             response = await SkillPipeline().run(client, request)

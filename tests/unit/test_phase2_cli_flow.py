@@ -96,6 +96,40 @@ class Phase2CliFlowTests(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_cli_analyze_supports_default_template_flag(self):
+        runner = CliRunner()
+        tmpdir = TMP_ROOT / f"phase2-default-template-{uuid.uuid4().hex}"
+        tmpdir.mkdir(parents=True, exist_ok=True)
+        try:
+            input_path = tmpdir / "input.md"
+            output_path = tmpdir / "report.md"
+
+            input_path.write_text("# 示例文章\n\n## 产品概述\n内容。\n", encoding="utf-8")
+
+            result = runner.invoke(
+                main,
+                [
+                    "analyze",
+                    "--input-file",
+                    str(input_path),
+                    "--default-template",
+                    "--output",
+                    str(output_path),
+                    "--format",
+                    "markdown",
+                    "--provider",
+                    "mock",
+                ],
+            )
+
+            self.assertEqual(result.exit_code, 0, msg=result.output)
+            self.assertTrue(output_path.exists())
+            self.assertIn("Template: built-in default", result.output)
+            content = output_path.read_text(encoding="utf-8")
+            self.assertIn("Structure Match", content)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()
