@@ -1,23 +1,20 @@
 # Tencent Doc Review Skill
 
-基于 LLM 的腾讯文档文章审核工具，当前默认接入 DeepSeek，但架构已支持按 provider 切换模型接入层。
+基于 LLM 的腾讯文档审核与批注工具。当前项目已经切到真实可用的 v3 路线：
+
+- 通过腾讯文档 MCP 直接下载原始 `.docx`
+- 在本地生成批注版和压缩版 `.docx`
+- 自动在上传前压缩超限文档
+- 上传到腾讯文档指定位置
 
 ## 当前能力
 
-- 事实核查框架
 - 结构匹配
 - 质量评估
-- 统一分析结果模型
-- 本地 CLI
-- 腾讯文档读取客户端占位实现
-- Markdown / JSON 报告输出
-
-## LLM 架构
-
-- 分析器依赖统一 LLM 接口
-- 当前内置 provider: `deepseek`, `openai`, `mock`
-- 后续可以继续增加 `openai`、`qwen`、`claude` 等 provider
-- `deepseek_client.py` 现在是兼容导出层，不再是唯一的架构入口
+- 事实核查框架
+- 本地 Word 批注导出
+- OpenClaw / Claude Code skill 桥接
+- Markdown / JSON / HTML 报告输出
 
 ## 安装
 
@@ -25,19 +22,13 @@
 pip install -e .
 ```
 
-开发依赖:
+开发依赖：
 
 ```bash
 pip install -e ".[dev]"
 ```
 
-标准构建包:
-
-```bash
-python -m build
-```
-
-安装后可先检查本地配置:
+检查本地配置：
 
 ```bash
 tencent-doc-review doctor
@@ -51,7 +42,6 @@ LLM_API_KEY=your_llm_key
 LLM_BASE_URL=https://api.deepseek.com/v1
 LLM_MODEL=deepseek-chat
 
-# 兼容旧配置，仍可继续使用
 DEEPSEEK_API_KEY=your_deepseek_key
 DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 DEEPSEEK_MODEL=deepseek-chat
@@ -60,109 +50,121 @@ TENCENT_DOCS_TOKEN=your_access_token
 TENCENT_DOCS_CLIENT_ID=your_client_id
 TENCENT_DOCS_OPEN_ID=your_open_id
 TENCENT_DOCS_BASE_URL=https://docs.qq.com/openapi
-```
 
-本地不依赖真实 API 的链路验证可用：
-
-```bash
-LLM_PROVIDER=mock
+SKILL_MCP_CLIENT=openclaw
+MCP_BRIDGE_TIMEOUT=180
+OPENCLAW_MCP_BRIDGE_EXECUTABLE=python
+OPENCLAW_MCP_BRIDGE_ARGS=E:\\VibeCoding\\tencent-doc-review\\src\\tencent_doc_review\\access\\openclaw_bridge.py --openclaw-executable C:\\Users\\VBTvisitor\\AppData\\Roaming\\npm\\openclaw.cmd --agent-id main --no-local
 ```
 
 ## CLI
 
-检查配置:
+检查配置：
 
 ```bash
 tencent-doc-review doctor
 ```
 
-分析本地文档:
+分析本地文件：
 
 ```bash
 tencent-doc-review analyze --input-file article.md --template-file template.md --output report.md
 ```
 
-输出 JSON:
+输出 JSON：
 
 ```bash
 tencent-doc-review analyze --input-file article.md --format json --output report.json
 ```
 
-输出 HTML:
+输出 HTML：
 
 ```bash
 tencent-doc-review analyze --input-file article.md --format html --output report.html
 ```
 
-分析腾讯文档:
+## Skill 工作流
+
+### OpenClaw bridge
 
 ```bash
-tencent-doc-review analyze --doc-id 300000000$abc123 --template-doc-id 300000000$tpl456 --output report.md
+tencent-doc-review skill-run ^
+  --doc-id "DUnF6UXJFRGNSV1NM" ^
+  --title "副本-蝉镜产品调研报告-michael" ^
+  --target-folder-id "RaVWacrBtGfN" ^
+  --target-space-type personal_space ^
+  --target-path "/更改" ^
+  --download-dir "E:\\VibeCoding\\tencent-doc-review\\downloads" ^
+  --mcp-client openclaw ^
+  --bridge-executable python ^
+  --bridge-args "E:\\VibeCoding\\tencent-doc-review\\src\\tencent_doc_review\\access\\openclaw_bridge.py --openclaw-executable C:\\Users\\VBTvisitor\\AppData\\Roaming\\npm\\openclaw.cmd --agent-id main --no-local"
 ```
 
-分析腾讯文档并将审核建议追加写回文档末尾:
+### 真实联调结果
 
-```bash
-tencent-doc-review analyze --doc-id 300000000$abc123 --template-doc-id 300000000$tpl456 --writeback-mode append --output report.md
-```
+已验证成功的真实链路：
 
-## 发布说明
+- MCP 直接下载原始 `.docx`
+- 批注版直接生成在下载目录旁边
+- 超过 10MB 时自动压缩
+- 压缩后成功上传到腾讯文档个人空间目标文件夹
 
-发布与 Docker 用法见 [docs/Release-Guide.md](docs/Release-Guide.md)。
+示例结果：
 
-## Python 用法
+- 原始文件：[副本-产品质量调研报告-michael.docx](E:/VibeCoding/tencent-doc-review/downloads/副本-产品质量调研报告-michael.docx)
+- 批注版：[副本-产品质量调研报告-michael-annotated.docx](E:/VibeCoding/tencent-doc-review/downloads/副本-产品质量调研报告-michael-annotated.docx)
+- 压缩版：[副本-产品质量调研报告-michael-annotated-compressed.docx](E:/VibeCoding/tencent-doc-review/downloads/副本-产品质量调研报告-michael-annotated-compressed.docx)
+- 远端链接：[https://docs.qq.com/doc/DUnJMcW9MTUtwV0xh](https://docs.qq.com/doc/DUnJMcW9MTUtwV0xh)
 
-```python
-import asyncio
+## `-compressed-1600` 是什么
 
-from tencent_doc_review import create_llm_client
-from tencent_doc_review.analyzer.document_analyzer import DocumentAnalyzer
+像 `副本-产品质量调研报告-michael-annotated-compressed-1600.docx` 这样的文件，是压缩器在尝试某一档图片宽度时生成的中间试算文件。
 
+现在代码已经改过：
 
-async def main() -> None:
-    client = create_llm_client(
-        provider="deepseek",
-        api_key="your-api-key",
-        base_url="https://api.deepseek.com/v1",
-        model="deepseek-chat",
-    )
-    analyzer = DocumentAnalyzer(llm_client=client)
+- 中间试算文件只在压缩过程中临时存在
+- 压缩完成后只保留最终的 `-annotated-compressed.docx`
 
-    result = await analyzer.analyze(
-        document_text="# 示例文档\n\n这里是待审核内容。",
-        template_text="# 模板\n\n## 背景\n## 结论",
-        document_title="示例文档",
-    )
-
-    print(result.to_markdown())
-    await client.close()
-
-
-asyncio.run(main())
-```
-
-## 代码结构
+## 项目目录
 
 ```text
 src/tencent_doc_review/
-  __init__.py
+  access/
+    agent_mcp_client.py
+    download_manager.py
+    mcp_adapter.py
+    openclaw_bridge.py
+    upload_manager.py
+  analyzer/
+  document/
+    docx_compressor.py
+    word_annotator.py
+    word_parser.py
+  skill/
+  workflows/
+    skill_pipeline.py
   cli.py
   config.py
-  deepseek_client.py
-  tencent_doc_client.py
-  mcp_client.py
-  llm/
-    base.py
-    factory.py
-    providers/
-      deepseek.py
-      openai.py
-  analyzer/
-    document_analyzer.py
-    fact_checker.py
-    quality_evaluator.py
-    structure_matcher.py
+
+docs/
+  PRD-v2.md
+  PRD-v3.md
+  执行情况-v3/
+
+downloads/
+  运行时下载与本地输出目录（已 git ignore）
+
+tests/
+  fixtures/
+  unit/
 ```
+
+## 目录约定
+
+- `downloads/`：真实联调下载、批注版、压缩版输出目录
+- `docs/执行情况-v3/`：v3 路线执行记录
+- `tests/.tmp/`：测试临时目录，已忽略
+- `.tmp/`：运行时临时目录，已忽略
 
 ## 仓库
 
@@ -172,30 +174,3 @@ src/tencent_doc_review/
 ## 许可
 
 MIT License
-
-## Skill Bridge
-
-The v3 skill workflow now supports command-bridge MCP clients.
-
-Environment variables:
-
-```bash
-SKILL_MCP_CLIENT=openclaw
-MCP_BRIDGE_TIMEOUT=180
-OPENCLAW_MCP_BRIDGE_EXECUTABLE=python
-OPENCLAW_MCP_BRIDGE_ARGS=-m tencent_doc_review.access.openclaw_bridge --openclaw-executable openclaw.cmd --agent-id main
-```
-
-CLI example:
-
-```bash
-tencent-doc-review skill-run ^
-  --doc-id "DUxxxxxxxxxxxxxxx" ^
-  --title "测试文档" ^
-  --target-folder-id "RaVWacrBtGfN" ^
-  --target-space-type personal_space ^
-  --target-path "/更改" ^
-  --mcp-client openclaw ^
-  --bridge-executable python ^
-  --bridge-args "-m tencent_doc_review.access.openclaw_bridge --openclaw-executable openclaw.cmd --agent-id main"
-```

@@ -84,6 +84,7 @@ class PhaseBMCPDownloadFlowTests(unittest.IsolatedAsyncioTestCase):
             )
 
             self.assertTrue(downloaded.file_path.exists())
+            self.assertEqual(downloaded.file_path, tmpdir / "downloaded-source.docx")
             paragraphs = [p.text for p in Document(downloaded.file_path).paragraphs]
             self.assertIn("Downloaded file paragraph.", paragraphs)
             self.assertFalse(downloaded.metadata["used_text_fallback"])

@@ -72,6 +72,8 @@ class PhaseISkillUploadCompressionTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(client.uploaded_local_path)
             assert client.uploaded_local_path is not None
             self.assertTrue(client.uploaded_local_path.name.endswith("-compressed.docx"))
+            self.assertEqual(client.uploaded_local_path.parent, tmpdir)
+            self.assertEqual(Path(response.annotated_word_path).parent, tmpdir)
             self.assertTrue(response.metadata["compression_applied"])
             self.assertLessEqual(response.metadata["compression_result_size"], response.metadata["compression_original_size"])
         finally:

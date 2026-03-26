@@ -79,10 +79,20 @@ class DownloadManager:
         )
 
     def materialize(self, payload: MCPDownloadPayload, plan: DownloadPlan) -> DownloadedDocument:
-        plan.target_dir.mkdir(parents=True, exist_ok=True)
         if payload.source_path is not None and payload.source_path.exists():
-            plan.file_path.write_bytes(payload.source_path.read_bytes())
-        elif payload.content_bytes:
+            metadata = dict(payload.metadata)
+            metadata.setdefault("source_path", str(payload.source_path))
+            return DownloadedDocument(
+                reference=plan.reference,
+                file_path=payload.source_path,
+                download_format=plan.download_format,
+                filename=payload.source_path.name,
+                purpose=plan.purpose,
+                metadata=metadata,
+            )
+
+        plan.target_dir.mkdir(parents=True, exist_ok=True)
+        if payload.content_bytes:
             plan.file_path.write_bytes(payload.content_bytes)
         else:
             self._materialize_from_text(payload, plan)

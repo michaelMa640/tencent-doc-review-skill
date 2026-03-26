@@ -341,6 +341,7 @@
 - 腾讯文档 MCP 概述：[https://docs.qq.com/open/document/mcp/](https://docs.qq.com/open/document/mcp/)
 - 真实 MCP 能力验证记录：[真实MCP能力验证记录](执行情况-v3/真实MCP能力验证记录.md)
 - 下载优先更新记录：[真实MCP能力验证记录-下载优先更新](执行情况-v3/真实MCP能力验证记录-下载优先更新.md)
+- 真实联调结果：[真实联调结果](执行情况-v3/真实联调结果.md)
 
 ## 17. v3 开发计划
 

@@ -68,11 +68,14 @@ class DocxCompressor:
     ) -> DocxCompressionResult:
         source = Path(source_path)
         best_result: DocxCompressionResult | None = None
+        temp_candidates: list[Path] = []
 
         for index, width in enumerate(self.width_candidates):
             candidate_path = output_path if index == len(self.width_candidates) - 1 else output_path.with_name(
                 f"{output_path.stem}-{width}{output_path.suffix}"
             )
+            if candidate_path != output_path:
+                temp_candidates.append(candidate_path)
             result = self.compress(source, candidate_path, max_image_width=width)
             result.target_met = result.compressed_size <= target_max_bytes
             if best_result is None or result.compressed_size < best_result.compressed_size:
@@ -92,6 +95,9 @@ class DocxCompressor:
                 target_met=best_result.compressed_size <= target_max_bytes,
                 max_image_width=best_result.max_image_width,
             )
+        for candidate_path in temp_candidates:
+            if candidate_path.exists():
+                candidate_path.unlink()
         return best_result
 
     def _compress_png(self, data: bytes, max_image_width: int) -> bytes | None:

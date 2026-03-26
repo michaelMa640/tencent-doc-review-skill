@@ -26,6 +26,12 @@ coverage.xml
 # Logs and runtime files
 logs/
 *.log
+.tmp/
+downloads/*
+!downloads/.gitkeep
+report.md
+pytest-cache-files-*/
+tests/.tmp/
 
 # Editor and OS files
 .vscode/

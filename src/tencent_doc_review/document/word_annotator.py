@@ -50,6 +50,8 @@ class WordAnnotator:
         source = Path(source_path)
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)
+        if output.exists():
+            output.unlink()
 
         document = Document(source)
         annotations_by_paragraph = {item.paragraph_index: [] for item in annotations}

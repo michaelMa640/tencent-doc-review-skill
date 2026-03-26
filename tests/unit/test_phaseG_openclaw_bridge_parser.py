@@ -49,7 +49,7 @@ class PhaseGOpenClawBridgeParserTests(unittest.TestCase):
 
     def test_build_export_prompt_prefers_download_and_mentions_fallback(self):
         prompt = build_export_prompt({"doc_id": "DU123", "title": "Demo"}, "C:/Users/VBTvisitor/Desktop/test")
-        self.assertIn("First, use Tencent Docs MCP to download the target document as a docx file", prompt)
+        self.assertIn("First, use Tencent Docs MCP to download the target Tencent document as a docx file", prompt)
         self.assertIn("source_path", prompt)
         self.assertIn("text_fallback", prompt)
         self.assertIn("C:/Users/VBTvisitor/Desktop/test", prompt)
