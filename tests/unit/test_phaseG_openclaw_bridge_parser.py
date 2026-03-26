@@ -37,7 +37,7 @@ class PhaseGOpenClawBridgeParserTests(unittest.TestCase):
 
     def test_extract_agent_json_accepts_source_path_payload(self):
         response = {
-            "text": '{"filename":"demo.docx","source_path":"C:/Users/VBTvisitor/Desktop/test/demo.docx","metadata":{"source":"openclaw","mode":"download"}}'
+            "text": '{"filename":"demo.docx","source_path":"C:/Users/testuser/Desktop/test/demo.docx","metadata":{"source":"openclaw","mode":"download"}}'
         }
         payload = extract_agent_json(response)
         self.assertEqual(payload["filename"], "demo.docx")
@@ -48,11 +48,11 @@ class PhaseGOpenClawBridgeParserTests(unittest.TestCase):
             extract_agent_json({"text": "Connection error."})
 
     def test_build_export_prompt_prefers_download_and_mentions_fallback(self):
-        prompt = build_export_prompt({"doc_id": "DU123", "title": "Demo"}, "C:/Users/VBTvisitor/Desktop/test")
+        prompt = build_export_prompt({"doc_id": "DU123", "title": "Demo"}, "C:/Users/testuser/Desktop/test")
         self.assertIn("First, use Tencent Docs MCP to download the target Tencent document as a docx file", prompt)
         self.assertIn("source_path", prompt)
         self.assertIn("text_fallback", prompt)
-        self.assertIn("C:/Users/VBTvisitor/Desktop/test", prompt)
+        self.assertIn("C:/Users/testuser/Desktop/test", prompt)
 
 
 if __name__ == "__main__":

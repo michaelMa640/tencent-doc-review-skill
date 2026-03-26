@@ -41,4 +41,4 @@ python -m unittest tests.unit.test_phase2_cli_flow tests.unit.test_phase3_llm_in
   - `pytest tests -q`
   - `python -m unittest tests.unit.test_phase2_cli_flow tests.unit.test_phase3_llm_interface tests.unit.test_phase4_review_models`
 
-Maintainer: Michael Ma
+Maintainer: project contributors

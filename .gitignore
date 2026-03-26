@@ -32,6 +32,8 @@ downloads/*
 report.md
 pytest-cache-files-*/
 tests/.tmp/
+docs/
+项目方案.md
 
 # Editor and OS files
 .vscode/

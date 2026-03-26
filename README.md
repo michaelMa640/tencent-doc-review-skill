@@ -1,19 +1,19 @@
 # Tencent Doc Review Skill
 
-基于 LLM 的腾讯文档审核与批注工具。当前项目已经切到真实可用的 v3 路线：
+基于 LLM 的腾讯文档审核与批注工具。当前主路径是：
 
-- 通过腾讯文档 MCP 直接下载原始 `.docx`
+- 通过 MCP 下载原始 `.docx`
 - 在本地生成批注版和压缩版 `.docx`
-- 自动在上传前压缩超限文档
+- 超过上传限制时自动压缩
 - 上传到腾讯文档指定位置
 
-## 当前能力
+## 能力概览
 
-- 结构匹配
-- 质量评估
+- 语言质量检查
 - 事实核查框架
+- 结构匹配
 - 本地 Word 批注导出
-- OpenClaw / Claude Code skill 桥接
+- OpenClaw / Claude Code bridge
 - Markdown / JSON / HTML 报告输出
 
 ## 安装
@@ -28,12 +28,6 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-检查本地配置：
-
-```bash
-tencent-doc-review doctor
-```
-
 ## 环境变量
 
 ```bash
@@ -41,10 +35,6 @@ LLM_PROVIDER=deepseek
 LLM_API_KEY=your_llm_key
 LLM_BASE_URL=https://api.deepseek.com/v1
 LLM_MODEL=deepseek-chat
-
-DEEPSEEK_API_KEY=your_deepseek_key
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
-DEEPSEEK_MODEL=deepseek-chat
 
 TENCENT_DOCS_TOKEN=your_access_token
 TENCENT_DOCS_CLIENT_ID=your_client_id
@@ -54,10 +44,10 @@ TENCENT_DOCS_BASE_URL=https://docs.qq.com/openapi
 SKILL_MCP_CLIENT=openclaw
 MCP_BRIDGE_TIMEOUT=180
 OPENCLAW_MCP_BRIDGE_EXECUTABLE=python
-OPENCLAW_MCP_BRIDGE_ARGS=E:\\VibeCoding\\tencent-doc-review\\src\\tencent_doc_review\\access\\openclaw_bridge.py --openclaw-executable C:\\Users\\VBTvisitor\\AppData\\Roaming\\npm\\openclaw.cmd --agent-id main --no-local
+OPENCLAW_MCP_BRIDGE_ARGS=path/to/openclaw_bridge.py --openclaw-executable path/to/openclaw.cmd --agent-id main --no-local
 ```
 
-## CLI
+## 常用命令
 
 检查配置：
 
@@ -83,93 +73,66 @@ tencent-doc-review analyze --input-file article.md --format json --output report
 tencent-doc-review analyze --input-file article.md --format html --output report.html
 ```
 
-## Skill 工作流
+## 默认审核模板
 
-### OpenClaw bridge
+项目内置了默认的产品调研报告审核模板：
+
+- [default_product_research_review_template.md](E:/VibeCoding/tencent-doc-review/src/tencent_doc_review/templates/default_product_research_review_template.md)
+
+它默认覆盖三类检查：
+
+- 语言问题核查
+- 事实核查与来源链接
+- 基于产品调研报告撰写要求的结构完整性检查
+
+示例：
+
+```bash
+tencent-doc-review analyze --input-file article.md --template-file E:\VibeCoding\tencent-doc-review\src\tencent_doc_review\templates\default_product_research_review_template.md --output report.md
+```
+
+## Skill 工作流
 
 ```bash
 tencent-doc-review skill-run ^
-  --doc-id "DUnF6UXJFRGNSV1NM" ^
-  --title "副本-蝉镜产品调研报告-michael" ^
-  --target-folder-id "RaVWacrBtGfN" ^
+  --doc-id "your_doc_id" ^
+  --title "your_doc_title" ^
+  --target-folder-id "your_target_folder_id" ^
   --target-space-type personal_space ^
-  --target-path "/更改" ^
+  --target-path "/target-folder" ^
   --download-dir "E:\\VibeCoding\\tencent-doc-review\\downloads" ^
   --mcp-client openclaw ^
   --bridge-executable python ^
-  --bridge-args "E:\\VibeCoding\\tencent-doc-review\\src\\tencent_doc_review\\access\\openclaw_bridge.py --openclaw-executable C:\\Users\\VBTvisitor\\AppData\\Roaming\\npm\\openclaw.cmd --agent-id main --no-local"
+  --bridge-args "path/to/openclaw_bridge.py --openclaw-executable path/to/openclaw.cmd --agent-id main --no-local"
 ```
 
-### 真实联调结果
-
-已验证成功的真实链路：
-
-- MCP 直接下载原始 `.docx`
-- 批注版直接生成在下载目录旁边
-- 超过 10MB 时自动压缩
-- 压缩后成功上传到腾讯文档个人空间目标文件夹
-
-示例结果：
-
-- 原始文件：[副本-产品质量调研报告-michael.docx](E:/VibeCoding/tencent-doc-review/downloads/副本-产品质量调研报告-michael.docx)
-- 批注版：[副本-产品质量调研报告-michael-annotated.docx](E:/VibeCoding/tencent-doc-review/downloads/副本-产品质量调研报告-michael-annotated.docx)
-- 压缩版：[副本-产品质量调研报告-michael-annotated-compressed.docx](E:/VibeCoding/tencent-doc-review/downloads/副本-产品质量调研报告-michael-annotated-compressed.docx)
-- 远端链接：[https://docs.qq.com/doc/DUnJMcW9MTUtwV0xh](https://docs.qq.com/doc/DUnJMcW9MTUtwV0xh)
-
-## `-compressed-1600` 是什么
-
-像 `副本-产品质量调研报告-michael-annotated-compressed-1600.docx` 这样的文件，是压缩器在尝试某一档图片宽度时生成的中间试算文件。
-
-现在代码已经改过：
-
-- 中间试算文件只在压缩过程中临时存在
-- 压缩完成后只保留最终的 `-annotated-compressed.docx`
-
-## 项目目录
+## 目录说明
 
 ```text
 src/tencent_doc_review/
   access/
-    agent_mcp_client.py
-    download_manager.py
-    mcp_adapter.py
-    openclaw_bridge.py
-    upload_manager.py
   analyzer/
   document/
-    docx_compressor.py
-    word_annotator.py
-    word_parser.py
+  domain/
+  llm/
   skill/
+  templates/
   workflows/
-    skill_pipeline.py
-  cli.py
-  config.py
-
-docs/
-  PRD-v2.md
-  PRD-v3.md
-  执行情况-v3/
 
 downloads/
-  运行时下载与本地输出目录（已 git ignore）
+  运行时下载与本地输出目录
 
 tests/
   fixtures/
   unit/
+  integration/
+  performance/
 ```
 
-## 目录约定
+## 说明
 
-- `downloads/`：真实联调下载、批注版、压缩版输出目录
-- `docs/执行情况-v3/`：v3 路线执行记录
-- `tests/.tmp/`：测试临时目录，已忽略
-- `.tmp/`：运行时临时目录，已忽略
-
-## 仓库
-
-- Repository: [michaelMa640/tencent-doc-review-skill](https://github.com/michaelMa640/tencent-doc-review-skill)
-- Email: michaelma640@163.com
+- `downloads/` 为本地运行产物目录，已忽略 Git 跟踪。
+- `docs/` 和项目方案类文档默认视为本地内部文档，不再上传到 GitHub。
 
 ## 许可
 

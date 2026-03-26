@@ -1,7 +1,7 @@
 """Tencent document review toolkit."""
 
 __version__ = "0.1.0"
-__author__ = "Michael Ma"
+__author__ = "Tencent Doc Review Contributors"
 
 from .config import Settings, get_settings
 from .access import (
@@ -36,6 +36,7 @@ from .document import (
     WordParser,
 )
 from .skill import SkillRequest, SkillResponse, SkillRuntimeInfo
+from .templates import get_default_review_template_path, read_default_review_template
 from .workflows import SkillPipeline, SkillPipelineArtifacts
 from .domain import ReviewIssue, ReviewIssueType, ReviewReport, ReviewSeverity
 from .llm import LLMClient, LLMResponse, SUPPORTED_PROVIDERS, UsageInfo, create_llm_client
@@ -72,6 +73,8 @@ __all__ = [
     "SkillRequest",
     "SkillResponse",
     "SkillRuntimeInfo",
+    "get_default_review_template_path",
+    "read_default_review_template",
     "WordAnnotation",
     "WordAnnotator",
     "WordParser",

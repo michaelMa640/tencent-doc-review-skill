@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Michael Ma", email = "michaelma640@163.com"}
+    {name = "Tencent Doc Review Contributors"}
 ]
 keywords = [
     "llm",
@@ -72,13 +72,6 @@ docs = [
 tencent-doc-review = "tencent_doc_review.cli:main"
 tdr = "tencent_doc_review.cli:main"
 
-[project.urls]
-Homepage = "https://github.com/michaelMa640/tencent-doc-review-skill"
-Documentation = "https://github.com/michaelMa640/tencent-doc-review-skill#readme"
-Repository = "https://github.com/michaelMa640/tencent-doc-review-skill.git"
-"Bug Tracker" = "https://github.com/michaelMa640/tencent-doc-review-skill/issues"
-Changelog = "https://github.com/michaelMa640/tencent-doc-review-skill/blob/main/CHANGELOG.md"
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 
@@ -86,7 +79,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-tencent_doc_review = ["py.typed", "*.yaml", "*.json"]
+tencent_doc_review = ["py.typed", "*.yaml", "*.json", "templates/*.md"]
 
 [tool.setuptools.exclude-package-data]
 tencent_doc_review = ["tests/*", "docs/*"]
