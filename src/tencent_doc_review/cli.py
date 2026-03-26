@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import asyncio
 import json
+import platform
+import tempfile
 from pathlib import Path
 from typing import Optional
 
 import click
 
 from .config import get_settings
+from .access import TencentDocReference, UploadTarget
 from .analyzer.document_analyzer import DocumentAnalyzer
 from .llm.factory import create_llm_client
+from .skill import SkillRequest, SkillRuntimeInfo
 from .tencent_doc_client import TencentDocClient
+from .workflows import SkillPipeline
 from .writers import DocAppendWriter, ReportGenerator
 
 
@@ -75,6 +80,16 @@ def list_files(folder_id: Optional[str], encoded_id: Optional[str], output_forma
     asyncio.run(_list_files(folder_id, encoded_id, output_format))
 
 
+@main.command("skill-info")
+def skill_info() -> None:
+    """Print shared skill runtime information for OpenClaw / Claude Code integration."""
+    runtime = SkillRuntimeInfo(
+        platform=platform.system().lower(),
+        temp_root=str(Path(tempfile.gettempdir()) / "tencent-doc-review"),
+    )
+    click.echo(json.dumps(runtime.__dict__, ensure_ascii=False, indent=2))
+
+
 @main.command("analyze")
 @click.option("--input-file", "input_file", type=click.Path(exists=True))
 @click.option("--doc-id", "doc_id", type=str)
@@ -114,6 +129,31 @@ def analyze(
             api_key,
             base_url,
             model,
+        )
+    )
+
+
+@main.command("skill-run")
+@click.option("--doc-id", "doc_id", required=True, type=str)
+@click.option("--title", "title", required=True, type=str)
+@click.option("--target-folder-id", "target_folder_id", required=True, type=str)
+@click.option("--target-space-id", "target_space_id", default="", type=str)
+@click.option("--target-path", "target_path", default="", type=str)
+def skill_run(
+    doc_id: str,
+    title: str,
+    target_folder_id: str,
+    target_space_id: str,
+    target_path: str,
+) -> None:
+    """Run the shared skill workflow with a local MCP client implementation."""
+    asyncio.run(
+        _skill_run(
+            doc_id=doc_id,
+            title=title,
+            target_folder_id=target_folder_id,
+            target_space_id=target_space_id,
+            target_path=target_path,
         )
     )
 
@@ -239,3 +279,56 @@ async def _list_files(folder_id: Optional[str], encoded_id: Optional[str], outpu
             click.echo(f"{item.file_id}\t{item.doc_type or '-'}\t{item.title or '-'}")
     finally:
         await doc_client.close()
+
+
+async def _skill_run(
+    doc_id: str,
+    title: str,
+    target_folder_id: str,
+    target_space_id: str,
+    target_path: str,
+) -> None:
+    class _CliMCPClient:
+        async def export_document(self, reference, download_format):
+            source_path = Path(tempfile.gettempdir()) / "tencent-doc-review" / f"{reference.doc_id}.docx"
+            source_path.parent.mkdir(parents=True, exist_ok=True)
+            from docx import Document
+
+            document = Document()
+            document.add_heading(reference.title or reference.doc_id, level=1)
+            document.add_paragraph("Skill workflow placeholder content.")
+            document.save(source_path)
+
+            from .access import MCPDownloadPayload
+
+            return MCPDownloadPayload(
+                reference=reference,
+                format=download_format,
+                filename=source_path.name,
+                content_bytes=source_path.read_bytes(),
+                source_path=source_path,
+                metadata={"source": "cli-skill-placeholder"},
+            )
+
+        async def upload_document(self, local_path, target, remote_filename):
+            from .access import MCPUploadPayload
+
+            return MCPUploadPayload(
+                target=target,
+                uploaded_name=remote_filename,
+                remote_file_id="mock-remote-file-id",
+                remote_url=f"https://docs.qq.com/mock/{remote_filename}",
+                metadata={"source": "cli-skill-placeholder"},
+            )
+
+    request = SkillRequest(
+        source_document=TencentDocReference(doc_id=doc_id, title=title),
+        target_location=UploadTarget(
+            folder_id=target_folder_id,
+            space_id=target_space_id,
+            path_hint=target_path,
+            display_name=target_path or target_folder_id,
+        ),
+    )
+    response = await SkillPipeline().run(_CliMCPClient(), request)
+    click.echo(json.dumps(response.__dict__, ensure_ascii=False, indent=2, default=str))
