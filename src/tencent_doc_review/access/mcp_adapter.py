@@ -40,7 +40,8 @@ class MCPDownloadPayload:
     reference: TencentDocReference
     format: DownloadFormat
     filename: str
-    content_bytes: bytes
+    content_bytes: bytes = b""
+    text_content: str = ""
     source_path: Optional[Path] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -51,6 +52,7 @@ class UploadTarget:
 
     folder_id: str = ""
     space_id: str = ""
+    space_type: str = "personal_space"
     path_hint: str = ""
     display_name: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)

@@ -172,3 +172,30 @@ src/tencent_doc_review/
 ## 许可
 
 MIT License
+
+## Skill Bridge
+
+The v3 skill workflow now supports command-bridge MCP clients.
+
+Environment variables:
+
+```bash
+SKILL_MCP_CLIENT=openclaw
+MCP_BRIDGE_TIMEOUT=180
+OPENCLAW_MCP_BRIDGE_EXECUTABLE=python
+OPENCLAW_MCP_BRIDGE_ARGS=-m tencent_doc_review.access.openclaw_bridge --openclaw-executable openclaw.cmd --agent-id main
+```
+
+CLI example:
+
+```bash
+tencent-doc-review skill-run ^
+  --doc-id "DUxxxxxxxxxxxxxxx" ^
+  --title "测试文档" ^
+  --target-folder-id "RaVWacrBtGfN" ^
+  --target-space-type personal_space ^
+  --target-path "/更改" ^
+  --mcp-client openclaw ^
+  --bridge-executable python ^
+  --bridge-args "-m tencent_doc_review.access.openclaw_bridge --openclaw-executable openclaw.cmd --agent-id main"
+```

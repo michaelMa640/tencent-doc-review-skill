@@ -18,6 +18,8 @@ class SkillRequest:
     llm_provider: str = "deepseek"
     output_formats: List[str] = field(default_factory=lambda: ["markdown"])
     keep_local_artifacts: bool = True
+    download_directory: str = ""
+    max_upload_size_bytes: int = 10 * 1024 * 1024
     metadata: Dict[str, object] = field(default_factory=dict)
 
 

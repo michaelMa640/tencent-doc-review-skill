@@ -6,13 +6,22 @@ import asyncio
 import json
 import platform
 import tempfile
+from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 
 import click
 
-from .config import get_settings
-from .access import TencentDocReference, UploadTarget
+from .config import get_settings, reload_settings
+from .access import (
+    CommandMCPClient,
+    MCPBridgeError,
+    MCPDownloadPayload,
+    MCPUploadPayload,
+    TencentDocReference,
+    UploadTarget,
+    build_bridge_config,
+)
 from .analyzer.document_analyzer import DocumentAnalyzer
 from .llm.factory import create_llm_client
 from .skill import SkillRequest, SkillRuntimeInfo
@@ -55,6 +64,9 @@ def doctor() -> None:
     click.echo(f"  TENCENT_DOCS_TOKEN: {'set' if settings.tencent_docs_token else 'missing'}")
     click.echo(f"  TENCENT_DOCS_CLIENT_ID: {'set' if settings.tencent_docs_client_id else 'missing'}")
     click.echo(f"  TENCENT_DOCS_OPEN_ID: {'set' if settings.tencent_docs_open_id else 'missing'}")
+    click.echo(f"  SKILL_MCP_CLIENT: {settings.skill_mcp_client}")
+    click.echo(f"  OPENCLAW_MCP_BRIDGE_EXECUTABLE: {'set' if settings.openclaw_mcp_bridge_executable else 'missing'}")
+    click.echo(f"  CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE: {'set' if settings.claude_code_mcp_bridge_executable else 'missing'}")
 
 
 @main.command("debug-doc")
@@ -83,11 +95,19 @@ def list_files(folder_id: Optional[str], encoded_id: Optional[str], output_forma
 @main.command("skill-info")
 def skill_info() -> None:
     """Print shared skill runtime information for OpenClaw / Claude Code integration."""
+    settings = get_settings()
     runtime = SkillRuntimeInfo(
         platform=platform.system().lower(),
         temp_root=str(Path(tempfile.gettempdir()) / "tencent-doc-review"),
     )
-    click.echo(json.dumps(runtime.__dict__, ensure_ascii=False, indent=2))
+    payload = dict(runtime.__dict__)
+    payload["default_mcp_client"] = settings.skill_mcp_client
+    payload["available_mcp_clients"] = {
+        "mock": True,
+        "openclaw": bool(settings.openclaw_mcp_bridge_executable),
+        "claude_code": bool(settings.claude_code_mcp_bridge_executable),
+    }
+    click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 @main.command("analyze")
@@ -138,13 +158,32 @@ def analyze(
 @click.option("--title", "title", required=True, type=str)
 @click.option("--target-folder-id", "target_folder_id", required=True, type=str)
 @click.option("--target-space-id", "target_space_id", default="", type=str)
+@click.option(
+    "--target-space-type",
+    "target_space_type",
+    default="personal_space",
+    type=click.Choice(["personal_space", "cloud_drive", "workspace"]),
+)
 @click.option("--target-path", "target_path", default="", type=str)
+@click.option("--download-dir", "download_dir", default="", type=click.Path())
+@click.option(
+    "--mcp-client",
+    "mcp_client_name",
+    type=click.Choice(["mock", "openclaw", "claude_code"]),
+)
+@click.option("--bridge-executable", "bridge_executable", default="", type=str)
+@click.option("--bridge-args", "bridge_args", default="", type=str)
 def skill_run(
     doc_id: str,
     title: str,
     target_folder_id: str,
     target_space_id: str,
+    target_space_type: str,
     target_path: str,
+    download_dir: str,
+    mcp_client_name: Optional[str],
+    bridge_executable: str,
+    bridge_args: str,
 ) -> None:
     """Run the shared skill workflow with a local MCP client implementation."""
     asyncio.run(
@@ -153,7 +192,12 @@ def skill_run(
             title=title,
             target_folder_id=target_folder_id,
             target_space_id=target_space_id,
+            target_space_type=target_space_type,
             target_path=target_path,
+            download_dir=download_dir,
+            mcp_client_name=mcp_client_name,
+            bridge_executable=bridge_executable,
+            bridge_args=bridge_args,
         )
     )
 
@@ -286,49 +330,92 @@ async def _skill_run(
     title: str,
     target_folder_id: str,
     target_space_id: str,
+    target_space_type: str,
     target_path: str,
+    download_dir: str,
+    mcp_client_name: Optional[str],
+    bridge_executable: str,
+    bridge_args: str,
 ) -> None:
-    class _CliMCPClient:
-        async def export_document(self, reference, download_format):
-            source_path = Path(tempfile.gettempdir()) / "tencent-doc-review" / f"{reference.doc_id}.docx"
-            source_path.parent.mkdir(parents=True, exist_ok=True)
-            from docx import Document
-
-            document = Document()
-            document.add_heading(reference.title or reference.doc_id, level=1)
-            document.add_paragraph("Skill workflow placeholder content.")
-            document.save(source_path)
-
-            from .access import MCPDownloadPayload
-
-            return MCPDownloadPayload(
-                reference=reference,
-                format=download_format,
-                filename=source_path.name,
-                content_bytes=source_path.read_bytes(),
-                source_path=source_path,
-                metadata={"source": "cli-skill-placeholder"},
-            )
-
-        async def upload_document(self, local_path, target, remote_filename):
-            from .access import MCPUploadPayload
-
-            return MCPUploadPayload(
-                target=target,
-                uploaded_name=remote_filename,
-                remote_file_id="mock-remote-file-id",
-                remote_url=f"https://docs.qq.com/mock/{remote_filename}",
-                metadata={"source": "cli-skill-placeholder"},
-            )
+    settings = reload_settings()
+    client = _create_skill_mcp_client(
+        client_name=mcp_client_name or settings.skill_mcp_client,
+        settings=settings,
+        bridge_executable=bridge_executable,
+        bridge_args=bridge_args,
+    )
 
     request = SkillRequest(
         source_document=TencentDocReference(doc_id=doc_id, title=title),
         target_location=UploadTarget(
             folder_id=target_folder_id,
             space_id=target_space_id,
+            space_type=target_space_type,
             path_hint=target_path,
             display_name=target_path or target_folder_id,
         ),
+        download_directory=download_dir,
     )
-    response = await SkillPipeline().run(_CliMCPClient(), request)
-    click.echo(json.dumps(response.__dict__, ensure_ascii=False, indent=2, default=str))
+    try:
+        response = await SkillPipeline().run(client, request)
+    except MCPBridgeError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(json.dumps(asdict(response), ensure_ascii=False, indent=2, default=str))
+
+
+class _MockMCPClient:
+    async def export_document(self, reference, download_format):
+        return MCPDownloadPayload(
+            reference=reference,
+            format=download_format,
+            filename=f"{reference.doc_id}.docx",
+            text_content="Skill workflow placeholder content.",
+            metadata={"source": "cli-skill-placeholder"},
+        )
+
+    async def upload_document(self, local_path, target, remote_filename):
+        return MCPUploadPayload(
+            target=target,
+            uploaded_name=remote_filename,
+            remote_file_id="mock-remote-file-id",
+            remote_url=f"https://docs.qq.com/mock/{remote_filename}",
+            metadata={"source": "cli-skill-placeholder"},
+        )
+
+
+def _create_skill_mcp_client(
+    client_name: str,
+    settings,
+    bridge_executable: str = "",
+    bridge_args: str = "",
+) -> object:
+    normalized_name = client_name.strip().lower()
+    if normalized_name == "mock":
+        return _MockMCPClient()
+    if normalized_name == "openclaw":
+        executable = bridge_executable or settings.openclaw_mcp_bridge_executable
+        args_text = bridge_args or settings.openclaw_mcp_bridge_args
+        if not executable:
+            raise click.UsageError("OPENCLAW_MCP_BRIDGE_EXECUTABLE is required for --mcp-client openclaw.")
+        return CommandMCPClient(
+            build_bridge_config(
+                client_name="openclaw",
+                executable=executable,
+                args_text=args_text,
+                timeout_seconds=settings.mcp_bridge_timeout,
+            )
+        )
+    if normalized_name == "claude_code":
+        executable = bridge_executable or settings.claude_code_mcp_bridge_executable
+        args_text = bridge_args or settings.claude_code_mcp_bridge_args
+        if not executable:
+            raise click.UsageError("CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE is required for --mcp-client claude_code.")
+        return CommandMCPClient(
+            build_bridge_config(
+                client_name="claude_code",
+                executable=executable,
+                args_text=args_text,
+                timeout_seconds=settings.mcp_bridge_timeout,
+            )
+        )
+    raise click.UsageError(f"Unsupported MCP client: {client_name}")

@@ -46,6 +46,12 @@ if BaseSettings is not None:
         request_timeout: int = Field(default=30)
         tencent_docs_max_retries: int = Field(default=2, alias="TENCENT_DOCS_MAX_RETRIES")
         tencent_docs_retry_delay: float = Field(default=1.0, alias="TENCENT_DOCS_RETRY_DELAY")
+        skill_mcp_client: str = Field(default="mock", alias="SKILL_MCP_CLIENT")
+        mcp_bridge_timeout: int = Field(default=120, alias="MCP_BRIDGE_TIMEOUT")
+        openclaw_mcp_bridge_executable: str = Field(default="", alias="OPENCLAW_MCP_BRIDGE_EXECUTABLE")
+        openclaw_mcp_bridge_args: str = Field(default="", alias="OPENCLAW_MCP_BRIDGE_ARGS")
+        claude_code_mcp_bridge_executable: str = Field(default="", alias="CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE")
+        claude_code_mcp_bridge_args: str = Field(default="", alias="CLAUDE_CODE_MCP_BRIDGE_ARGS")
         log_level: str = Field(default="INFO")
 
 
@@ -93,6 +99,12 @@ else:
         request_timeout: int = int(_get_env("REQUEST_TIMEOUT", "30"))
         tencent_docs_max_retries: int = int(_get_env("TENCENT_DOCS_MAX_RETRIES", "2"))
         tencent_docs_retry_delay: float = float(_get_env("TENCENT_DOCS_RETRY_DELAY", "1.0"))
+        skill_mcp_client: str = _get_env("SKILL_MCP_CLIENT", "mock")
+        mcp_bridge_timeout: int = int(_get_env("MCP_BRIDGE_TIMEOUT", "120"))
+        openclaw_mcp_bridge_executable: str = _get_env("OPENCLAW_MCP_BRIDGE_EXECUTABLE", "")
+        openclaw_mcp_bridge_args: str = _get_env("OPENCLAW_MCP_BRIDGE_ARGS", "")
+        claude_code_mcp_bridge_executable: str = _get_env("CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE", "")
+        claude_code_mcp_bridge_args: str = _get_env("CLAUDE_CODE_MCP_BRIDGE_ARGS", "")
         log_level: str = _get_env("LOG_LEVEL", "INFO")
 
 

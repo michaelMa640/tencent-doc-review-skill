@@ -6,7 +6,6 @@ import unittest
 from pathlib import Path
 
 from click.testing import CliRunner
-from docx import Document
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -20,22 +19,17 @@ from tencent_doc_review.workflows import SkillPipeline
 
 
 class _FakeSkillClient:
-    def __init__(self, root: Path) -> None:
-        self.root = root
+    def __init__(self) -> None:
+        self.last_reference = None
 
     async def export_document(self, reference, download_format=DownloadFormat.DOCX):
-        source_path = self.root / "source.docx"
-        document = Document()
-        document.add_heading(reference.title, level=1)
-        document.add_paragraph("Skill pipeline example content.")
-        document.save(source_path)
+        self.last_reference = reference
         return MCPDownloadPayload(
             reference=reference,
             format=download_format,
-            filename=source_path.name,
-            content_bytes=source_path.read_bytes(),
-            source_path=source_path,
-            metadata={"source": "fake-skill-client"},
+            filename="source.docx",
+            text_content="Skill pipeline example content.",
+            metadata={"source": "fake-skill-client", "used_text_fallback": True},
         )
 
     async def upload_document(self, local_path, target, remote_filename):
@@ -53,17 +47,25 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         tmpdir = PROJECT_ROOT / "tests" / ".tmp" / f"phasee-skill-{uuid.uuid4().hex}"
         tmpdir.mkdir(parents=True, exist_ok=True)
         try:
+            client = _FakeSkillClient()
             request = SkillRequest(
                 source_document=TencentDocReference(doc_id="doc-123", title="Skill Demo"),
-                target_location=UploadTarget(folder_id="folder-456", path_hint="/审核结果"),
+                target_location=UploadTarget(
+                    folder_id="folder-456",
+                    space_type="personal_space",
+                    path_hint="/review-results",
+                ),
+                download_directory=str(tmpdir),
             )
 
-            response = await SkillPipeline().run(_FakeSkillClient(tmpdir), request)
+            response = await SkillPipeline().run(client, request)
 
             self.assertTrue(response.success)
             self.assertEqual(response.remote_file_id, "remote-123")
             self.assertTrue(response.annotated_word_path.endswith("-annotated.docx"))
             self.assertEqual(response.target_location.folder_id, "folder-456")
+            self.assertTrue(response.metadata["used_text_fallback"])
+            self.assertEqual(client.last_reference.metadata["preferred_download_dir"], str(tmpdir))
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -75,6 +77,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         payload = json.loads(result.output)
         self.assertIn("platform", payload)
         self.assertIn("temp_root", payload)
+        self.assertIn("default_mcp_client", payload)
 
     def test_cli_skill_run_prints_response(self):
         runner = CliRunner()
@@ -89,7 +92,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
                 "--target-folder-id",
                 "folder-456",
                 "--target-path",
-                "/审核结果",
+                "/review-results",
             ],
         )
 
