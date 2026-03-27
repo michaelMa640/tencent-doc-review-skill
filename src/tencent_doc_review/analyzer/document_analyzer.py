@@ -136,9 +136,10 @@ class AnalysisResult:
         if self.fact_check_results:
             lines.extend(["## Fact Check", ""])
             for item in self.fact_check_results:
-                lines.append(
-                    f"- {item.original_text or item.claim_content}: {item.verification_status.value} ({item.confidence:.0%})"
-                )
+                lines.append(f"- {item.original_text or item.claim_content}: {item.verification_status.value} ({item.confidence:.0%})")
+                formatted_sources = self._format_sources_for_markdown(item.sources)
+                if formatted_sources:
+                    lines.append(f"  Sources: {formatted_sources}")
             lines.append("")
         if self.language_issues:
             lines.extend(["## Language Issues", ""])
@@ -155,6 +156,17 @@ class AnalysisResult:
             lines.extend(f"- {item}" for item in self.recommendations)
             lines.append("")
         return "\n".join(lines).strip() + "\n"
+
+    def _format_sources_for_markdown(self, sources: List[Dict[str, str]]) -> str:
+        parts: List[str] = []
+        for item in sources:
+            title = str(item.get("title") or "来源").strip()
+            url = str(item.get("url") or "").strip()
+            if url:
+                parts.append(f"[{title}]({url})")
+            elif title:
+                parts.append(title)
+        return "; ".join(parts)
 
 
 class DocumentAnalyzer:

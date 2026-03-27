@@ -1,8 +1,8 @@
 import json
 import shutil
 import sys
-import uuid
 import unittest
+import uuid
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -179,6 +179,36 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(annotation.metadata.get("render_mode"), "summary_block")
         self.assertEqual(annotation.metadata.get("anchor_reason"), "unreliable_paragraph_match")
+
+    def test_word_comment_formats_sources_without_python_repr(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。"),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。",
+            suggestion="该内容需要复查。",
+            source_excerpt="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。",
+            location={"paragraph_index": 1},
+            metadata={
+                "sources": [
+                    {"title": "蝉镜数字人帮助文档", "url": "https://example.com/help"},
+                    {"title": "京东健康官网/蝉镜产品页面", "url": ""},
+                ]
+            },
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, issue)
+
+        self.assertIn("问题：视频生成数字人", annotation.comment)
+        self.assertIn("建议：该内容需要复查。", annotation.comment)
+        self.assertIn("1. 蝉镜数字人帮助文档 - https://example.com/help", annotation.comment)
+        self.assertIn("2. 京东健康官网/蝉镜产品页面", annotation.comment)
+        self.assertNotIn("[{'title':", annotation.comment)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,10 @@ from ..llm.structured_output import extract_json_payload
 DEFAULT_RECHECK_SUGGESTION = "该内容需要复查。"
 HEADING_LABEL_PATTERN = re.compile(r"^[#>\-\*\d\.\s一二三四五六七八九十IVXivx（）()【】\[\]：:]+$")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[。！？!?])\s+|\n{2,}")
+HARD_FACT_PATTERN = re.compile(
+    r"\b20\d{2}\b|\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:亿|万|万元|亿美元|美元|元|人|次|家|MB|GB|秒|分钟)",
+    re.IGNORECASE,
+)
 
 
 class VerificationStatus(Enum):
@@ -572,6 +576,8 @@ class FactChecker:
             return True
         if len(stripped) <= 18 and stripped.endswith((":", "：")):
             return True
+        if self._is_subjective_or_experiential_claim(stripped):
+            return True
 
         skip_markers = [
             "我认为",
@@ -597,6 +603,34 @@ class FactChecker:
             "主观上",
         ]
         return any(marker in stripped for marker in skip_markers)
+
+    def _is_subjective_or_experiential_claim(self, sentence: str) -> bool:
+        subjective_markers = [
+            "大体上",
+            "大差不差",
+            "比较突出",
+            "更突出",
+            "更强",
+            "更弱",
+            "更适合",
+            "特色功能",
+            "七八成",
+            "水准",
+            "低门槛",
+            "更顺手",
+            "体验更",
+            "我觉得",
+            "我认为",
+            "个人感受",
+            "主观上",
+            "还不错",
+            "不太",
+            "优势明显",
+            "表现比较",
+        ]
+        if not any(marker in sentence for marker in subjective_markers):
+            return False
+        return not HARD_FACT_PATTERN.search(sentence)
 
     def _infer_claim_type(self, sentence: str) -> ClaimType:
         if re.search(r"\b20\d{2}\b.*(?:年|月|日)", sentence):
@@ -685,10 +719,12 @@ class FactChecker:
         sources: List[Dict[str, str]] = []
         for item in value:
             if isinstance(item, dict):
+                raw_url = str(item.get("url") or item.get("link") or "").strip()
+                normalized_url = "" if raw_url in {"待补充", "N/A", "TBD", "-"} else raw_url
                 sources.append(
                     {
                         "title": str(item.get("title") or item.get("name") or item.get("url") or "来源"),
-                        "url": str(item.get("url") or item.get("link") or ""),
+                        "url": normalized_url,
                     }
                 )
             elif item:

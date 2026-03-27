@@ -188,6 +188,18 @@ class TestFallbackBehavior:
         assert len(results) == 1
         assert "2025年" in results[0].original_text
 
+    @pytest.mark.asyncio
+    async def test_check_skips_subjective_comparison_claims(self):
+        mock_client = Mock()
+        mock_client.analyze = AsyncMock(side_effect=Exception("LLM API error"))
+        checker = FactChecker(llm_client=mock_client)
+
+        results = await checker.check(
+            "功能：大体上这三个平台的功能都大差不差，蝉镜在生成速度和低门槛的形象定制上表现比较突出，闪剪有直播快剪的特色功能。"
+        )
+
+        assert results == []
+
 
 class TestUtilityFunctions:
     @pytest.mark.asyncio

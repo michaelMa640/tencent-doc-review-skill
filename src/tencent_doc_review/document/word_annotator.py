@@ -93,19 +93,23 @@ class WordAnnotator:
         return paragraph.add_run(" ")
 
     def _build_comment_text(self, annotation: WordAnnotation) -> str:
-        parts = [f"[{annotation.severity.upper()}] {annotation.title}", annotation.comment]
-        if annotation.source_excerpt:
-            parts.append(f"命中原文：{annotation.source_excerpt}")
-        return "\n".join(part for part in parts if part)
+        parts = [f"[{annotation.severity.upper()}] {annotation.title}"]
+        body = (annotation.comment or "").strip()
+        if body:
+            parts.append(body)
+        excerpt = (annotation.source_excerpt or "").strip()
+        if excerpt:
+            parts.append(f"命中原文：{excerpt}")
+        return "\n\n".join(parts)
 
     def _append_summary_section(self, document: DocumentObject, annotations: List[WordAnnotation]) -> None:
         document.add_page_break()
         document.add_heading("AI审核总结", level=1)
         intro = document.add_paragraph()
-        intro.add_run("以下内容为整篇层面的审核结论，未挂在具体句子评论上。")
+        intro.add_run("以下内容为整篇层面的审核结论，未挂在具体句子评论中。")
 
         for index, annotation in enumerate(annotations, start=1):
             paragraph = document.add_paragraph()
             paragraph.add_run(f"{index}. 【{annotation.title}】").bold = True
             if annotation.comment:
-                paragraph.add_run(annotation.comment if annotation.comment.startswith("\n") else f" {annotation.comment}")
+                paragraph.add_run(f" {annotation.comment}")

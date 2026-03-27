@@ -41,6 +41,10 @@ if BaseSettings is not None:
         deepseek_base_url: str = Field(default="https://api.deepseek.com/v1")
         deepseek_model: str = Field(default="deepseek-chat")
 
+        minimax_api_key: str = Field(default="", alias="MINIMAX_API_KEY")
+        minimax_base_url: str = Field(default="https://api.minimaxi.com/v1", alias="MINIMAX_BASE_URL")
+        minimax_model: str = Field(default="MiniMax-M2.7", alias="MINIMAX_MODEL")
+
         search_provider: str = Field(default="disabled", alias="SEARCH_PROVIDER")
         search_api_key: Optional[str] = Field(default=None, alias="SEARCH_API_KEY")
         search_base_url: str = Field(default="https://api.tavily.com/search", alias="SEARCH_BASE_URL")
@@ -99,6 +103,10 @@ else:
         deepseek_api_key: str = _get_env("DEEPSEEK_API_KEY", "")
         deepseek_base_url: str = _get_env("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
         deepseek_model: str = _get_env("DEEPSEEK_MODEL", "deepseek-chat")
+
+        minimax_api_key: str = _get_env("MINIMAX_API_KEY", "")
+        minimax_base_url: str = _get_env("MINIMAX_BASE_URL", "https://api.minimaxi.com/v1")
+        minimax_model: str = _get_env("MINIMAX_MODEL", "MiniMax-M2.7")
 
         search_provider: str = _get_env("SEARCH_PROVIDER", "disabled")
         search_api_key: Optional[str] = _get_env("SEARCH_API_KEY") or None

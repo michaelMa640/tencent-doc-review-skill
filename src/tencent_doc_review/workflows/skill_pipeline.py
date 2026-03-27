@@ -29,7 +29,7 @@ from ..document import (
 )
 from ..document.word_parser import ParagraphNode
 from ..domain import ReviewIssue
-from ..llm.factory import create_llm_client
+from ..llm.factory import create_llm_client, resolve_llm_settings
 from ..skill import SkillRequest, SkillResponse, SkillRuntimeInfo
 from ..templates import (
     get_default_review_rules_path,
@@ -189,12 +189,13 @@ class SkillPipeline:
         document_title: str,
     ) -> AnalysisResult:
         settings = get_settings()
+        provider = (request.llm_provider or settings.llm_provider or "deepseek").strip().lower()
         llm_client = create_llm_client(
-            provider=request.llm_provider or settings.llm_provider,
-            api_key=settings.llm_api_key or settings.deepseek_api_key,
-            base_url=settings.llm_base_url or settings.deepseek_base_url,
-            model=settings.llm_model or settings.deepseek_model,
-            timeout=settings.request_timeout,
+            **resolve_llm_settings(
+                settings=settings,
+                provider=provider,
+                timeout=settings.request_timeout,
+            )
         )
         try:
             analyzer = DocumentAnalyzer(llm_client=llm_client)
@@ -222,12 +223,7 @@ class SkillPipeline:
     def _to_word_annotation(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> WordAnnotation:
         metadata = dict(issue.metadata) if isinstance(issue.metadata, dict) else {}
         anchor = self._resolve_anchor(paragraphs, issue)
-        comment_parts = [issue.description]
-        if issue.suggestion:
-            comment_parts.append(f"建议：{issue.suggestion}")
-        source_links = metadata.get("sources")
-        if source_links:
-            comment_parts.append(f"来源：{source_links}")
+        comment_text = self._format_issue_comment(issue, metadata)
 
         if metadata.get("anchor_preference") == "document_end":
             metadata["render_mode"] = "summary_block"
@@ -238,11 +234,48 @@ class SkillPipeline:
         return WordAnnotation(
             paragraph_index=anchor.paragraph_index,
             title=issue.title,
-            comment="\n".join(part for part in comment_parts if part),
+            comment=comment_text,
             severity=issue.severity.value,
             source_excerpt=issue.source_excerpt,
             metadata=metadata,
         )
+
+    def _format_issue_comment(self, issue: ReviewIssue, metadata: dict) -> str:
+        lines: List[str] = []
+        description = (issue.description or "").strip()
+        if description:
+            lines.append(f"问题：{description}")
+
+        suggestion = (issue.suggestion or "").strip()
+        if suggestion:
+            lines.append(f"建议：{suggestion}")
+
+        source_lines = self._format_sources(metadata.get("sources"))
+        if source_lines:
+            lines.append("来源：")
+            lines.extend(source_lines)
+
+        return "\n".join(lines).strip()
+
+    def _format_sources(self, sources: object) -> List[str]:
+        if not isinstance(sources, list):
+            return []
+
+        lines: List[str] = []
+        for index, item in enumerate(sources, start=1):
+            if not isinstance(item, dict):
+                title = str(item).strip()
+                if title:
+                    lines.append(f"{index}. {title}")
+                continue
+
+            title = str(item.get("title") or "来源").strip()
+            url = str(item.get("url") or "").strip()
+            if url:
+                lines.append(f"{index}. {title} - {url}")
+            else:
+                lines.append(f"{index}. {title}")
+        return lines
 
     def _resolve_paragraph_index(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> int:
         return self._resolve_anchor(paragraphs, issue).paragraph_index

@@ -23,7 +23,7 @@ from .access import (
     build_bridge_config,
 )
 from .analyzer.document_analyzer import DocumentAnalyzer
-from .llm.factory import create_llm_client
+from .llm.factory import create_llm_client, resolve_llm_settings
 from .skill import SkillRequest, SkillRuntimeInfo
 from .templates import get_default_review_template_path, read_default_review_template
 from .tencent_doc_client import TencentDocClient
@@ -62,6 +62,8 @@ def doctor() -> None:
     click.echo("Configuration")
     click.echo(f"  LLM_PROVIDER: {settings.llm_provider}")
     click.echo(f"  LLM_API_KEY: {'set' if (settings.llm_api_key or settings.deepseek_api_key) else 'missing'}")
+    click.echo(f"  DEEPSEEK_API_KEY: {'set' if settings.deepseek_api_key else 'missing'}")
+    click.echo(f"  MINIMAX_API_KEY: {'set' if settings.minimax_api_key else 'missing'}")
     click.echo(f"  TENCENT_DOCS_TOKEN: {'set' if settings.tencent_docs_token else 'missing'}")
     click.echo(f"  TENCENT_DOCS_CLIENT_ID: {'set' if settings.tencent_docs_client_id else 'missing'}")
     click.echo(f"  TENCENT_DOCS_OPEN_ID: {'set' if settings.tencent_docs_open_id else 'missing'}")
@@ -237,13 +239,15 @@ async def _analyze(
     resolved_template_text = read_default_review_template() if default_template else None
 
     settings = get_settings()
-    client = create_llm_client(
+    llm_settings = resolve_llm_settings(
+        settings=settings,
         provider=provider or settings.llm_provider,
-        api_key=api_key or settings.llm_api_key or settings.deepseek_api_key,
-        base_url=base_url or settings.llm_base_url or settings.deepseek_base_url,
-        model=model or settings.llm_model or settings.deepseek_model,
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
         timeout=settings.request_timeout,
     )
+    client = create_llm_client(**llm_settings)
 
     doc_client: Optional[TencentDocClient] = None
     writeback_result = None
