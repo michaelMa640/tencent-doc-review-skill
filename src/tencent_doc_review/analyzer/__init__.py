@@ -41,6 +41,8 @@ from .quality_evaluator import (
     evaluate_quality,
     quick_quality_score,
 )
+from .language_reviewer import LanguageReviewer
+from .consistency_reviewer import ConsistencyReviewer
 
 __all__ = [
     # 事实核查模块
@@ -71,4 +73,6 @@ __all__ = [
     "DimensionScore",
     "evaluate_quality",
     "quick_quality_score",
+    "LanguageReviewer",
+    "ConsistencyReviewer",
 ]

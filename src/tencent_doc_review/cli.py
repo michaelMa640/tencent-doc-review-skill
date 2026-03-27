@@ -65,6 +65,8 @@ def doctor() -> None:
     click.echo(f"  TENCENT_DOCS_TOKEN: {'set' if settings.tencent_docs_token else 'missing'}")
     click.echo(f"  TENCENT_DOCS_CLIENT_ID: {'set' if settings.tencent_docs_client_id else 'missing'}")
     click.echo(f"  TENCENT_DOCS_OPEN_ID: {'set' if settings.tencent_docs_open_id else 'missing'}")
+    click.echo(f"  SEARCH_PROVIDER: {settings.search_provider}")
+    click.echo(f"  SEARCH_API_KEY: {'set' if settings.search_api_key else 'missing'}")
     click.echo(f"  SKILL_MCP_CLIENT: {settings.skill_mcp_client}")
     click.echo(f"  OPENCLAW_MCP_BRIDGE_EXECUTABLE: {'set' if settings.openclaw_mcp_bridge_executable else 'missing'}")
     click.echo(f"  CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE: {'set' if settings.claude_code_mcp_bridge_executable else 'missing'}")

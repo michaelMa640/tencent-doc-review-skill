@@ -41,7 +41,13 @@ if BaseSettings is not None:
         deepseek_base_url: str = Field(default="https://api.deepseek.com/v1")
         deepseek_model: str = Field(default="deepseek-chat")
 
+        search_provider: str = Field(default="disabled", alias="SEARCH_PROVIDER")
         search_api_key: Optional[str] = Field(default=None, alias="SEARCH_API_KEY")
+        search_base_url: str = Field(default="https://api.tavily.com/search", alias="SEARCH_BASE_URL")
+        search_max_results: int = Field(default=5, alias="SEARCH_MAX_RESULTS")
+        search_timeout: int = Field(default=20, alias="SEARCH_TIMEOUT")
+        search_depth: str = Field(default="basic", alias="SEARCH_DEPTH")
+        search_topic: str = Field(default="general", alias="SEARCH_TOPIC")
         batch_size: int = Field(default=5)
         request_timeout: int = Field(default=30)
         tencent_docs_max_retries: int = Field(default=2, alias="TENCENT_DOCS_MAX_RETRIES")
@@ -94,7 +100,13 @@ else:
         deepseek_base_url: str = _get_env("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
         deepseek_model: str = _get_env("DEEPSEEK_MODEL", "deepseek-chat")
 
+        search_provider: str = _get_env("SEARCH_PROVIDER", "disabled")
         search_api_key: Optional[str] = _get_env("SEARCH_API_KEY") or None
+        search_base_url: str = _get_env("SEARCH_BASE_URL", "https://api.tavily.com/search")
+        search_max_results: int = int(_get_env("SEARCH_MAX_RESULTS", "5"))
+        search_timeout: int = int(_get_env("SEARCH_TIMEOUT", "20"))
+        search_depth: str = _get_env("SEARCH_DEPTH", "basic")
+        search_topic: str = _get_env("SEARCH_TOPIC", "general")
         batch_size: int = int(_get_env("BATCH_SIZE", "5"))
         request_timeout: int = int(_get_env("REQUEST_TIMEOUT", "30"))
         tencent_docs_max_retries: int = int(_get_env("TENCENT_DOCS_MAX_RETRIES", "2"))

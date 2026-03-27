@@ -127,8 +127,8 @@ class StructureMatcher:
                     SectionMatch(
                         template_section=expected,
                         status=MatchStatus.MISSING,
-                        issues=[f"Missing section: {expected.title}"],
-                        suggestions=[f"Add section '{expected.title}' to match the template."],
+                        issues=[f"缺少章节：{expected.title}"],
+                        suggestions=[f"请补充章节“{expected.title}”。"],
                     )
                 )
 
@@ -221,7 +221,13 @@ class StructureMatcher:
         return sections
 
     def _normalize(self, title: str) -> str:
-        return re.sub(r"\s+", "", title).lower()
+        normalized = title.strip().lower()
+        normalized = re.sub(r"^\d+[\.\)、]\s*", "", normalized)
+        normalized = re.sub(r"^[一二三四五六七八九十]+[\.\)、]\s*", "", normalized)
+        normalized = re.sub(r"^(第[一二三四五六七八九十\d]+[章节部分篇])\s*", "", normalized)
+        normalized = re.sub(r"[：:()（）\-_/]", "", normalized)
+        normalized = re.sub(r"\s+", "", normalized)
+        return normalized
 
 
 async def match_structure(

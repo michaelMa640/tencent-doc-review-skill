@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import platform
+import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,11 +42,15 @@ from ..writers import ReportGenerator
 
 @dataclass
 class SkillPipelineArtifacts:
-    """Intermediate files produced by the skill workflow."""
-
     downloaded_document: DownloadedDocument
     annotated_document: AnnotatedWordDocument
     upload_result: UploadResult
+
+
+@dataclass
+class AnchorResolution:
+    paragraph_index: int
+    reliable: bool = False
 
 
 class SkillPipeline:
@@ -65,11 +70,7 @@ class SkillPipeline:
         self.word_annotator = word_annotator or WordAnnotator()
         self.word_parser = word_parser or WordParser()
 
-    async def run(
-        self,
-        client: MCPDocumentClient,
-        request: SkillRequest,
-    ) -> SkillResponse:
+    async def run(self, client: MCPDocumentClient, request: SkillRequest) -> SkillResponse:
         reference = self._build_source_reference(request)
         downloaded = await self.download_manager.download_via_mcp(
             client=client,
@@ -79,7 +80,7 @@ class SkillPipeline:
         )
 
         parsed_document = self.word_parser.parse(downloaded.file_path)
-        document_text = "\n\n".join(node.text for node in parsed_document.paragraphs if node.text)
+        document_text = self._render_document_text(parsed_document.paragraphs)
         review_result = await self._review_document(
             request=request,
             document_text=document_text,
@@ -125,21 +126,14 @@ class SkillPipeline:
             client=client,
             local_path=upload_source_path,
             target=request.target_location,
-            remote_filename=upload_source_path.name,
+            remote_filename=self._build_remote_filename(request, upload_source_path.suffix),
         )
 
         runtime = SkillRuntimeInfo(
             platform=platform.system().lower(),
             temp_root=str(Path(tempfile.gettempdir()) / "tencent-doc-review"),
         )
-
         used_fallback = bool(downloaded.metadata.get("used_text_fallback"))
-        download_message = (
-            "Downloaded original Word document through MCP."
-            if not used_fallback
-            else "MCP direct download unavailable; materialized local Word document from fallback text content."
-        )
-
         return SkillResponse(
             success=True,
             source_document=request.source_document,
@@ -151,13 +145,13 @@ class SkillPipeline:
             generated_reports={"markdown": review_report_path},
             runtime=runtime,
             messages=[
-                download_message,
-                f"Generated local annotated Word artifact with {annotated.annotation_count} review annotations.",
-                (
-                    "Compressed annotated document before upload."
-                    if compression_metadata["compression_applied"]
-                    else "Upload size within threshold; compression skipped."
-                ),
+                "Downloaded original Word document through MCP."
+                if not used_fallback
+                else "MCP direct download unavailable; materialized local Word document from fallback text content.",
+                f"Generated local annotated Word artifact with {annotated.annotation_count} review outputs.",
+                "Compressed annotated document before upload."
+                if compression_metadata["compression_applied"]
+                else "Upload size within threshold; compression skipped.",
                 "Uploaded annotated Word document to target location.",
             ],
             metadata={
@@ -226,48 +220,138 @@ class SkillPipeline:
         return [self._to_word_annotation(paragraphs, issue) for issue in issues]
 
     def _to_word_annotation(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> WordAnnotation:
-        paragraph_index = self._resolve_paragraph_index(paragraphs, issue)
+        metadata = dict(issue.metadata) if isinstance(issue.metadata, dict) else {}
+        anchor = self._resolve_anchor(paragraphs, issue)
         comment_parts = [issue.description]
         if issue.suggestion:
             comment_parts.append(f"建议：{issue.suggestion}")
-        source_links = issue.metadata.get("sources") if isinstance(issue.metadata, dict) else None
+        source_links = metadata.get("sources")
         if source_links:
             comment_parts.append(f"来源：{source_links}")
+
+        if metadata.get("anchor_preference") == "document_end":
+            metadata["render_mode"] = "summary_block"
+        elif not anchor.reliable:
+            metadata["render_mode"] = "summary_block"
+            metadata.setdefault("anchor_reason", "unreliable_paragraph_match")
+
         return WordAnnotation(
-            paragraph_index=paragraph_index,
+            paragraph_index=anchor.paragraph_index,
             title=issue.title,
             comment="\n".join(part for part in comment_parts if part),
             severity=issue.severity.value,
             source_excerpt=issue.source_excerpt,
-            metadata=issue.metadata,
+            metadata=metadata,
         )
 
     def _resolve_paragraph_index(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> int:
-        location_index = issue.location.get("paragraph_index") if isinstance(issue.location, dict) else None
-        if isinstance(location_index, int):
-            return location_index
+        return self._resolve_anchor(paragraphs, issue).paragraph_index
 
-        needles = [
-            issue.source_excerpt.strip(),
-            issue.description.strip(),
-            str(issue.metadata.get("template_section", "")).strip() if isinstance(issue.metadata, dict) else "",
-        ]
-        for needle in needles:
-            if not needle:
-                continue
-            for paragraph in paragraphs:
-                if paragraph.text and needle in paragraph.text:
-                    return paragraph.index
+    def _resolve_anchor(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> AnchorResolution:
+        visible_paragraphs = [paragraph for paragraph in paragraphs if paragraph.text.strip()]
+        if not visible_paragraphs:
+            return AnchorResolution(paragraph_index=0, reliable=False)
 
-        first_heading = next(
-            (paragraph.index for paragraph in paragraphs if paragraph.is_heading and paragraph.text),
-            None,
-        )
-        if first_heading is not None:
-            return first_heading
-        return -1
+        non_heading_paragraphs = [paragraph for paragraph in visible_paragraphs if not paragraph.is_heading]
+        candidate_pool = non_heading_paragraphs or visible_paragraphs
+
+        location = issue.location if isinstance(issue.location, dict) else {}
+        location_index = location.get("paragraph_index")
+        preferred_paragraph = None
+        if isinstance(location_index, int) and 0 <= location_index < len(visible_paragraphs):
+            preferred_paragraph = visible_paragraphs[location_index]
+
+        source_excerpt = issue.source_excerpt.strip()
+        normalized_excerpt = self._normalize_text(source_excerpt)
+
+        if source_excerpt and preferred_paragraph is not None:
+            preferred_text = self._normalize_text(preferred_paragraph.text)
+            if normalized_excerpt and normalized_excerpt in preferred_text and not preferred_paragraph.is_heading:
+                return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=True)
+            if normalized_excerpt and preferred_text == normalized_excerpt:
+                return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=True)
+
+        if source_excerpt:
+            for paragraph in candidate_pool:
+                if paragraph.text.strip() == source_excerpt:
+                    return AnchorResolution(paragraph_index=paragraph.index, reliable=True)
+
+        if normalized_excerpt:
+            substring_match = self._find_best_substring_match(candidate_pool, normalized_excerpt, preferred_paragraph)
+            if substring_match is not None:
+                return AnchorResolution(paragraph_index=substring_match.index, reliable=True)
+
+            heading_match = self._find_heading_exact_match(visible_paragraphs, normalized_excerpt)
+            if heading_match is not None:
+                return AnchorResolution(paragraph_index=heading_match.index, reliable=True)
+
+        if issue.metadata.get("anchor_preference") == "document_end":
+            return AnchorResolution(paragraph_index=visible_paragraphs[-1].index, reliable=False)
+
+        if preferred_paragraph is not None and not preferred_paragraph.is_heading:
+            return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=False)
+
+        fallback = candidate_pool[-1] if candidate_pool else visible_paragraphs[-1]
+        return AnchorResolution(paragraph_index=fallback.index, reliable=False)
 
     def _write_markdown_report(self, annotated_output_path: Path, review_result: AnalysisResult) -> str:
         report_path = annotated_output_path.with_suffix(".review.md")
         report_path.write_text(ReportGenerator().render(review_result, "markdown"), encoding="utf-8")
         return str(report_path)
+
+    def _render_document_text(self, paragraphs: List[ParagraphNode]) -> str:
+        lines: List[str] = []
+        for paragraph in paragraphs:
+            text = paragraph.text.strip()
+            if not text:
+                continue
+            if paragraph.heading_level > 0:
+                lines.append(f"{'#' * min(paragraph.heading_level, 6)} {text}")
+            else:
+                lines.append(text)
+        return "\n\n".join(lines)
+
+    def _build_remote_filename(self, request: SkillRequest, suffix: str) -> str:
+        base_title = (request.source_document.title or request.source_document.doc_id).strip()
+        sanitized = "".join(char for char in base_title if char not in '<>:"/\\|?*').strip().rstrip(".")
+        if not sanitized:
+            sanitized = request.source_document.doc_id
+        return f"{sanitized}-批注版{suffix}"
+
+    def _normalize_text(self, text: str) -> str:
+        return re.sub(r"\s+", "", text).lower()
+
+    def _find_best_substring_match(
+        self,
+        paragraphs: List[ParagraphNode],
+        normalized_excerpt: str,
+        preferred_paragraph: Optional[ParagraphNode],
+    ) -> Optional[ParagraphNode]:
+        if not normalized_excerpt:
+            return None
+
+        candidates: List[tuple[int, int, int, ParagraphNode]] = []
+        for order, paragraph in enumerate(paragraphs):
+            normalized_text = self._normalize_text(paragraph.text)
+            position = normalized_text.find(normalized_excerpt)
+            if position < 0:
+                continue
+            distance = abs(paragraph.index - preferred_paragraph.index) if preferred_paragraph is not None else 0
+            candidates.append((distance, position, order, paragraph))
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+        return candidates[0][3]
+
+    def _find_heading_exact_match(
+        self,
+        paragraphs: List[ParagraphNode],
+        normalized_excerpt: str,
+    ) -> Optional[ParagraphNode]:
+        if not normalized_excerpt:
+            return None
+        for paragraph in paragraphs:
+            if paragraph.is_heading and self._normalize_text(paragraph.text) == normalized_excerpt:
+                return paragraph
+        return None

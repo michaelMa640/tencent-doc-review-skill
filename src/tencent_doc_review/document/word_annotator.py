@@ -1,4 +1,4 @@
-"""Write review annotations back into a `.docx` file as native Word comments."""
+"""Write review output back into a `.docx` file."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from docx.text.run import Run
 
 @dataclass
 class WordAnnotation:
-    """Annotation to be applied to a paragraph in a Word document."""
+    """Annotation to be applied to a Word document."""
 
     paragraph_index: int
     title: str
@@ -34,7 +34,7 @@ class AnnotatedWordDocument:
 
 
 class WordAnnotator:
-    """Apply review annotations as native Word comments."""
+    """Apply inline comments and append summary paragraphs at document end."""
 
     def annotate(
         self,
@@ -50,8 +50,10 @@ class WordAnnotator:
             output.unlink()
 
         document = Document(source)
+        inline_annotations = [item for item in annotations if item.metadata.get("render_mode") != "summary_block"]
+        summary_annotations = [item for item in annotations if item.metadata.get("render_mode") == "summary_block"]
 
-        for annotation in annotations:
+        for annotation in inline_annotations:
             paragraph = self._resolve_paragraph(document, annotation.paragraph_index)
             anchor_run = self._resolve_anchor_run(paragraph)
             document.add_comment(
@@ -61,6 +63,9 @@ class WordAnnotator:
                 initials="AI",
             )
 
+        if summary_annotations:
+            self._append_summary_section(document, summary_annotations)
+
         document.save(output)
         return AnnotatedWordDocument(
             source_path=source,
@@ -68,7 +73,9 @@ class WordAnnotator:
             annotation_count=len(annotations),
             metadata={
                 "document_title": document_title or source.stem,
-                "comment_mode": "native",
+                "comment_mode": "native+summary" if summary_annotations else "native",
+                "inline_comment_count": len(inline_annotations),
+                "summary_block_count": len(summary_annotations),
             },
         )
 
@@ -90,3 +97,15 @@ class WordAnnotator:
         if annotation.source_excerpt:
             parts.append(f"命中原文：{annotation.source_excerpt}")
         return "\n".join(part for part in parts if part)
+
+    def _append_summary_section(self, document: DocumentObject, annotations: List[WordAnnotation]) -> None:
+        document.add_page_break()
+        document.add_heading("AI审核总结", level=1)
+        intro = document.add_paragraph()
+        intro.add_run("以下内容为整篇层面的审核结论，未挂在具体句子评论上。")
+
+        for index, annotation in enumerate(annotations, start=1):
+            paragraph = document.add_paragraph()
+            paragraph.add_run(f"{index}. 【{annotation.title}】").bold = True
+            if annotation.comment:
+                paragraph.add_run(annotation.comment if annotation.comment.startswith("\n") else f" {annotation.comment}")

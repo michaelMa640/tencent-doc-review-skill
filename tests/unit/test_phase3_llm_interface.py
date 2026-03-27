@@ -12,12 +12,18 @@ from tencent_doc_review.analyzer.fact_checker import FactChecker
 from tencent_doc_review.analyzer.quality_evaluator import QualityEvaluator
 from tencent_doc_review.analyzer.structure_matcher import StructureMatcher
 from tencent_doc_review.llm import SUPPORTED_PROVIDERS
+from tencent_doc_review.llm.factory import create_llm_client
+from tencent_doc_review.llm.providers.minimax import MiniMaxClient
 from tencent_doc_review.llm.providers.mock import MockLLMClient
 
 
 class Phase3LLMInterfaceTests(unittest.TestCase):
     def test_supported_providers_are_explicit(self):
-        self.assertEqual(SUPPORTED_PROVIDERS, ("deepseek", "mock", "openai"))
+        self.assertEqual(SUPPORTED_PROVIDERS, ("deepseek", "minimax", "mock", "openai"))
+
+    def test_minimax_provider_can_be_created(self):
+        client = create_llm_client(provider="minimax", api_key="test-key")
+        self.assertIsInstance(client, MiniMaxClient)
 
     def test_document_analyzer_accepts_llm_client(self):
         analyzer = DocumentAnalyzer(llm_client=MockLLMClient())

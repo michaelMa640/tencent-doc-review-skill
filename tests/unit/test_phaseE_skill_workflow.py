@@ -12,8 +12,16 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from tencent_doc_review.access import DownloadFormat, MCPDownloadPayload, MCPUploadPayload, TencentDocReference, UploadTarget
+from tencent_doc_review.access import (
+    DownloadFormat,
+    MCPDownloadPayload,
+    MCPUploadPayload,
+    TencentDocReference,
+    UploadTarget,
+)
 from tencent_doc_review.cli import main
+from tencent_doc_review.document.word_parser import ParagraphNode
+from tencent_doc_review.domain import ReviewIssue, ReviewIssueType, ReviewSeverity
 from tencent_doc_review.skill import SkillRequest
 from tencent_doc_review.workflows import SkillPipeline
 
@@ -105,6 +113,72 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         payload = json.loads(result.output)
         self.assertTrue(payload["success"])
         self.assertEqual(payload["remote_file_id"], "mock-remote-file-id")
+
+    def test_resolve_paragraph_index_uses_visible_paragraph_mapping(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text=""),
+            ParagraphNode(index=2, text="第一段正文"),
+            ParagraphNode(index=3, text=""),
+            ParagraphNode(index=4, text="第二段正文"),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="desc",
+            source_excerpt="第二段正文",
+            location={"paragraph_index": 2},
+        )
+
+        resolved = pipeline._resolve_paragraph_index(paragraphs, issue)
+
+        self.assertEqual(resolved, 4)
+
+    def test_substring_match_prefers_body_paragraph_over_heading_fallback(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="文章标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="第一段正文，介绍产品背景。"),
+            ParagraphNode(index=2, text="第二段正文，说明该产品支持中英文多语种。"),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="支持中英文多语种",
+            suggestion="该内容需要复查。",
+            source_excerpt="支持中英文多语种",
+            location={"paragraph_index": 0},
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, issue)
+
+        self.assertEqual(annotation.paragraph_index, 2)
+        self.assertNotIn("render_mode", annotation.metadata)
+
+    def test_unreliable_anchor_is_moved_to_summary_block(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="文章标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="第一段正文，介绍产品背景。"),
+            ParagraphNode(index=2, text="第二段正文，说明价格策略。"),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="一个没有可靠锚点的判断",
+            suggestion="该内容需要复查。",
+            source_excerpt="支持中英文多语种",
+            location={"paragraph_index": 0},
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, issue)
+
+        self.assertEqual(annotation.metadata.get("render_mode"), "summary_block")
+        self.assertEqual(annotation.metadata.get("anchor_reason"), "unreliable_paragraph_match")
 
 
 if __name__ == "__main__":

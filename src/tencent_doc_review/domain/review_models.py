@@ -17,6 +17,8 @@ class ReviewIssueType(Enum):
     FACT = "fact"
     STRUCTURE = "structure"
     QUALITY = "quality"
+    LANGUAGE = "language"
+    CONSISTENCY = "consistency"
 
 
 @dataclass

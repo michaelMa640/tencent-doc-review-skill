@@ -12,10 +12,13 @@ from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
 
+from ..config import get_settings
 from ..domain import ReviewIssue, ReviewReport, aggregate_review_issues, build_review_report
 from ..llm.base import LLMClient
 from ..mcp_client import Comment, TencentDocMCPClient
-from .fact_checker import FactCheckResult, FactChecker
+from .consistency_reviewer import ConsistencyReviewer
+from .fact_checker import FactCheckResult, FactChecker, SearchClient
+from .language_reviewer import LanguageReviewer
 from .quality_evaluator import QualityEvaluator, QualityReport
 from .structure_matcher import StructureMatchResult, StructureMatcher
 
@@ -37,6 +40,8 @@ class AnalysisConfig:
     fact_check_config: Dict[str, Any] = field(default_factory=dict)
     structure_match_config: Dict[str, Any] = field(default_factory=dict)
     quality_eval_config: Dict[str, Any] = field(default_factory=dict)
+    language_review_config: Dict[str, Any] = field(default_factory=dict)
+    consistency_review_config: Dict[str, Any] = field(default_factory=dict)
     batch_size: int = 5
     max_concurrency: int = 3
     timeout: int = 300
@@ -44,21 +49,11 @@ class AnalysisConfig:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AnalysisConfig":
         config = cls()
-        if "analysis_type" in data:
-            config.analysis_type = AnalysisType(data["analysis_type"])
-        for key in (
-            "enable_fact_check",
-            "enable_structure_match",
-            "enable_quality_eval",
-            "fact_check_config",
-            "structure_match_config",
-            "quality_eval_config",
-            "batch_size",
-            "max_concurrency",
-            "timeout",
-        ):
-            if key in data:
-                setattr(config, key, data[key])
+        for key, value in data.items():
+            if key == "analysis_type":
+                config.analysis_type = AnalysisType(value)
+            elif hasattr(config, key):
+                setattr(config, key, value)
         return config
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,6 +65,8 @@ class AnalysisConfig:
             "fact_check_config": self.fact_check_config,
             "structure_match_config": self.structure_match_config,
             "quality_eval_config": self.quality_eval_config,
+            "language_review_config": self.language_review_config,
+            "consistency_review_config": self.consistency_review_config,
             "batch_size": self.batch_size,
             "max_concurrency": self.max_concurrency,
             "timeout": self.timeout,
@@ -85,6 +82,8 @@ class AnalysisResult:
     fact_check_results: List[FactCheckResult] = field(default_factory=list)
     structure_match_result: Optional[StructureMatchResult] = None
     quality_report: Optional[QualityReport] = None
+    language_issues: List[ReviewIssue] = field(default_factory=list)
+    consistency_issues: List[ReviewIssue] = field(default_factory=list)
     review_issues: List[ReviewIssue] = field(default_factory=list)
     review_report: Optional[ReviewReport] = None
     summary: str = ""
@@ -100,6 +99,8 @@ class AnalysisResult:
             "fact_check_results": [item.to_dict() for item in self.fact_check_results],
             "structure_match_result": self.structure_match_result.to_dict() if self.structure_match_result else None,
             "quality_report": self.quality_report.to_dict() if self.quality_report else None,
+            "language_issues": [item.to_dict() for item in self.language_issues],
+            "consistency_issues": [item.to_dict() for item in self.consistency_issues],
             "review_issues": [item.to_dict() for item in self.review_issues],
             "review_report": self.review_report.to_dict() if self.review_report else None,
             "summary": self.summary,
@@ -120,7 +121,6 @@ class AnalysisResult:
             self.summary or "No summary generated.",
             "",
         ]
-
         if self.structure_match_result:
             lines.extend(
                 [
@@ -133,18 +133,6 @@ class AnalysisResult:
             for match in self.structure_match_result.section_matches:
                 lines.append(f"- {match.template_section.title}: {match.status.value}")
             lines.append("")
-
-        if self.quality_report:
-            lines.extend(
-                [
-                    "## Quality Evaluation",
-                    "",
-                    f"- Overall Score: {self.quality_report.overall_score:.1f}/100",
-                    f"- Level: {self.quality_report.overall_level.value}",
-                    "",
-                ]
-            )
-
         if self.fact_check_results:
             lines.extend(["## Fact Check", ""])
             for item in self.fact_check_results:
@@ -152,29 +140,31 @@ class AnalysisResult:
                     f"- {item.original_text or item.claim_content}: {item.verification_status.value} ({item.confidence:.0%})"
                 )
             lines.append("")
-
+        if self.language_issues:
+            lines.extend(["## Language Issues", ""])
+            for item in self.language_issues:
+                lines.append(f"- [{item.severity.value}] {item.title}: {item.source_excerpt or item.description}")
+            lines.append("")
+        if self.consistency_issues:
+            lines.extend(["## Consistency Issues", ""])
+            for item in self.consistency_issues:
+                lines.append(f"- [{item.severity.value}] {item.title}: {item.description}")
+            lines.append("")
         if self.recommendations:
             lines.extend(["## Recommendations", ""])
-            for item in self.recommendations:
-                lines.append(f"- {item}")
+            lines.extend(f"- {item}" for item in self.recommendations)
             lines.append("")
-
-        if self.review_issues:
-            lines.extend(["## Unified Issues", ""])
-            for item in self.review_issues:
-                lines.append(f"- [{item.severity.value}] {item.issue_type.value}: {item.title}")
-            lines.append("")
-
         return "\n".join(lines).strip() + "\n"
 
 
 class DocumentAnalyzer:
-    """Coordinates fact check, structure match, and quality evaluation."""
+    """Coordinates fact check, structure match, language review, consistency review and quality evaluation."""
 
     def __init__(
         self,
         llm_client: Optional[LLMClient] = None,
         mcp_client: Optional[TencentDocMCPClient] = None,
+        search_client: Optional[SearchClient] = None,
         config: Optional[Dict[str, Any]] = None,
         deepseek_client: Optional[LLMClient] = None,
     ) -> None:
@@ -185,9 +175,10 @@ class DocumentAnalyzer:
         self.llm_client = resolved_llm_client
         self.mcp_client = mcp_client
         self.config = config or {}
+        self.search_client = search_client or self._build_search_client(self.config.get("fact_check_config", {}))
         self.fact_checker = FactChecker(
             llm_client=resolved_llm_client,
-            search_client=None,
+            search_client=self.search_client,
             config=self.config.get("fact_check_config", {}),
         )
         self.structure_matcher = StructureMatcher(
@@ -197,6 +188,27 @@ class DocumentAnalyzer:
         self.quality_evaluator = QualityEvaluator(
             llm_client=resolved_llm_client,
             config=self.config.get("quality_eval_config", {}),
+        )
+        self.language_reviewer = LanguageReviewer(
+            llm_client=resolved_llm_client,
+            config=self.config.get("language_review_config", {}),
+        )
+        self.consistency_reviewer = ConsistencyReviewer(
+            llm_client=resolved_llm_client,
+            config=self.config.get("consistency_review_config", {}),
+        )
+
+    def _build_search_client(self, fact_check_config: Dict[str, Any]) -> SearchClient:
+        settings = get_settings()
+        provider = fact_check_config.get("search_provider") or settings.search_provider
+        return SearchClient(
+            api_key=fact_check_config.get("search_api_key") or settings.search_api_key,
+            provider=provider,
+            base_url=fact_check_config.get("search_base_url") or settings.search_base_url,
+            timeout=int(fact_check_config.get("search_timeout_seconds") or settings.search_timeout),
+            max_results=int(fact_check_config.get("search_max_results") or settings.search_max_results),
+            search_depth=str(fact_check_config.get("search_depth") or settings.search_depth),
+            topic=str(fact_check_config.get("search_topic") or settings.search_topic),
         )
 
     async def analyze(
@@ -218,44 +230,53 @@ class DocumentAnalyzer:
             }
         )
 
-        tasks: List[asyncio.Future] = []
-        if config.enable_fact_check:
-            tasks.append(asyncio.create_task(self.fact_checker.check(document_text, analysis_context)))
-        else:
-            tasks.append(asyncio.create_task(asyncio.sleep(0, result=[])))
-
-        if config.enable_structure_match and template_text:
-            tasks.append(
-                asyncio.create_task(
-                    self.structure_matcher.match(document_text, template_text, analysis_context)
-                )
-            )
-        else:
-            tasks.append(asyncio.create_task(asyncio.sleep(0, result=None)))
-
-        if config.enable_quality_eval:
-            tasks.append(asyncio.create_task(self.quality_evaluator.evaluate(document_text, analysis_context)))
-        else:
-            tasks.append(asyncio.create_task(asyncio.sleep(0, result=None)))
+        tasks: List[asyncio.Task[Any]] = [
+            asyncio.create_task(self.fact_checker.check(document_text, analysis_context))
+            if config.enable_fact_check
+            else asyncio.create_task(asyncio.sleep(0, result=[])),
+            asyncio.create_task(self.structure_matcher.match(document_text, template_text, analysis_context))
+            if config.enable_structure_match and template_text
+            else asyncio.create_task(asyncio.sleep(0, result=None)),
+            asyncio.create_task(self.quality_evaluator.evaluate(document_text, analysis_context))
+            if config.enable_quality_eval
+            else asyncio.create_task(asyncio.sleep(0, result=None)),
+            asyncio.create_task(self.language_reviewer.review(document_text, analysis_context))
+            if config.enable_quality_eval
+            else asyncio.create_task(asyncio.sleep(0, result=[])),
+            asyncio.create_task(self.consistency_reviewer.review(document_text, analysis_context))
+            if config.enable_quality_eval
+            else asyncio.create_task(asyncio.sleep(0, result=[])),
+        ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-
         fact_check_results = results[0] if not isinstance(results[0], Exception) else []
         structure_match_result = results[1] if not isinstance(results[1], Exception) else None
         quality_report = results[2] if not isinstance(results[2], Exception) else None
+        language_issues = results[3] if not isinstance(results[3], Exception) else []
+        consistency_issues = results[4] if not isinstance(results[4], Exception) else []
 
         for result in results:
             if isinstance(result, Exception):
                 logger.error("Analysis task failed: {}", result)
 
-        summary = self._generate_summary(fact_check_results, structure_match_result, quality_report)
+        summary = self._generate_summary(
+            fact_check_results or [],
+            structure_match_result,
+            quality_report,
+            consistency_issues or [],
+        )
         recommendations = self._generate_recommendations(
-            fact_check_results, structure_match_result, quality_report
+            fact_check_results or [],
+            structure_match_result,
+            quality_report,
+            consistency_issues or [],
         )
         review_issues = aggregate_review_issues(
             fact_check_results or [],
             structure_match_result,
             quality_report,
+            language_issues=language_issues or [],
+            consistency_issues=consistency_issues or [],
         )
         metadata = {
             "document_length": len(document_text),
@@ -271,7 +292,6 @@ class DocumentAnalyzer:
             quality_report=quality_report,
             metadata=metadata,
         )
-
         return AnalysisResult(
             document_id=document_id,
             document_title=document_title,
@@ -279,6 +299,8 @@ class DocumentAnalyzer:
             fact_check_results=fact_check_results or [],
             structure_match_result=structure_match_result,
             quality_report=quality_report,
+            language_issues=language_issues or [],
+            consistency_issues=consistency_issues or [],
             review_issues=review_issues,
             review_report=review_report,
             summary=summary,
@@ -340,12 +362,10 @@ class DocumentAnalyzer:
     ) -> AnalysisResult:
         if self.mcp_client is None:
             raise ValueError("TencentDoc client is required for Tencent Docs analysis")
-
         document_info, document_text = await self.mcp_client.get_document_bundle(file_id)
         resolved_template_text = template_text
         if template_file_id:
             resolved_template_text = await self.mcp_client.get_document_content(template_file_id)
-
         result = await self.analyze(
             document_text=document_text,
             template_text=resolved_template_text,
@@ -359,7 +379,6 @@ class DocumentAnalyzer:
     async def _add_annotations_to_doc(self, file_id: str, result: AnalysisResult) -> None:
         if not self.mcp_client:
             return
-
         comments: List[Comment] = []
         for issue in result.fact_check_results:
             if issue.verification_status.value in {"incorrect", "disputed", "unverified"}:
@@ -371,14 +390,12 @@ class DocumentAnalyzer:
                         comment_type="warning",
                     )
                 )
-
         if comments:
             await self.mcp_client.add_comments_batch(file_id, comments)
 
     def save_report(self, result: AnalysisResult, output_path: str, format: str = "markdown") -> str:
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-
         if format == "markdown":
             path = path.with_suffix(".md")
             content = result.to_markdown()
@@ -387,7 +404,6 @@ class DocumentAnalyzer:
             content = json.dumps(result.to_dict(), ensure_ascii=False, indent=2)
         else:
             raise ValueError(f"Unsupported format: {format}")
-
         path.write_text(content, encoding="utf-8")
         return str(path)
 
@@ -396,21 +412,22 @@ class DocumentAnalyzer:
         fact_check_results: List[FactCheckResult],
         structure_match_result: Optional[StructureMatchResult],
         quality_report: Optional[QualityReport],
+        consistency_issues: List[ReviewIssue],
     ) -> str:
         parts: List[str] = []
         if quality_report:
-            parts.append(
-                f"Quality score {quality_report.overall_score:.1f}/100 ({quality_report.overall_level.value})."
-            )
+            parts.append(f"Quality score {quality_report.overall_score:.1f}/100 ({quality_report.overall_level.value}).")
         if structure_match_result:
             parts.append(f"Structure match {structure_match_result.overall_score:.1%}.")
         if fact_check_results:
             issues = sum(
                 1
                 for item in fact_check_results
-                if item.verification_status.value in {"disputed", "incorrect", "unverified"}
+                if item.verification_status.value in {"disputed", "incorrect", "unverified", "partial"}
             )
             parts.append(f"Fact check reviewed {len(fact_check_results)} claims, with {issues} flagged.")
+        if consistency_issues:
+            parts.append(f"Found {len(consistency_issues)} potential consistency issues.")
         return " ".join(parts) if parts else "No analysis output generated."
 
     def _generate_recommendations(
@@ -418,22 +435,27 @@ class DocumentAnalyzer:
         fact_check_results: List[FactCheckResult],
         structure_match_result: Optional[StructureMatchResult],
         quality_report: Optional[QualityReport],
+        consistency_issues: List[ReviewIssue],
     ) -> List[str]:
         recommendations: List[str] = []
         if quality_report and quality_report.priority_improvements:
-            recommendations.extend(quality_report.priority_improvements[:3])
-        if structure_match_result:
-            missing = [match for match in structure_match_result.section_matches if match.status.value == "missing"]
-            if missing:
-                recommendations.append(f"Add {len(missing)} missing sections from the template.")
+            recommendations.extend(
+                item for item in quality_report.priority_improvements[:3] if "格式" not in item and "format" not in item.lower()
+            )
         if fact_check_results:
             flagged = [
                 item
                 for item in fact_check_results
-                if item.verification_status.value in {"incorrect", "disputed", "unverified"}
+                if item.verification_status.value in {"incorrect", "disputed", "unverified", "partial"}
             ]
             if flagged:
-                recommendations.append(f"Review {len(flagged)} flagged fact-check items.")
+                recommendations.append(f"请优先复查 {len(flagged)} 处事实性表述。")
+        if consistency_issues:
+            recommendations.append(f"请复核 {len(consistency_issues)} 处前后表述是否一致。")
+        if structure_match_result:
+            missing = [match for match in structure_match_result.section_matches if match.status.value == "missing"]
+            if missing:
+                recommendations.append("如有必要，可在文末补充缺失章节总结。")
         return recommendations[:5]
 
 
@@ -446,8 +468,4 @@ async def analyze_document(
     **kwargs: Any,
 ) -> AnalysisResult:
     analyzer = DocumentAnalyzer(llm_client=llm_client, deepseek_client=deepseek_client, mcp_client=mcp_client)
-    return await analyzer.analyze(
-        document_text=document_text,
-        template_text=template_text,
-        **kwargs,
-    )
+    return await analyzer.analyze(document_text=document_text, template_text=template_text, **kwargs)

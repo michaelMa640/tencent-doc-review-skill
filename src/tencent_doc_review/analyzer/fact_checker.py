@@ -1,54 +1,51 @@
-"""
-事实核查模块
+"""Fact checking helpers with optional search-backed verification."""
 
-提供文章内容的自动化事实核查功能：
-1. 从文本中提取需要验证的声明
-2. 对关键信息进行联网搜索验证
-3. 生成结构化核查结果
-4. 提供可信度评估和修改建议
+from __future__ import annotations
 
-Usage:
-    checker = FactChecker(llm_client, search_client)
-    results = await checker.check(text, context)
-    
-    for result in results:
-        print(f"{result.original_text}: {result.verification_status}")
-"""
-
+import asyncio
 import json
 import re
-from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime
-import asyncio
+from enum import Enum
+from typing import Any, Callable, Dict, Iterable, List, Optional
+from urllib.parse import urlparse
 
 from loguru import logger
 
-from ..llm.providers.mock import MockLLMClient as MockDeepSeekClient
+try:
+    import httpx
+except ModuleNotFoundError:  # pragma: no cover - fallback for lean environments
+    httpx = None
+
 from ..llm.base import LLMClient
+from ..llm.providers.mock import MockLLMClient as MockDeepSeekClient
+from ..llm.structured_output import extract_json_payload
+
+
+DEFAULT_RECHECK_SUGGESTION = "该内容需要复查。"
+HEADING_LABEL_PATTERN = re.compile(r"^[#>\-\*\d\.\s一二三四五六七八九十IVXivx（）()【】\[\]：:]+$")
+SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[。！？!?])\s+|\n{2,}")
 
 
 class VerificationStatus(Enum):
-    """验证状态枚举"""
-    CONFIRMED = "confirmed"           # 已确认正确
-    DISPUTED = "disputed"              # 存在争议
-    UNVERIFIED = "unverified"          # 无法验证
-    INCORRECT = "incorrect"            # 确认错误
-    PARTIALLY_CORRECT = "partial"      # 部分正确
+    CONFIRMED = "confirmed"
+    DISPUTED = "disputed"
+    UNVERIFIED = "unverified"
+    INCORRECT = "incorrect"
+    PARTIALLY_CORRECT = "partial"
 
 
 class ClaimType(Enum):
-    """声明类型枚举"""
-    DATA = "data"                      # 数据/统计
-    DATE_TIME = "date_time"            # 时间/日期
-    PERSON = "person"                  # 人物
-    LOCATION = "location"              # 地点
-    ORGANIZATION = "organization"      # 组织/机构
-    EVENT = "event"                    # 事件
-    QUOTATION = "quotation"            # 引用
-    NUMBER = "number"                  # 数字/数量
-    OTHER = "other"                    # 其他
+    DATA = "data"
+    DATE_TIME = "date_time"
+    PERSON = "person"
+    LOCATION = "location"
+    ORGANIZATION = "organization"
+    EVENT = "event"
+    QUOTATION = "quotation"
+    NUMBER = "number"
+    OTHER = "other"
 
 
 ClaimType.OPINION = ClaimType.OTHER
@@ -56,23 +53,6 @@ ClaimType.OPINION = ClaimType.OTHER
 
 @dataclass
 class FactCheckResult:
-    """
-    事实核查结果数据类
-    
-    Attributes:
-        id: 结果唯一标识
-        original_text: 原文引用
-        claim_type: 声明类型
-        claim_content: 需要验证的具体内容
-        verification_status: 验证状态
-        confidence: 置信度 (0-1)
-        evidence: 证据列表
-        sources: 信息来源
-        suggestion: 修改建议
-        position: 在原文中的位置信息
-        created_at: 创建时间
-        verified_at: 验证时间
-    """
     id: str = field(default_factory=lambda: f"fcr_{datetime.now().strftime('%Y%m%d%H%M%S%f')}")
     original_text: str = ""
     claim_type: ClaimType = ClaimType.OTHER
@@ -85,9 +65,8 @@ class FactCheckResult:
     position: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     verified_at: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
         return {
             "id": self.id,
             "original_text": self.original_text,
@@ -100,56 +79,12 @@ class FactCheckResult:
             "suggestion": self.suggestion,
             "position": self.position,
             "created_at": self.created_at,
-            "verified_at": self.verified_at
+            "verified_at": self.verified_at,
         }
-    
-    def to_markdown(self) -> str:
-        """转换为 Markdown 格式"""
-        status_emoji = {
-            VerificationStatus.CONFIRMED: "✅",
-            VerificationStatus.DISPUTED: "⚠️",
-            VerificationStatus.UNVERIFIED: "❓",
-            VerificationStatus.INCORRECT: "❌",
-            VerificationStatus.PARTIALLY_CORRECT: "〽️"
-        }
-        
-        emoji = status_emoji.get(self.verification_status, "❓")
-        
-        md = f"""### {emoji} {self.claim_type.value.upper()}: {self.verification_status.value}
-
-**原文**: {self.original_text}
-
-**验证内容**: {self.claim_content}
-
-**置信度**: {self.confidence:.1%}
-
-**证据**:
-"""
-        for i, ev in enumerate(self.evidence, 1):
-            md += f"{i}. {ev}\n"
-        
-        if self.sources:
-            md += "\n**来源**:\n"
-            for src in self.sources:
-                md += f"- [{src.get('title', 'Link')}]({src.get('url', '')})\n"
-        
-        md += f"\n**建议**: {self.suggestion}\n\n---\n"
-        
-        return md
 
 
 @dataclass
 class Claim:
-    """
-    从文本中提取的需要验证的声明
-    
-    Attributes:
-        text: 声明文本
-        type: 声明类型
-        entities: 提取的实体（人名、地名等）
-        position: 在原文中的位置
-        context: 上下文信息
-    """
     text: str
     type: ClaimType = ClaimType.OTHER
     claim_type: Optional[ClaimType] = None
@@ -166,700 +101,637 @@ class Claim:
 
 
 class SearchClient:
-    """
-    联网搜索客户端（预留接口）
-    
-    用于验证关键信息，当前为占位实现。
-    后续可集成：
-    - Google Search API
-    - Bing Search API
-    - Serper API
-    - 其他搜索引擎
-    """
-    
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key
-        self.enabled = False  # 默认禁用，需要配置 API Key 后启用
-        logger.info("SearchClient initialized (placeholder mode)")
-    
+    """Optional search verification client."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        provider: str = "disabled",
+        base_url: str = "",
+        timeout: int = 20,
+        max_results: int = 5,
+        search_depth: str = "basic",
+        topic: str = "general",
+        client: Optional["httpx.AsyncClient"] = None,
+    ) -> None:
+        self.api_key = api_key or ""
+        self.provider = (provider or ("tavily" if self.api_key else "disabled")).strip().lower()
+        self.base_url = (base_url or "https://api.tavily.com/search").rstrip("/")
+        self.timeout = int(timeout)
+        self.max_results = int(max_results)
+        self.search_depth = search_depth or "basic"
+        self.topic = topic or "general"
+        self._client = client
+        self._owns_client = client is None
+        self.enabled = self.provider != "disabled" and bool(self.api_key)
+        logger.info("SearchClient initialized (provider={}, enabled={})", self.provider, self.enabled)
+
     async def search(self, query: str, num_results: int = 5) -> List[Dict[str, Any]]:
-        """
-        执行搜索查询
-        
-        Args:
-            query: 搜索关键词
-            num_results: 返回结果数量
-            
-        Returns:
-            搜索结果列表
-        """
         if not self.enabled:
-            logger.warning("SearchClient is not enabled. Please configure API key.")
+            logger.warning("SearchClient is not enabled. Please configure search provider and API key.")
             return []
-        
-        # TODO: 实现实际的搜索逻辑
-        # 这里返回模拟数据用于测试
-        return [
-            {
-                "title": f"Search result for: {query}",
-                "url": "https://example.com/result",
-                "snippet": "This is a placeholder search result.",
-                "source": "placeholder"
-            }
-        ]
-    
+        if not query.strip():
+            return []
+        if self.provider == "tavily":
+            return await self._search_tavily(query, min(num_results, self.max_results))
+        raise ValueError(f"Unsupported search provider: {self.provider}")
+
     async def verify_fact(self, claim: str, context: str = "") -> Dict[str, Any]:
-        """
-        验证具体事实声明
-        
-        Args:
-            claim: 需要验证的声明
-            context: 上下文信息
-            
-        Returns:
-            验证结果
-        """
-        search_results = await self.search(claim)
-        
-        # 简化处理：基于搜索结果数量判断
-        if len(search_results) > 0:
-            return {
-                "status": "partially_verified",
-                "confidence": 0.5,
-                "sources": search_results[:3],
-                "note": "Placeholder verification - configure real search API for accurate results"
-            }
-        else:
+        query = claim if not context else f"{claim} {context}"
+        results = await self.search(query)
+        if not results:
             return {
                 "status": "unverified",
                 "confidence": 0.0,
+                "evidence": [],
                 "sources": [],
-                "note": "Search not available"
+                "suggestion": DEFAULT_RECHECK_SUGGESTION,
             }
+        return {
+            "status": "unverified",
+            "confidence": 0.35,
+            "evidence": [item.get("snippet", "") for item in results if item.get("snippet")][:3],
+            "sources": self._to_source_refs(results),
+            "suggestion": DEFAULT_RECHECK_SUGGESTION,
+        }
+
+    async def close(self) -> None:
+        if self._client is not None and self._owns_client:
+            await self._client.aclose()
+        self._client = None
+
+    async def _search_tavily(self, query: str, num_results: int) -> List[Dict[str, Any]]:
+        if httpx is None:
+            raise ModuleNotFoundError("httpx is required to call the search API")
+
+        client = self._client or httpx.AsyncClient(timeout=self.timeout)
+        if self._client is None:
+            self._client = client
+
+        response = await client.post(
+            self.base_url,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "query": query,
+                "topic": self.topic,
+                "search_depth": self.search_depth,
+                "max_results": num_results,
+                "include_answer": False,
+                "include_images": False,
+                "include_raw_content": False,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        results: List[Dict[str, Any]] = []
+        for item in data.get("results") or []:
+            url = str(item.get("url") or "")
+            host = urlparse(url).netloc or str(item.get("source") or "")
+            results.append(
+                {
+                    "title": str(item.get("title") or url or "来源"),
+                    "url": url,
+                    "snippet": str(item.get("content") or item.get("raw_content") or ""),
+                    "source": host,
+                    "score": item.get("score"),
+                }
+            )
+        return results
+
+    def _to_source_refs(self, results: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+        sources: List[Dict[str, str]] = []
+        for item in results[:3]:
+            sources.append(
+                {
+                    "title": str(item.get("title") or item.get("url") or "来源"),
+                    "url": str(item.get("url") or ""),
+                }
+            )
+        return sources
 
 
 class FactChecker:
-    """
-    事实核查器主类
-    
-    提供完整的事实核查流程：
-    1. 从文本中提取声明
-    2. 对声明进行分类
-    3. 使用搜索验证（可选）
-    4. 生成结构化核查结果
-    
-    Usage:
-        checker = FactChecker(llm_client, search_client)
-        
-        # 完整核查流程
-        results = await checker.check(text, context)
-        
-        # 仅提取声明（不验证）
-        claims = await checker.extract_claims(text)
-        
-        # 验证单个声明
-        result = await checker.verify_claim(claim, context)
-    """
-    
+    """Extract factual claims and verify them with search-backed LLM prompts."""
+
     def __init__(
         self,
         llm_client: Optional[LLMClient] = None,
         search_client: Optional[SearchClient] = None,
         config: Optional[Dict[str, Any]] = None,
         deepseek_client: Optional[LLMClient] = None,
-    ):
-        """
-        初始化事实核查器
-        
-        Args:
-            llm_client: LLM 客户端（必需）
-            search_client: 搜索客户端（可选，用于验证）
-            config: 配置参数
-        """
+    ) -> None:
         self.llm = llm_client or deepseek_client
         if self.llm is None:
             raise ValueError("An llm_client is required")
-        self.search = search_client or SearchClient()  # 使用占位实现
         self.config = config or {}
-        
-        # 可配置参数
-        self.min_confidence = self.config.get("min_confidence", 0.6)
-        self.max_claims = self.config.get("max_claims", 50)
-        self.enable_search = self.config.get("enable_search", False)
-        
-        logger.info(f"FactChecker initialized (search_enabled={self.enable_search})")
-    
-    async def check(
-        self,
-        text: str,
-        context: Optional[Dict[str, Any]] = None
-    ) -> List[FactCheckResult]:
-        """
-        执行完整的事实核查流程
-        
-        Args:
-            text: 需要核查的文本
-            context: 上下文信息（如文章主题、来源等）
-            
-        Returns:
-            核查结果列表
-        """
-        logger.info(f"Starting fact check for text ({len(text)} chars)")
-
-        if not text.strip():
-            logger.warning("Empty text provided for fact check")
-            return []
-        
-        # Step 1: 提取声明
-        try:
-            claims = await self.extract_claims(text, context)
-        except Exception as e:
-            logger.error(f"Claim extraction failed: {e}")
-            return []
-        logger.info(f"Extracted {len(claims)} claims")
-        
-        if not claims:
-            logger.warning("No claims extracted from text")
-            return []
-        
-        # Step 2: 验证每个声明
-        results = []
-        for i, claim in enumerate(claims[:self.max_claims]):
-            logger.debug(f"Verifying claim {i+1}/{len(claims)}: {claim.text[:50]}...")
-            
-            try:
-                result = await self.verify_claim(claim, context)
-                results.append(result)
-            except Exception as e:
-                logger.error(f"Failed to verify claim: {e}")
-                # 添加错误标记的结果
-                results.append(FactCheckResult(
-                    original_text=claim.text,
-                    claim_type=claim.type,
-                    claim_content=claim.text,
-                    verification_status=VerificationStatus.UNVERIFIED,
-                    confidence=0.0,
-                    suggestion=f"Verification failed: {str(e)}"
-                ))
-        
-        logger.info(f"Fact check completed: {len(results)} results")
-        return results
-    
-    async def extract_claims(
-        self,
-        text: str,
-        context: Optional[Dict[str, Any]] = None
-    ) -> List[Claim]:
-        """
-        从文本中提取需要验证的声明
-        
-        使用 LLM 分析文本，识别关键信息点。
-        
-        Args:
-            text: 输入文本
-            context: 上下文信息
-            
-        Returns:
-            声明列表
-        """
-        if not text.strip():
-            return []
-
-        # 构建提示词
-        prompt = self._build_extraction_prompt(text, context)
-        
-        # 调用 LLM
-        try:
-            analysis = await self.llm.analyze(prompt, analysis_type="fact_check")
-            content = analysis.content if hasattr(analysis, 'content') else str(analysis)
-        except Exception as e:
-            logger.error(f"LLM analysis failed: {e}")
-            raise
-        
-        # 解析结果
-        claims = self._parse_claims_from_response(content, text)
-        return claims
-    
-    def _build_extraction_prompt(
-        self,
-        text: str,
-        context: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """构建声明提取提示词"""
-        
-        context_str = ""
-        if context:
-            context_str = f"\n上下文信息：\n{json.dumps(context, ensure_ascii=False, indent=2)}\n"
-        
-        prompt = f"""请仔细分析以下文本，提取所有需要事实核查的关键信息。
-
-文本内容：
-{text}
-{context_str}
-
-请识别以下类型的信息：
-1. **数据/统计** - 具体数字、百分比、统计数据等
-2. **时间/日期** - 具体时间点、时间段、年份等
-3. **人物** - 人名、职务、身份等
-4. **地点** - 地名、位置、区域等
-5. **组织** - 机构、公司、政府部门等
-6. **事件** - 具体事件描述、历史事实等
-7. **引用** - 引用他人言论、文献等
-
-请以 JSON 格式输出，格式如下：
-```json
-{{
-  "claims": [
-    {{
-      "text": "原文引用",
-      "type": "数据/时间/人物/地点/组织/事件/引用/其他",
-      "claim": "需要验证的具体内容",
-      "entities": ["提取的实体"],
-      "context": "上下文信息"
-    }}
-  ]
-}}
-```
-
-注意：
-- 只输出 JSON，不要有其他说明文字
-- 确保每个 claim 都包含完整的原文引用
-- type 必须从指定的类型中选择
-- 如果没有需要验证的内容，返回空数组
-"""
-        return prompt
-    
-    def _parse_claims_from_response(
-        self,
-        response: str,
-        original_text: str
-    ) -> List[Claim]:
-        """从 LLM 响应中解析声明列表"""
-        
-        claims = []
-        
-        try:
-            # 提取 JSON 部分
-            payload = None
-            array_match = re.search(r'\[.*\]', response, re.DOTALL)
-            object_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if array_match:
-                payload = json.loads(array_match.group())
-            elif object_match:
-                payload = json.loads(object_match.group())
-            else:
-                logger.warning("No JSON found in LLM response")
-                return []
-
-            if isinstance(payload, list):
-                claim_items = payload
-            elif isinstance(payload, dict) and isinstance(payload.get("claims"), list):
-                claim_items = payload["claims"]
-            else:
-                logger.warning("Invalid JSON structure: missing claims payload")
-                return []
-
-            for item in claim_items:
-                try:
-                    # 映射类型
-                    type_str = item.get("type", "其他").upper()
-                    claim_type = self._map_claim_type(type_str)
-                    
-                    # 创建 Claim 对象
-                    claim = Claim(
-                        text=item.get("text", ""),
-                        type=claim_type,
-                        entities=item.get("entities", []),
-                        position=self._find_position(item.get("text", ""), original_text),
-                        context=item.get("context", "")
-                    )
-                    
-                    claims.append(claim)
-                    
-                except Exception as e:
-                    logger.error(f"Failed to parse claim item: {e}")
-                    continue
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error parsing claims: {e}")
-        
-        logger.info(f"Parsed {len(claims)} claims from LLM response")
-        return claims
-    
-    def _map_claim_type(self, type_str: str) -> ClaimType:
-        """将字符串映射到 ClaimType"""
-        type_mapping = {
-            "数据": ClaimType.DATA,
-            "DATA": ClaimType.DATA,
-            "时间": ClaimType.DATE_TIME,
-            "DATE_TIME": ClaimType.DATE_TIME,
-            "日期": ClaimType.DATE_TIME,
-            "人物": ClaimType.PERSON,
-            "PERSON": ClaimType.PERSON,
-            "人名": ClaimType.PERSON,
-            "地点": ClaimType.LOCATION,
-            "LOCATION": ClaimType.LOCATION,
-            "地名": ClaimType.LOCATION,
-            "组织": ClaimType.ORGANIZATION,
-            "ORGANIZATION": ClaimType.ORGANIZATION,
-            "机构": ClaimType.ORGANIZATION,
-            "事件": ClaimType.EVENT,
-            "EVENT": ClaimType.EVENT,
-            "引用": ClaimType.QUOTATION,
-            "QUOTATION": ClaimType.QUOTATION,
-            "其他": ClaimType.OTHER,
-            "OTHER": ClaimType.OTHER,
-        }
-        return type_mapping.get(type_str.upper(), ClaimType.OTHER)
-    
-    def _find_position(self, text: str, original: str) -> Dict[str, Any]:
-        """在原文中查找文本位置"""
-        if not text or not original:
-            return {}
-        
-        try:
-            start = original.find(text)
-            if start == -1:
-                # 尝试模糊匹配
-                return {"search_text": text[:50], "note": "Exact match not found"}
-            
-            end = start + len(text)
-            
-            # 计算段落和行号
-            paragraphs_before = original[:start].count('\n\n') + 1
-            lines_before = original[:start].count('\n') + 1
-            
-            return {
-                "start": start,
-                "end": end,
-                "length": len(text),
-                "paragraph": paragraphs_before,
-                "line": lines_before,
-                "excerpt": original[max(0, start-20):min(len(original), end+20)]
-            }
-            
-        except Exception as e:
-            logger.error(f"Error finding position: {e}")
-            return {"error": str(e)}
-    
-    async def verify_claim(
-        self,
-        claim: Claim,
-        context: Optional[Dict[str, Any]] = None
-    ) -> FactCheckResult:
-        """
-        验证单个声明
-        
-        Args:
-            claim: 要验证的声明
-            context: 上下文信息
-            
-        Returns:
-            核查结果
-        """
-        logger.debug(f"Verifying claim: {claim.text[:50]}...")
-        
-        # 构建验证提示
-        prompt = self._build_verification_prompt(claim, context)
-        
-        # 调用 LLM 进行验证
-        try:
-            analysis = await self.llm.analyze(prompt, analysis_type="fact_check")
-            llm_result = analysis.content if hasattr(analysis, 'content') else str(analysis)
-        except Exception as e:
-            logger.error(f"LLM verification failed: {e}")
-            return self._create_error_result(claim, f"LLM error: {e}")
-        
-        # 解析 LLM 结果
-        parsed_result = self._parse_verification_result(llm_result, claim)
-        
-        # 如果启用了搜索，进行交叉验证
-        if self.enable_search and self.search.enabled:
-            search_result = await self._cross_verify_with_search(claim, parsed_result)
-            parsed_result = self._merge_verification_results(parsed_result, search_result)
-        
-        # 创建最终结果
-        result = FactCheckResult(
-            original_text=claim.text,
-            claim_type=claim.type,
-            claim_content=parsed_result.get("claim_content", claim.text),
-            verification_status=VerificationStatus(parsed_result.get("status", "unverified")),
-            confidence=parsed_result.get("confidence", 0.0),
-            evidence=parsed_result.get("evidence", []),
-            sources=parsed_result.get("sources", []),
-            suggestion=parsed_result.get("suggestion", ""),
-            position=claim.position,
-            verified_at=datetime.now().isoformat()
+        self.batch_size = int(self.config.get("batch_size", 5))
+        self.max_claims = int(self.config.get("max_claims", self.batch_size))
+        self.timeout_seconds = float(self.config.get("timeout_seconds", 45))
+        self.max_retries = int(self.config.get("max_retries", 2))
+        self.retry_delay_seconds = float(self.config.get("retry_delay_seconds", 1))
+        self.temperature = float(self.config.get("temperature", 0.1))
+        self.search_client = search_client or SearchClient(
+            api_key=self.config.get("search_api_key"),
+            provider=self.config.get("search_provider", "disabled"),
+            base_url=self.config.get("search_base_url", ""),
+            timeout=int(self.config.get("search_timeout_seconds", max(15, int(self.timeout_seconds)))),
+            max_results=int(self.config.get("search_max_results", 5)),
+            search_depth=str(self.config.get("search_depth", "basic")),
+            topic=str(self.config.get("search_topic", "general")),
         )
-        
-        logger.debug(f"Verification completed: {result.verification_status.value}")
-        return result
-    
-    def _build_verification_prompt(
-        self,
-        claim: Claim,
-        context: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """构建验证提示词"""
-        
-        context_str = ""
-        if context:
-            context_str = f"\n上下文信息：\n{json.dumps(context, ensure_ascii=False, indent=2)}\n"
-        
-        type_guidance = {
-            ClaimType.DATA: "这是一个数据声明，请核实数字的准确性、数据来源和统计口径。",
-            ClaimType.DATE_TIME: "这是一个时间声明，请核实具体日期、时间范围是否正确。",
-            ClaimType.PERSON: "这是一个人物声明，请核实人物身份、职务等信息。",
-            ClaimType.LOCATION: "这是一个地点声明，请核实地理位置、行政区划是否正确。",
-            ClaimType.ORGANIZATION: "这是一个组织声明，请核实机构名称、性质等信息。",
-            ClaimType.EVENT: "这是一个事件声明，请核实事件经过、参与方等信息。",
-            ClaimType.QUOTATION: "这是一个引用声明，请核实引用来源、上下文是否准确。",
-        }
-        
-        type_guidance_str = type_guidance.get(claim.type, "请核实该声明的准确性。")
-        
-        prompt = f"""请对以下声明进行事实核查：
+        logger.info(
+            "FactChecker initialized (search_enabled={}, search_provider={})",
+            bool(getattr(self.search_client, "enabled", False)),
+            getattr(self.search_client, "provider", "disabled"),
+        )
 
-**声明类型**: {claim.type.value}
-**声明原文**: {claim.text}
-**实体信息**: {json.dumps(claim.entities, ensure_ascii=False)}
-{type_guidance_str}
-{context_str}
+    async def extract_claims(self, text: str, context: Optional[Dict[str, Any]] = None) -> List[Claim]:
+        if not text or not text.strip():
+            return []
 
-请按照以下格式输出核查结果：
-
-```json
-{{
-  "claim_content": "需要验证的核心内容",
-  "status": "confirmed/disputed/unverified/incorrect/partial",
-  "confidence": 0.85,
-  "evidence": [
-    "证据1: 具体说明",
-    "证据2: 具体说明"
-  ],
-  "sources": [
-    {{
-      "title": "来源名称",
-      "url": "https://example.com",
-      "type": "official/media/academic/other"
-    }}
-  ],
-  "suggestion": "如果存在问题，给出具体的修改建议"
-}}
-```
-
-注意：
-1. status 必须是以下之一：confirmed(已确认), disputed(存在争议), unverified(无法验证), incorrect(确认错误), partial(部分正确)
-2. confidence 是 0-1 之间的浮点数
-3. 尽可能提供具体的证据和可靠的来源
-4. 如果无法验证，说明原因
-5. 只输出 JSON，不要有其他说明文字
-"""
-        return prompt
-    
-    def _parse_verification_result(
-        self,
-        llm_output: str,
-        claim: Claim
-    ) -> Dict[str, Any]:
-        """解析 LLM 验证结果"""
-        
         try:
-            # 提取 JSON
-            json_match = re.search(r'\{.*\}', llm_output, re.DOTALL)
-            if not json_match:
-                logger.warning("No JSON found in LLM output")
-                return self._create_default_result(claim)
-            
-            result = json.loads(json_match.group())
-            
-            # 验证必要字段
-            if "status" not in result:
-                result["status"] = "unverified"
-            if "confidence" not in result:
-                result["confidence"] = 0.0
-            
+            response = await self._analyze_with_retry(
+                self._build_claim_extraction_prompt(text, context or {}),
+                analysis_type="fact_check",
+            )
+            payload = self._extract_json_payload(response.content)
+            claims = self._parse_claim_payload(payload, text)
+            if claims:
+                return claims[: self.max_claims]
+        except Exception as exc:
+            logger.warning("Claim extraction failed, falling back to heuristics: {}", exc)
+        return self._heuristic_extract_claims(text)
+
+    async def verify_claim(self, claim: Claim, context: Optional[Dict[str, Any]] = None) -> FactCheckResult:
+        if not claim.needs_verification:
+            return FactCheckResult(
+                original_text=claim.text,
+                claim_type=claim.claim_type or claim.type,
+                claim_content=claim.text,
+                verification_status=VerificationStatus.UNVERIFIED,
+                confidence=claim.confidence,
+                suggestion="该句更偏主观体验表达，可按编辑需要决定是否保留。",
+                position=claim.position,
+            )
+
+        context = context or {}
+        search_results = await self._search_claim(claim, context)
+        llm_error: Optional[Exception] = None
+        try:
+            response = await self._analyze_with_retry(
+                self._build_claim_verification_prompt(claim, context, search_results),
+                analysis_type="fact_check",
+            )
+            payload = self._extract_json_payload(response.content)
+            if not isinstance(payload, dict):
+                raise ValueError("Verification payload must be a JSON object")
+
+            result = self._build_result_from_payload(claim, payload)
+            if search_results:
+                if not result.sources:
+                    result.sources = self.search_client._to_source_refs(search_results)
+                if not result.evidence:
+                    result.evidence = self._search_evidence(search_results)
+                if result.verification_status == VerificationStatus.UNVERIFIED and not result.suggestion:
+                    result.suggestion = DEFAULT_RECHECK_SUGGESTION
             return result
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON: {e}")
-            return self._create_default_result(claim)
-        except Exception as e:
-            logger.error(f"Unexpected error parsing result: {e}")
-            return self._create_default_result(claim)
-    
-    def _create_default_result(self, claim: Claim) -> Dict[str, Any]:
-        """创建默认结果"""
-        return {
-            "claim_content": claim.text,
-            "status": "unverified",
-            "confidence": 0.0,
-            "evidence": [],
-            "sources": [],
-            "suggestion": "无法自动验证，请人工核实"
-        }
-    
-    def _create_error_result(self, claim: Claim, error_msg: str) -> FactCheckResult:
-        """创建错误结果"""
-        return FactCheckResult(
+        except Exception as exc:  # pragma: no cover - provider/network path
+            llm_error = exc
+            logger.warning("Fact verification failed for claim '{}': {}", claim.text, exc)
+
+        if search_results:
+            return self._build_search_only_result(claim, search_results, llm_error=llm_error)
+
+        if getattr(self.search_client, "enabled", False):
+            verification = await self.search_client.verify_fact(claim.text, claim.context)
+            result = self._build_result_from_payload(claim, verification)
+            if llm_error and not result.evidence:
+                result.evidence.append(f"LLM verification failed: {llm_error}")
+            return result
+
+        fallback = FactCheckResult(
             original_text=claim.text,
-            claim_type=claim.type,
+            claim_type=claim.claim_type or claim.type,
             claim_content=claim.text,
             verification_status=VerificationStatus.UNVERIFIED,
             confidence=0.0,
             evidence=[],
             sources=[],
-            suggestion=f"验证过程出错: {error_msg}",
-            position=claim.position
+            suggestion=DEFAULT_RECHECK_SUGGESTION,
+            position=claim.position,
+            verified_at=datetime.now().isoformat(),
         )
-    
-    async def _cross_verify_with_search(
-        self,
-        claim: Claim,
-        llm_result: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        使用搜索进行交叉验证
-        
-        Args:
-            claim: 声明
-            llm_result: LLM 验证结果
-            
-        Returns:
-            搜索结果
-        """
-        if not self.search or not self.search.enabled:
-            return {}
-        
+        if llm_error:
+            fallback.evidence.append(f"LLM verification failed: {llm_error}")
+        return fallback
+
+    async def check(self, text: str, context: Optional[Dict[str, Any]] = None) -> List[FactCheckResult]:
+        logger.info("Starting fact check for text ({} chars)", len(text or ""))
+        if not text or not text.strip():
+            logger.warning("Empty text provided for fact check")
+            return []
+
         try:
-            search_result = await self.search.verify_fact(
-                claim=claim.text,
-                context=f"Type: {claim.type.value}, Entities: {claim.entities}"
-            )
-            return search_result
-        except Exception as e:
-            logger.error(f"Search verification failed: {e}")
-            return {}
-    
-    def _merge_verification_results(
-        self,
-        llm_result: Dict[str, Any],
-        search_result: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        合并 LLM 和搜索验证结果
-        
-        Args:
-            llm_result: LLM 结果
-            search_result: 搜索结果
-            
-        Returns:
-            合并后的结果
-        """
-        if not search_result:
-            return llm_result
-        
-        # 简单的合并策略：优先使用 LLM 结果，搜索作为补充
-        merged = llm_result.copy()
-        
-        # 如果搜索有更高置信度，更新置信度
-        if search_result.get("confidence", 0) > merged.get("confidence", 0):
-            merged["confidence"] = search_result["confidence"]
-        
-        # 合并来源
-        if "sources" in search_result and search_result["sources"]:
-            merged.setdefault("sources", []).extend(search_result["sources"])
-        
-        return merged
-    
+            claims = await self.extract_claims(text, context)
+        except Exception as exc:
+            logger.warning("FactChecker: extract_claims failed: {}", exc)
+            claims = self._heuristic_extract_claims(text)
+
+        if not claims:
+            claims = self._heuristic_extract_claims(text)
+        if not claims:
+            return []
+
+        results: List[FactCheckResult] = []
+        for claim in claims[: self.max_claims]:
+            if not claim.needs_verification:
+                continue
+            results.append(await self.verify_claim(claim, context))
+        return results
+
     async def batch_check(
         self,
         texts: List[str],
         context: Optional[Dict[str, Any]] = None,
-        max_concurrency: int = 3,
-        progress_callback: Optional[Any] = None,
+        progress_callback: Optional[Callable[[int, int, str], None]] = None,
     ) -> List[List[FactCheckResult]]:
-        """
-        批量核查多个文本
-        
-        Args:
-            texts: 文本列表
-            context: 上下文
-            max_concurrency: 最大并发数
-            
-        Returns:
-            每组文本的核查结果
-        """
-        semaphore = asyncio.Semaphore(max_concurrency)
-        
-        async def check_with_limit(index: int, text: str) -> List[FactCheckResult]:
-            async with semaphore:
-                if progress_callback:
-                    progress_callback(index + 1, len(texts), f"Checking text {index + 1}")
-                return await self.check(text, context)
+        if not texts:
+            return []
 
-        tasks = [check_with_limit(index, text) for index, text in enumerate(texts)]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # 处理异常
-        final_results = []
-        for result in results:
-            if isinstance(result, Exception):
-                logger.error(f"Batch check error: {result}")
-                final_results.append([])
+        results: List[List[FactCheckResult]] = []
+        total = len(texts)
+        for index, text in enumerate(texts, start=1):
+            results.append(await self.check(text, context))
+            if progress_callback:
+                progress_callback(index, total, f"已完成 {index}/{total} 篇文档的事实核查")
+        return results
+
+    async def close(self) -> None:
+        if hasattr(self.search_client, "close"):
+            await self.search_client.close()
+
+    async def _analyze_with_retry(self, prompt: str, analysis_type: str) -> Any:
+        last_error: Optional[Exception] = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                return await asyncio.wait_for(
+                    self.llm.analyze(
+                        prompt,
+                        analysis_type=analysis_type,
+                        temperature=self.temperature,
+                    ),
+                    timeout=self.timeout_seconds,
+                )
+            except Exception as exc:
+                last_error = exc
+                if attempt >= self.max_retries:
+                    break
+                await asyncio.sleep(self.retry_delay_seconds)
+        assert last_error is not None
+        raise last_error
+
+    async def _search_claim(self, claim: Claim, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        if not getattr(self.search_client, "enabled", False):
+            return []
+        query = self._build_search_query(claim, context)
+        try:
+            return await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
+        except Exception as exc:  # pragma: no cover - provider/network path
+            logger.warning("Search verification failed for claim '{}': {}", claim.text, exc)
+            return []
+
+    def _build_search_query(self, claim: Claim, context: Dict[str, Any]) -> str:
+        hints: List[str] = []
+        for key in ("document_title", "topic", "product_name"):
+            value = str(context.get(key) or "").strip()
+            if value:
+                hints.append(value)
+        return f"{claim.text} {' '.join(hints[:2])}".strip()
+
+    def _build_claim_extraction_prompt(self, text: str, context: Dict[str, Any]) -> str:
+        context_block = json.dumps(context, ensure_ascii=False) if context else "{}"
+        return (
+            "You are extracting factual claims from a Chinese product research report.\n"
+            "Return exactly one JSON array and nothing else. Do not use markdown code fences.\n"
+            "If there are no verifiable claims, return [].\n"
+            "Only keep claims that can be checked externally. Skip headings, section labels, bullet labels, "
+            "subjective opinions, personal experience, workflow impressions, forecasts, and pure editing notes.\n"
+            'Schema per item: {"text":"claim sentence","claim_type":"data|date_time|person|location|organization|event|quotation|number|other","confidence":0.0,"needs_verification":true}\n'
+            f"Context: {context_block}\n\nText:\n{text}"
+        )
+
+    def _build_claim_verification_prompt(
+        self,
+        claim: Claim,
+        context: Dict[str, Any],
+        search_results: List[Dict[str, Any]],
+    ) -> str:
+        context_block = json.dumps(context, ensure_ascii=False) if context else "{}"
+        sources_block = json.dumps(self._serialize_search_results(search_results), ensure_ascii=False)
+        prompt_parts = [
+            "You are verifying one factual statement from a Chinese product research report.",
+            "Use the provided search results as your primary external evidence.",
+            "If the claim is risky but you still cannot confirm it confidently, set status to unverified.",
+            "Return exactly one JSON object and nothing else. Do not use markdown code fences.",
+            (
+                'Schema: {"status":"confirmed|disputed|unverified|incorrect|partial",'
+                '"confidence":0.0,"evidence":["..."],"sources":[{"title":"...","url":"..."}],'
+                '"suggestion":"用中文一句话说明；如无法确认，则写“该内容需要复查。”"}'
+            ),
+            f"Context: {context_block}",
+            f"Statement: {claim.text}",
+            f"Search results: {sources_block}",
+        ]
+        return "\n".join(prompt_parts)
+
+    def _extract_json_payload(self, content: str) -> Any:
+        return extract_json_payload(content)
+
+    def _parse_claim_payload(self, payload: Any, full_text: str) -> List[Claim]:
+        if not isinstance(payload, list):
+            return []
+
+        claims: List[Claim] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            text = str(item.get("text") or item.get("claim") or "").strip()
+            if not text or self._should_skip_claim(text):
+                continue
+            claims.append(
+                Claim(
+                    text=text,
+                    claim_type=self._parse_claim_type(item.get("claim_type")),
+                    confidence=self._safe_float(item.get("confidence"), default=0.6),
+                    needs_verification=bool(item.get("needs_verification", True)),
+                    position=self._locate_excerpt(full_text, text),
+                )
+            )
+        return claims
+
+    def _build_result_from_payload(self, claim: Claim, payload: Dict[str, Any]) -> FactCheckResult:
+        status_value = payload.get("status") or payload.get("verification_status") or "unverified"
+        status = self._parse_verification_status(status_value)
+        suggestion = str(payload.get("suggestion") or "").strip()
+        if not suggestion and status in {
+            VerificationStatus.UNVERIFIED,
+            VerificationStatus.DISPUTED,
+            VerificationStatus.PARTIALLY_CORRECT,
+        }:
+            suggestion = DEFAULT_RECHECK_SUGGESTION
+        return FactCheckResult(
+            original_text=claim.text,
+            claim_type=claim.claim_type or claim.type,
+            claim_content=claim.text,
+            verification_status=status,
+            confidence=self._safe_float(payload.get("confidence"), default=0.0),
+            evidence=self._normalize_string_list(payload.get("evidence")),
+            sources=self._normalize_sources(payload.get("sources")),
+            suggestion=suggestion,
+            position=claim.position,
+            verified_at=datetime.now().isoformat(),
+        )
+
+    def _build_search_only_result(
+        self,
+        claim: Claim,
+        search_results: List[Dict[str, Any]],
+        llm_error: Optional[Exception] = None,
+    ) -> FactCheckResult:
+        evidence = self._search_evidence(search_results)
+        if llm_error is not None:
+            evidence.append(f"LLM verification failed: {llm_error}")
+        return FactCheckResult(
+            original_text=claim.text,
+            claim_type=claim.claim_type or claim.type,
+            claim_content=claim.text,
+            verification_status=VerificationStatus.UNVERIFIED,
+            confidence=0.35,
+            evidence=evidence,
+            sources=self.search_client._to_source_refs(search_results),
+            suggestion=DEFAULT_RECHECK_SUGGESTION,
+            position=claim.position,
+            verified_at=datetime.now().isoformat(),
+        )
+
+    def _heuristic_extract_claims(self, text: str) -> List[Claim]:
+        claims: List[Claim] = []
+        seen: set[str] = set()
+        for sentence in self._split_sentences(text):
+            normalized = sentence.strip()
+            if not normalized or normalized in seen or self._should_skip_claim(normalized):
+                continue
+            if not self._looks_like_verifiable_claim(normalized):
+                continue
+            seen.add(normalized)
+            claims.append(
+                Claim(
+                    text=normalized,
+                    claim_type=self._infer_claim_type(normalized),
+                    confidence=0.55,
+                    needs_verification=True,
+                    position=self._locate_excerpt(text, normalized),
+                )
+            )
+        return claims[: self.max_claims]
+
+    def _split_sentences(self, text: str) -> List[str]:
+        sentences: List[str] = []
+        for part in SENTENCE_SPLIT_PATTERN.split(text):
+            stripped = part.strip()
+            if not stripped:
+                continue
+            if len(stripped) > 180:
+                segments = re.split(r"[。！？!?]", stripped)
+                sentences.extend(item.strip() for item in segments if item.strip())
             else:
-                final_results.append(result)
-        
-        return final_results
+                sentences.append(stripped)
+        return sentences
 
+    def _looks_like_verifiable_claim(self, sentence: str) -> bool:
+        patterns = [
+            r"\b20\d{2}\b",
+            r"\d+(?:\.\d+)?%",
+            r"\d+(?:\.\d+)?(?:亿|万|万元|亿美元|美元|元|人|次|家|MB|GB|秒|分钟)",
+            r"(发布|上线|融资|营收|收入|下载量|用户数|市场占有率|价格|定价|排名|增长|下降)",
+            r"(腾讯|阿里|字节|百度|微软|谷歌|OpenAI|Anthropic|飞书|影刀|蝉镜|MiniMax|DeepSeek)",
+        ]
+        return any(re.search(pattern, sentence, re.IGNORECASE) for pattern in patterns)
 
-# 便捷函数
+    def _should_skip_claim(self, sentence: str) -> bool:
+        stripped = sentence.strip()
+        if not stripped:
+            return True
+        if stripped.startswith("#"):
+            return True
+        if HEADING_LABEL_PATTERN.match(stripped):
+            return True
+        if len(stripped) <= 18 and stripped.endswith((":", "：")):
+            return True
+
+        skip_markers = [
+            "我认为",
+            "我觉得",
+            "我们可以",
+            "整体来说",
+            "预计",
+            "预期",
+            "有望",
+            "如下图所示",
+            "体验",
+            "试用",
+            "实测反馈",
+            "用户反馈",
+            "问题记录",
+            "流程顺畅性",
+            "性能表现",
+            "等待大约三分钟",
+            "可在3分钟内完成",
+            "约为2-5分钟",
+            "很快视频就生成完成",
+            "个人感受",
+            "主观上",
+        ]
+        return any(marker in stripped for marker in skip_markers)
+
+    def _infer_claim_type(self, sentence: str) -> ClaimType:
+        if re.search(r"\b20\d{2}\b.*(?:年|月|日)", sentence):
+            return ClaimType.DATE_TIME
+        if re.search(r"%|亿美元|美元|万元|万|亿|MB|GB|秒|分钟", sentence):
+            return ClaimType.DATA
+        if re.search(r"(腾讯|阿里|字节|百度|微软|谷歌|OpenAI|Anthropic|飞书|影刀|蝉镜|MiniMax|DeepSeek)", sentence):
+            return ClaimType.ORGANIZATION
+        return ClaimType.OTHER
+
+    def _locate_excerpt(self, full_text: str, excerpt: str) -> Dict[str, Any]:
+        index = full_text.find(excerpt)
+        if index >= 0:
+            return {
+                "char_start": index,
+                "char_end": index + len(excerpt),
+                "paragraph_index": full_text[:index].count("\n\n"),
+            }
+
+        normalized_excerpt = self._normalize_text(excerpt)
+        if not normalized_excerpt:
+            return {}
+        paragraphs = [item for item in full_text.split("\n\n") if item.strip()]
+        for paragraph_index, paragraph in enumerate(paragraphs):
+            if normalized_excerpt in self._normalize_text(paragraph):
+                char_start = full_text.find(paragraph)
+                return {
+                    "char_start": char_start,
+                    "char_end": char_start + len(paragraph),
+                    "paragraph_index": paragraph_index,
+                }
+        return {}
+
+    def _serialize_search_results(self, search_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        serialized: List[Dict[str, Any]] = []
+        for item in search_results[:3]:
+            serialized.append(
+                {
+                    "title": str(item.get("title") or "来源"),
+                    "url": str(item.get("url") or ""),
+                    "snippet": str(item.get("snippet") or "")[:500],
+                    "source": str(item.get("source") or ""),
+                }
+            )
+        return serialized
+
+    def _search_evidence(self, search_results: List[Dict[str, Any]]) -> List[str]:
+        evidence: List[str] = []
+        for item in search_results[:3]:
+            snippet = str(item.get("snippet") or "").strip()
+            if snippet:
+                evidence.append(snippet[:240])
+        return evidence
+
+    def _parse_claim_type(self, value: Any) -> ClaimType:
+        normalized = str(value or "other").strip().lower()
+        for item in ClaimType:
+            if item.value == normalized:
+                return item
+        if normalized == "opinion":
+            return ClaimType.OTHER
+        return ClaimType.OTHER
+
+    def _parse_verification_status(self, value: Any) -> VerificationStatus:
+        normalized = str(value or "unverified").strip().lower()
+        mapping = {
+            "confirmed": VerificationStatus.CONFIRMED,
+            "true": VerificationStatus.CONFIRMED,
+            "disputed": VerificationStatus.DISPUTED,
+            "controversial": VerificationStatus.DISPUTED,
+            "unverified": VerificationStatus.UNVERIFIED,
+            "unknown": VerificationStatus.UNVERIFIED,
+            "incorrect": VerificationStatus.INCORRECT,
+            "false": VerificationStatus.INCORRECT,
+            "partial": VerificationStatus.PARTIALLY_CORRECT,
+            "partially_correct": VerificationStatus.PARTIALLY_CORRECT,
+        }
+        return mapping.get(normalized, VerificationStatus.UNVERIFIED)
+
+    def _normalize_sources(self, value: Any) -> List[Dict[str, str]]:
+        if not isinstance(value, Iterable) or isinstance(value, (str, bytes, dict)):
+            if isinstance(value, dict):
+                value = [value]
+            else:
+                return []
+        sources: List[Dict[str, str]] = []
+        for item in value:
+            if isinstance(item, dict):
+                sources.append(
+                    {
+                        "title": str(item.get("title") or item.get("name") or item.get("url") or "来源"),
+                        "url": str(item.get("url") or item.get("link") or ""),
+                    }
+                )
+            elif item:
+                sources.append({"title": str(item), "url": ""})
+        return sources
+
+    def _normalize_string_list(self, value: Any) -> List[str]:
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if value:
+            return [str(value).strip()]
+        return []
+
+    def _safe_float(self, value: Any, default: float = 0.0) -> float:
+        try:
+            return max(0.0, min(1.0, float(value)))
+        except (TypeError, ValueError):
+            return default
+
+    def _normalize_text(self, text: str) -> str:
+        return re.sub(r"\s+", "", text).lower()
+
 
 async def check_facts(
     text: str,
     llm_client: LLMClient,
     search_client: Optional[SearchClient] = None,
-    context: Optional[Dict[str, Any]] = None
+    context: Optional[Dict[str, Any]] = None,
 ) -> List[FactCheckResult]:
-    """
-    便捷函数：快速核查文本事实
-    
-    Args:
-        text: 需要核查的文本
-        llm_client: LLM 客户端
-        search_client: 搜索客户端（可选）
-        context: 上下文
-        
-    Returns:
-        核查结果列表
-    """
-    checker = FactChecker(
-        llm_client=llm_client,
-        search_client=search_client
-    )
-    
+    checker = FactChecker(llm_client=llm_client, search_client=search_client)
     try:
         return await checker.check(text, context)
     finally:
-        # 清理资源
-        pass
+        await checker.close()
 
 
 async def extract_claims_only(
     text: str,
-    llm_client: LLMClient
+    llm_client: LLMClient,
+    context: Optional[Dict[str, Any]] = None,
 ) -> List[Claim]:
-    """
-    便捷函数：仅提取声明，不验证
-    
-    Args:
-        text: 输入文本
-        llm_client: LLM 客户端
-        
-    Returns:
-        声明列表
-    """
     checker = FactChecker(llm_client=llm_client)
-    return await checker.extract_claims(text)
+    try:
+        return await checker.extract_claims(text, context)
+    finally:
+        await checker.close()

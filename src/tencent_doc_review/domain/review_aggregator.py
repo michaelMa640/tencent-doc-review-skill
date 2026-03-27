@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from ..analyzer.fact_checker import FactCheckResult
 from ..analyzer.quality_evaluator import QualityLevel, QualityReport
@@ -14,6 +14,8 @@ def aggregate_review_issues(
     fact_check_results: List[FactCheckResult],
     structure_match_result: Optional[StructureMatchResult],
     quality_report: Optional[QualityReport],
+    language_issues: Optional[List[ReviewIssue]] = None,
+    consistency_issues: Optional[List[ReviewIssue]] = None,
 ) -> List[ReviewIssue]:
     issues: List[ReviewIssue] = []
 
@@ -21,61 +23,74 @@ def aggregate_review_issues(
         status = item.verification_status.value
         if status not in {"incorrect", "disputed", "unverified", "partial"}:
             continue
-        severity = {
-            "incorrect": ReviewSeverity.HIGH,
-            "disputed": ReviewSeverity.MEDIUM,
-            "unverified": ReviewSeverity.MEDIUM,
-            "partial": ReviewSeverity.LOW,
-        }.get(status, ReviewSeverity.LOW)
         issues.append(
             ReviewIssue(
                 issue_type=ReviewIssueType.FACT,
-                severity=severity,
-                title=f"Fact check: {status}",
+                severity={
+                    "incorrect": ReviewSeverity.HIGH,
+                    "disputed": ReviewSeverity.MEDIUM,
+                    "unverified": ReviewSeverity.MEDIUM,
+                    "partial": ReviewSeverity.LOW,
+                }.get(status, ReviewSeverity.LOW),
+                title=_fact_title(status),
                 description=item.claim_content or item.original_text,
-                suggestion=item.suggestion,
+                suggestion=_fact_suggestion(status, item.suggestion),
                 source_excerpt=item.original_text,
                 location=item.position,
                 confidence=item.confidence,
-                metadata={"claim_type": item.claim_type.value, "verification_status": status},
+                metadata={
+                    "claim_type": item.claim_type.value,
+                    "verification_status": status,
+                    "sources": item.sources,
+                },
             )
         )
 
     if structure_match_result:
-        for match in structure_match_result.section_matches:
-            if match.status.value == "matched":
-                continue
-            severity = ReviewSeverity.HIGH if match.status.value == "missing" else ReviewSeverity.MEDIUM
+        missing = [match for match in structure_match_result.section_matches if match.status.value != "matched"]
+        if missing:
             issues.append(
                 ReviewIssue(
                     issue_type=ReviewIssueType.STRUCTURE,
-                    severity=severity,
-                    title=f"Structure: {match.status.value}",
-                    description=match.template_section.title,
-                    suggestion=match.suggestions[0] if match.suggestions else "",
-                    source_excerpt=match.document_section.title if match.document_section else "",
-                    confidence=match.similarity,
-                    metadata={"template_section": match.template_section.title},
+                    severity=ReviewSeverity.MEDIUM,
+                    title="结构建议",
+                    description="文档结构与模板仍有差异，建议在正文末尾统一补齐缺失部分。",
+                    suggestion="请在文末补充缺失章节或合并相关内容，不需要逐段修改格式。",
+                    metadata={"anchor_preference": "document_end"},
                 )
             )
 
-    if quality_report:
+    if quality_report and not (
+        quality_report.overall_score == 0 and all(score.score == 0 for score in quality_report.dimension_scores)
+    ):
         for score in quality_report.dimension_scores:
+            if score.dimension.value in {"language_expression", "format_compliance"}:
+                continue
+            if any("评估失败" in weakness or "解析评估结果失败" in weakness for weakness in score.weaknesses):
+                continue
             if score.score >= 80:
                 continue
-            severity = ReviewSeverity.HIGH if score.score < 60 else ReviewSeverity.MEDIUM
-            description = "; ".join(score.weaknesses) if score.weaknesses else f"{score.dimension.value} needs improvement"
             issues.append(
                 ReviewIssue(
                     issue_type=ReviewIssueType.QUALITY,
-                    severity=severity,
-                    title=f"Quality: {score.dimension.value}",
-                    description=description,
-                    suggestion=score.suggestions[0] if score.suggestions else "",
+                    severity=ReviewSeverity.HIGH if score.score < 60 else ReviewSeverity.MEDIUM,
+                    title=f"质量问题：{_quality_dimension_name(score.dimension.value)}",
+                    description=_shorten_quality_description(score.weaknesses, score.dimension.value),
+                    suggestion=(score.suggestions[0] if score.suggestions else "请补充可验证证据并压缩主观判断。"),
                     confidence=max(0.0, min(1.0, score.score / 100)),
-                    metadata={"dimension": score.dimension.value, "score": score.score, "level": score.level.value},
+                    metadata={
+                        "dimension": score.dimension.value,
+                        "score": score.score,
+                        "level": score.level.value,
+                        "anchor_preference": "document_end",
+                    },
                 )
             )
+
+    if consistency_issues:
+        issues.extend(consistency_issues)
+    if language_issues:
+        issues.extend(language_issues)
 
     return issues
 
@@ -87,13 +102,15 @@ def build_review_report(
     fact_check_results: List[FactCheckResult],
     structure_match_result: Optional[StructureMatchResult],
     quality_report: Optional[QualityReport],
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: Optional[Dict[str, object]] = None,
 ) -> ReviewReport:
     metrics = {
         "issue_count": len(issues),
         "high_severity_count": sum(1 for issue in issues if issue.severity == ReviewSeverity.HIGH),
         "fact_check_count": len(fact_check_results),
         "flagged_fact_count": sum(1 for issue in issues if issue.issue_type == ReviewIssueType.FACT),
+        "language_issue_count": sum(1 for issue in issues if issue.issue_type == ReviewIssueType.LANGUAGE),
+        "consistency_issue_count": sum(1 for issue in issues if issue.issue_type == ReviewIssueType.CONSISTENCY),
         "structure_score": structure_match_result.overall_score if structure_match_result else None,
         "quality_score": quality_report.overall_score if quality_report else None,
         "quality_level": quality_report.overall_level.value if quality_report else None,
@@ -113,3 +130,36 @@ def quality_level_to_severity(level: QualityLevel) -> ReviewSeverity:
     if level == QualityLevel.NEEDS_IMPROVEMENT:
         return ReviewSeverity.MEDIUM
     return ReviewSeverity.LOW
+
+
+def _fact_title(status: str) -> str:
+    return {
+        "incorrect": "事实错误",
+        "disputed": "事实存疑",
+        "unverified": "事实待核实",
+        "partial": "事实部分准确",
+    }.get(status, "事实问题")
+
+
+def _fact_suggestion(status: str, original: str) -> str:
+    if status in {"unverified", "disputed", "partial"}:
+        return "该内容需要复查。"
+    return original or "请复核该内容。"
+
+
+def _quality_dimension_name(value: str) -> str:
+    return {
+        "content_completeness": "内容完整性",
+        "logical_clarity": "逻辑清晰度",
+        "argumentation_quality": "论证充分性",
+        "data_accuracy": "数据准确性",
+        "language_expression": "语言表达",
+        "format_compliance": "格式规范",
+    }.get(value, value)
+
+
+def _shorten_quality_description(weaknesses: List[str], dimension: str) -> str:
+    if not weaknesses:
+        return f"{_quality_dimension_name(dimension)}仍需加强。"
+    first = weaknesses[0].strip()
+    return first.split("；")[0].split("。")[0].strip() or f"{_quality_dimension_name(dimension)}仍需加强。"

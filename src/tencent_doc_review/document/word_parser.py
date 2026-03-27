@@ -17,6 +17,7 @@ class ParagraphNode:
     text: str
     style_name: str = ""
     is_heading: bool = False
+    heading_level: int = 0
     metadata: Dict[str, object] = field(default_factory=dict)
 
 
@@ -40,13 +41,15 @@ class WordParser:
         for index, paragraph in enumerate(document.paragraphs):
             text = paragraph.text.strip()
             style_name = paragraph.style.name if paragraph.style is not None else ""
-            is_heading = style_name.lower().startswith("heading")
+            heading_level = self._detect_heading_level(style_name, text)
+            is_heading = heading_level > 0
             paragraphs.append(
                 ParagraphNode(
                     index=index,
                     text=text,
                     style_name=style_name,
                     is_heading=is_heading,
+                    heading_level=heading_level,
                 )
             )
 
@@ -56,3 +59,26 @@ class WordParser:
             paragraphs=paragraphs,
             title=title,
         )
+
+    def _detect_heading_level(self, style_name: str, text: str) -> int:
+        normalized_style = style_name.lower().strip()
+        if normalized_style == "title":
+            return 1
+
+        if normalized_style.startswith("heading"):
+            parts = normalized_style.split()
+            if parts and parts[-1].isdigit():
+                return max(1, int(parts[-1]))
+            return 1
+
+        stripped = text.strip()
+        if not stripped:
+            return 0
+
+        if len(stripped) <= 30 and (
+            stripped.startswith(tuple(f"{i}." for i in range(1, 10)))
+            or stripped.startswith(tuple(f"{i}、" for i in range(1, 10)))
+        ):
+            return 2
+
+        return 0
