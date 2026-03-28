@@ -136,6 +136,60 @@ class TestClaimVerification:
         assert result.verification_status == VerificationStatus.UNVERIFIED
         assert "主观体验" in result.suggestion
 
+    @pytest.mark.asyncio
+    async def test_verify_claim_allows_product_description_without_public_conflict(self):
+        llm_client = Mock()
+        llm_client.analyze = AsyncMock(
+            return_value=Mock(
+                content='{"status":"unverified","confidence":0.4,"evidence":[],"sources":[],"suggestion":""}'
+            )
+        )
+        search_client = Mock(spec=SearchClient)
+        search_client.enabled = False
+        search_client.provider = "disabled"
+        search_client.verify_fact = AsyncMock(return_value={})
+        search_client.close = AsyncMock()
+
+        checker = FactChecker(llm_client=llm_client, search_client=search_client)
+        claim = Claim(
+            text="该产品支持多语言模板和数字人播报。",
+            claim_type=ClaimType.OTHER,
+            confidence=0.7,
+            needs_verification=True,
+        )
+
+        result = await checker.verify_claim(claim)
+
+        assert result.verification_status == VerificationStatus.CONFIRMED
+        assert result.suggestion == ""
+
+    @pytest.mark.asyncio
+    async def test_verify_claim_marks_implausible_number_for_manual_review(self):
+        llm_client = Mock()
+        llm_client.analyze = AsyncMock(
+            return_value=Mock(
+                content='{"status":"unverified","confidence":0.4,"evidence":[],"sources":[],"suggestion":""}'
+            )
+        )
+        search_client = Mock(spec=SearchClient)
+        search_client.enabled = False
+        search_client.provider = "disabled"
+        search_client.verify_fact = AsyncMock(return_value={})
+        search_client.close = AsyncMock()
+
+        checker = FactChecker(llm_client=llm_client, search_client=search_client)
+        claim = Claim(
+            text="该产品市场占有率达到150%。",
+            claim_type=ClaimType.DATA,
+            confidence=0.8,
+            needs_verification=True,
+        )
+
+        result = await checker.verify_claim(claim)
+
+        assert result.verification_status == VerificationStatus.UNVERIFIED
+        assert "人工二次核查" in result.suggestion
+
 
 class TestFullCheck:
     @pytest.mark.asyncio

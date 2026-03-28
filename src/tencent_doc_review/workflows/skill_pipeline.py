@@ -51,6 +51,7 @@ class SkillPipelineArtifacts:
 class AnchorResolution:
     paragraph_index: int
     reliable: bool = False
+    strategy: str = "fallback"
 
 
 class SkillPipeline:
@@ -225,11 +226,14 @@ class SkillPipeline:
         anchor = self._resolve_anchor(paragraphs, issue)
         comment_text = self._format_issue_comment(issue, metadata)
 
-        if metadata.get("anchor_preference") == "document_end":
+        if metadata.get("anchor_preference") == "document_end" or anchor.strategy in {"document_end", "fallback"}:
             metadata["render_mode"] = "summary_block"
-        elif not anchor.reliable:
+            metadata.setdefault("anchor_reason", anchor.strategy)
+        elif not anchor.reliable and not issue.source_excerpt.strip():
             metadata["render_mode"] = "summary_block"
             metadata.setdefault("anchor_reason", "unreliable_paragraph_match")
+        elif not anchor.reliable:
+            metadata.setdefault("anchor_reason", anchor.strategy or "approximate_paragraph_match")
 
         return WordAnnotation(
             paragraph_index=anchor.paragraph_index,
@@ -283,7 +287,7 @@ class SkillPipeline:
     def _resolve_anchor(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> AnchorResolution:
         visible_paragraphs = [paragraph for paragraph in paragraphs if paragraph.text.strip()]
         if not visible_paragraphs:
-            return AnchorResolution(paragraph_index=0, reliable=False)
+            return AnchorResolution(paragraph_index=0, reliable=False, strategy="fallback")
 
         non_heading_paragraphs = [paragraph for paragraph in visible_paragraphs if not paragraph.is_heading]
         candidate_pool = non_heading_paragraphs or visible_paragraphs
@@ -300,32 +304,32 @@ class SkillPipeline:
         if source_excerpt and preferred_paragraph is not None:
             preferred_text = self._normalize_text(preferred_paragraph.text)
             if normalized_excerpt and normalized_excerpt in preferred_text and not preferred_paragraph.is_heading:
-                return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=True)
+                return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=True, strategy="preferred_exact")
             if normalized_excerpt and preferred_text == normalized_excerpt:
-                return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=True)
+                return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=True, strategy="preferred_exact")
 
         if source_excerpt:
             for paragraph in candidate_pool:
                 if paragraph.text.strip() == source_excerpt:
-                    return AnchorResolution(paragraph_index=paragraph.index, reliable=True)
+                    return AnchorResolution(paragraph_index=paragraph.index, reliable=True, strategy="exact")
 
         if normalized_excerpt:
             substring_match = self._find_best_substring_match(candidate_pool, normalized_excerpt, preferred_paragraph)
             if substring_match is not None:
-                return AnchorResolution(paragraph_index=substring_match.index, reliable=True)
-
-            heading_match = self._find_heading_exact_match(visible_paragraphs, normalized_excerpt)
-            if heading_match is not None:
-                return AnchorResolution(paragraph_index=heading_match.index, reliable=True)
+                return AnchorResolution(paragraph_index=substring_match.index, reliable=True, strategy="substring")
 
         if issue.metadata.get("anchor_preference") == "document_end":
-            return AnchorResolution(paragraph_index=visible_paragraphs[-1].index, reliable=False)
+            return AnchorResolution(paragraph_index=visible_paragraphs[-1].index, reliable=False, strategy="document_end")
 
         if preferred_paragraph is not None and not preferred_paragraph.is_heading:
-            return AnchorResolution(paragraph_index=preferred_paragraph.index, reliable=False)
+            return AnchorResolution(
+                paragraph_index=preferred_paragraph.index,
+                reliable=False,
+                strategy="preferred_approximate",
+            )
 
         fallback = candidate_pool[-1] if candidate_pool else visible_paragraphs[-1]
-        return AnchorResolution(paragraph_index=fallback.index, reliable=False)
+        return AnchorResolution(paragraph_index=fallback.index, reliable=False, strategy="fallback")
 
     def _write_markdown_report(self, annotated_output_path: Path, review_result: AnalysisResult) -> str:
         report_path = annotated_output_path.with_suffix(".review.md")
@@ -338,10 +342,7 @@ class SkillPipeline:
             text = paragraph.text.strip()
             if not text:
                 continue
-            if paragraph.heading_level > 0:
-                lines.append(f"{'#' * min(paragraph.heading_level, 6)} {text}")
-            else:
-                lines.append(text)
+            lines.append(text)
         return "\n\n".join(lines)
 
     def _build_remote_filename(self, request: SkillRequest, suffix: str) -> str:
@@ -352,7 +353,8 @@ class SkillPipeline:
         return f"{sanitized}-批注版{suffix}"
 
     def _normalize_text(self, text: str) -> str:
-        return re.sub(r"\s+", "", text).lower()
+        stripped = re.sub(r"\s+", "", text).lower()
+        return re.sub(r"[:：，,。.;；!?！？、“”\"'‘’（）()\[\]{}<>《》#*_\-—/]+", "", stripped)
 
     def _find_best_substring_match(
         self,
@@ -376,15 +378,3 @@ class SkillPipeline:
             return None
         candidates.sort(key=lambda item: (item[0], item[1], item[2]))
         return candidates[0][3]
-
-    def _find_heading_exact_match(
-        self,
-        paragraphs: List[ParagraphNode],
-        normalized_excerpt: str,
-    ) -> Optional[ParagraphNode]:
-        if not normalized_excerpt:
-            return None
-        for paragraph in paragraphs:
-            if paragraph.is_heading and self._normalize_text(paragraph.text) == normalized_excerpt:
-                return paragraph
-        return None

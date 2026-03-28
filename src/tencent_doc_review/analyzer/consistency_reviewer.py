@@ -74,21 +74,58 @@ class ConsistencyReviewer:
             description = str(item.get("description") or "").strip()
             if not description or not excerpt_a:
                 continue
-            location = self._locate_excerpt(full_text, excerpt_a)
+            severity = self._parse_severity(item.get("severity"))
+            suggestion = str(item.get("suggestion") or "请核对前后表述并统一口径。").strip()
             issues.append(
-                ReviewIssue(
-                    issue_type=ReviewIssueType.CONSISTENCY,
-                    severity=self._parse_severity(item.get("severity")),
-                    title="前后矛盾",
+                self._build_issue(
+                    excerpt=excerpt_a,
+                    counterpart=excerpt_b,
                     description=description,
-                    suggestion=str(item.get("suggestion") or "请复核前后表述并统一口径。").strip(),
-                    source_excerpt=excerpt_a if not excerpt_b else f"{excerpt_a} / {excerpt_b}",
-                    location=location,
-                    confidence=0.7,
-                    metadata={"excerpt_a": excerpt_a, "excerpt_b": excerpt_b, "anchor_preference": "document_end"},
+                    suggestion=suggestion,
+                    severity=severity,
+                    full_text=full_text,
+                    anchor_side="a",
                 )
             )
+            if excerpt_b and excerpt_b != excerpt_a:
+                issues.append(
+                    self._build_issue(
+                        excerpt=excerpt_b,
+                        counterpart=excerpt_a,
+                        description=description,
+                        suggestion=suggestion,
+                        severity=severity,
+                        full_text=full_text,
+                        anchor_side="b",
+                    )
+                )
         return issues
+
+    def _build_issue(
+        self,
+        excerpt: str,
+        counterpart: str,
+        description: str,
+        suggestion: str,
+        severity: ReviewSeverity,
+        full_text: str,
+        anchor_side: str,
+    ) -> ReviewIssue:
+        if counterpart:
+            full_description = f"{description} 另一处相关表述：{counterpart}"
+        else:
+            full_description = description
+        return ReviewIssue(
+            issue_type=ReviewIssueType.CONSISTENCY,
+            severity=severity,
+            title="前后矛盾",
+            description=full_description,
+            suggestion=suggestion,
+            source_excerpt=excerpt,
+            location=self._locate_excerpt(full_text, excerpt),
+            confidence=0.7,
+            metadata={"excerpt_a": excerpt if anchor_side == "a" else counterpart, "excerpt_b": counterpart if anchor_side == "a" else excerpt, "anchor_side": anchor_side},
+        )
 
     def _locate_excerpt(self, full_text: str, excerpt: str) -> Dict[str, Any]:
         index = full_text.find(excerpt)

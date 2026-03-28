@@ -179,10 +179,8 @@ def run_openclaw(settings: OpenClawBridgeSettings, prompt: str) -> Dict[str, Any
 
 
 def extract_openclaw_payload(stdout: str) -> Dict[str, Any]:
-    outer = extract_first_json_object(stdout)
+    outer = extract_payload_container(stdout)
     payloads = outer.get("payloads") or outer.get("result", {}).get("payloads") or []
-    if not payloads:
-        raise OpenClawBridgeError("OpenClaw returned no payloads")
     text = payloads[0].get("text", "")
     if not text:
         raise OpenClawBridgeError("OpenClaw payload had no text response")
@@ -234,6 +232,58 @@ def extract_first_json_object(text: str) -> Dict[str, Any]:
             depth -= 1
             if depth == 0:
                 return json.loads(text[start : index + 1])
+    raise OpenClawBridgeError("Unterminated JSON object in OpenClaw output")
+
+
+def extract_payload_container(text: str) -> Dict[str, Any]:
+    candidates = extract_json_objects(text)
+    for item in reversed(candidates):
+        payloads = item.get("payloads") or item.get("result", {}).get("payloads") or []
+        if payloads:
+            return item
+    raise OpenClawBridgeError("OpenClaw returned no payloads")
+
+
+def extract_json_objects(text: str) -> list[Dict[str, Any]]:
+    objects: list[Dict[str, Any]] = []
+    start = 0
+    while start < len(text):
+        next_start = text.find("{", start)
+        if next_start == -1:
+            break
+        try:
+            obj, end = _extract_json_object_at(text, next_start)
+        except OpenClawBridgeError:
+            start = next_start + 1
+            continue
+        objects.append(obj)
+        start = end
+    return objects
+
+
+def _extract_json_object_at(text: str, start: int) -> tuple[Dict[str, Any], int]:
+    depth = 0
+    in_string = False
+    escape = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if escape:
+            escape = False
+            continue
+        if char == "\\":
+            escape = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return json.loads(text[start : index + 1]), index + 1
     raise OpenClawBridgeError("Unterminated JSON object in OpenClaw output")
 
 

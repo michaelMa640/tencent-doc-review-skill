@@ -12,6 +12,7 @@ from tencent_doc_review.access.openclaw_bridge import (
     build_export_prompt,
     extract_agent_json,
     extract_first_json_object,
+    extract_payload_container,
     extract_openclaw_payload,
 )
 
@@ -34,6 +35,16 @@ class PhaseGOpenClawBridgeParserTests(unittest.TestCase):
         )
         payload = extract_openclaw_payload(raw)
         self.assertIn("uploaded_name", payload["text"])
+
+    def test_extract_payload_container_prefers_last_payload_json_over_tool_logs(self):
+        raw = (
+            '[plugins] ready\n'
+            'feishu: tool call: exec params={"command":"dir demo"}\n'
+            '{"payloads":[{"text":"{\\"filename\\":\\"demo.docx\\"}","mediaUrl":null}],"meta":{"durationMs":1}}\n'
+        )
+        payload = extract_payload_container(raw)
+        self.assertIn("payloads", payload)
+        self.assertEqual(payload["meta"]["durationMs"], 1)
 
     def test_extract_agent_json_accepts_source_path_payload(self):
         response = {

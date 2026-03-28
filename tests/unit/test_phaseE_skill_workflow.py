@@ -158,7 +158,30 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(annotation.paragraph_index, 2)
         self.assertNotIn("render_mode", annotation.metadata)
 
-    def test_unreliable_anchor_is_moved_to_summary_block(self):
+    def test_issue_with_source_excerpt_keeps_inline_approximate_anchor(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="文章标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="第一段正文，介绍产品背景。"),
+            ParagraphNode(index=2, text="第二段正文，说明价格策略。"),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="一个没有可靠锚点的判断",
+            suggestion="该内容需要复查。",
+            source_excerpt="支持中英文多语种",
+            location={"paragraph_index": 2},
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, issue)
+
+        self.assertEqual(annotation.paragraph_index, 2)
+        self.assertNotIn("render_mode", annotation.metadata)
+        self.assertEqual(annotation.metadata.get("anchor_reason"), "preferred_approximate")
+
+    def test_source_excerpt_without_anchor_moves_to_summary_block(self):
         pipeline = SkillPipeline()
         paragraphs = [
             ParagraphNode(index=0, text="文章标题", is_heading=True, heading_level=1),
@@ -178,7 +201,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         annotation = pipeline._to_word_annotation(paragraphs, issue)
 
         self.assertEqual(annotation.metadata.get("render_mode"), "summary_block")
-        self.assertEqual(annotation.metadata.get("anchor_reason"), "unreliable_paragraph_match")
+        self.assertEqual(annotation.metadata.get("anchor_reason"), "fallback")
 
     def test_word_comment_formats_sources_without_python_repr(self):
         pipeline = SkillPipeline()
@@ -191,7 +214,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             severity=ReviewSeverity.MEDIUM,
             title="事实待核实",
             description="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。",
-            suggestion="该内容需要复查。",
+            suggestion="检索到的网络信息未能直接证实该表述，建议依据下列来源核对后再保留。",
             source_excerpt="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。",
             location={"paragraph_index": 1},
             metadata={
@@ -205,10 +228,21 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         annotation = pipeline._to_word_annotation(paragraphs, issue)
 
         self.assertIn("问题：视频生成数字人", annotation.comment)
-        self.assertIn("建议：该内容需要复查。", annotation.comment)
+        self.assertIn("建议：检索到的网络信息未能直接证实该表述，建议依据下列来源核对后再保留。", annotation.comment)
         self.assertIn("1. 蝉镜数字人帮助文档 - https://example.com/help", annotation.comment)
         self.assertIn("2. 京东健康官网/蝉镜产品页面", annotation.comment)
         self.assertNotIn("[{'title':", annotation.comment)
+
+    def test_render_document_text_keeps_original_heading_text(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="一、产品概述", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="这是正文第一段。"),
+        ]
+
+        rendered = pipeline._render_document_text(paragraphs)
+
+        self.assertEqual(rendered, "一、产品概述\n\n这是正文第一段。")
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ from ..llm.providers.mock import MockLLMClient as MockDeepSeekClient
 from ..llm.structured_output import extract_json_payload
 
 
-DEFAULT_RECHECK_SUGGESTION = "该内容需要复查。"
+DEFAULT_RECHECK_SUGGESTION = "检索到的公开信息未能直接证实该表述，建议依据下列来源核对后再保留。"
 HEADING_LABEL_PATTERN = re.compile(r"^[#>\-\*\d\.\s一二三四五六七八九十IVXivx（）()【】\[\]：:]+$")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[。！？!?])\s+|\n{2,}")
 HARD_FACT_PATTERN = re.compile(
@@ -302,20 +302,24 @@ class FactChecker:
                     result.evidence = self._search_evidence(search_results)
                 if result.verification_status == VerificationStatus.UNVERIFIED and not result.suggestion:
                     result.suggestion = DEFAULT_RECHECK_SUGGESTION
-            return result
+            return self._apply_review_policy(claim, result, search_results)
         except Exception as exc:  # pragma: no cover - provider/network path
             llm_error = exc
             logger.warning("Fact verification failed for claim '{}': {}", claim.text, exc)
 
         if search_results:
-            return self._build_search_only_result(claim, search_results, llm_error=llm_error)
+            return self._apply_review_policy(
+                claim,
+                self._build_search_only_result(claim, search_results, llm_error=llm_error),
+                search_results,
+            )
 
         if getattr(self.search_client, "enabled", False):
             verification = await self.search_client.verify_fact(claim.text, claim.context)
             result = self._build_result_from_payload(claim, verification)
             if llm_error and not result.evidence:
                 result.evidence.append(f"LLM verification failed: {llm_error}")
-            return result
+            return self._apply_review_policy(claim, result, [])
 
         fallback = FactCheckResult(
             original_text=claim.text,
@@ -331,7 +335,7 @@ class FactChecker:
         )
         if llm_error:
             fallback.evidence.append(f"LLM verification failed: {llm_error}")
-        return fallback
+        return self._apply_review_policy(claim, fallback, [])
 
     async def check(self, text: str, context: Optional[Dict[str, Any]] = None) -> List[FactCheckResult]:
         logger.info("Starting fact check for text ({} chars)", len(text or ""))
@@ -444,7 +448,7 @@ class FactChecker:
             (
                 'Schema: {"status":"confirmed|disputed|unverified|incorrect|partial",'
                 '"confidence":0.0,"evidence":["..."],"sources":[{"title":"...","url":"..."}],'
-                '"suggestion":"用中文一句话说明；如无法确认，则写“该内容需要复查。”"}'
+                '"suggestion":"用中文一句话说明原因；如无法确认，要明确写出是“检索到的公开信息未能直接证实该表述”还是“检索到的网络信息与原文表述存在冲突”"}'
             ),
             f"Context: {context_block}",
             f"Statement: {claim.text}",
@@ -499,6 +503,53 @@ class FactChecker:
             position=claim.position,
             verified_at=datetime.now().isoformat(),
         )
+
+    def _apply_review_policy(
+        self,
+        claim: Claim,
+        result: FactCheckResult,
+        search_results: List[Dict[str, Any]],
+    ) -> FactCheckResult:
+        """Apply the sample-based review policy to raw fact-check results."""
+
+        is_numeric = self._is_numeric_claim(claim)
+        status = result.verification_status
+        has_conflict = status in {
+            VerificationStatus.INCORRECT,
+            VerificationStatus.DISPUTED,
+            VerificationStatus.PARTIALLY_CORRECT,
+        }
+        has_sources = bool(result.sources or search_results)
+
+        if has_conflict:
+            if not result.suggestion:
+                result.suggestion = "检索到的网络信息与原文表述存在冲突，建议依据下列来源核对后改写。"
+            return result
+
+        if is_numeric:
+            if status == VerificationStatus.UNVERIFIED:
+                if has_sources:
+                    result.suggestion = (
+                        result.suggestion
+                        or "检索到的公开信息未能直接证实该数值表述，建议依据下列来源核对后再保留。"
+                    )
+                    return result
+                if self._looks_implausible_numeric_claim(claim.text):
+                    result.suggestion = "未检索到可直接支撑该数值的公开来源，且该数值表现异常，建议人工二次核查。"
+                    return result
+
+                result.verification_status = VerificationStatus.CONFIRMED
+                result.suggestion = ""
+                return result
+            return result
+
+        if status == VerificationStatus.UNVERIFIED:
+            # Product descriptions should not be flagged solely because public sources are absent.
+            result.verification_status = VerificationStatus.CONFIRMED
+            result.suggestion = ""
+            return result
+
+        return result
 
     def _build_search_only_result(
         self,
@@ -640,6 +691,44 @@ class FactChecker:
         if re.search(r"(腾讯|阿里|字节|百度|微软|谷歌|OpenAI|Anthropic|飞书|影刀|蝉镜|MiniMax|DeepSeek)", sentence):
             return ClaimType.ORGANIZATION
         return ClaimType.OTHER
+
+    def _is_numeric_claim(self, claim: Claim) -> bool:
+        claim_type = claim.claim_type or claim.type
+        if claim_type in {ClaimType.DATA, ClaimType.NUMBER, ClaimType.DATE_TIME}:
+            return True
+        return bool(HARD_FACT_PATTERN.search(claim.text))
+
+    def _looks_implausible_numeric_claim(self, sentence: str) -> bool:
+        for match in re.finditer(r"(\d+(?:\.\d+)?)\s*%", sentence):
+            try:
+                if float(match.group(1)) > 100:
+                    return True
+            except ValueError:
+                continue
+
+        for match in re.finditer(r"\b(20\d{2})\b", sentence):
+            try:
+                if int(match.group(1)) > datetime.now().year + 2:
+                    return True
+            except ValueError:
+                continue
+
+        for match in re.finditer(r"(\d+(?:\.\d+)?)\s*(秒|分钟|小时|天)", sentence):
+            try:
+                value = float(match.group(1))
+            except ValueError:
+                continue
+            unit = match.group(2)
+            if unit == "秒" and value > 3600:
+                return True
+            if unit == "分钟" and value > 1440:
+                return True
+            if unit == "小时" and value > 168:
+                return True
+            if unit == "天" and value > 365:
+                return True
+
+        return False
 
     def _locate_excerpt(self, full_text: str, excerpt: str) -> Dict[str, Any]:
         index = full_text.find(excerpt)

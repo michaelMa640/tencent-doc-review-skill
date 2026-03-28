@@ -34,7 +34,7 @@ def aggregate_review_issues(
                 }.get(status, ReviewSeverity.LOW),
                 title=_fact_title(status),
                 description=item.claim_content or item.original_text,
-                suggestion=_fact_suggestion(status, item.suggestion),
+                suggestion=_fact_suggestion(item),
                 source_excerpt=item.original_text,
                 location=item.position,
                 confidence=item.confidence,
@@ -63,6 +63,7 @@ def aggregate_review_issues(
     if quality_report and not (
         quality_report.overall_score == 0 and all(score.score == 0 for score in quality_report.dimension_scores)
     ):
+        quality_findings = []
         for score in quality_report.dimension_scores:
             if score.dimension.value in {"language_expression", "format_compliance"}:
                 continue
@@ -70,18 +71,26 @@ def aggregate_review_issues(
                 continue
             if score.score >= 80:
                 continue
+            quality_findings.append(score)
+
+        if quality_findings:
+            weakest = min(quality_findings, key=lambda item: item.score)
+            dimension_names = "、".join(_quality_dimension_name(item.dimension.value) for item in quality_findings)
             issues.append(
                 ReviewIssue(
                     issue_type=ReviewIssueType.QUALITY,
-                    severity=ReviewSeverity.HIGH if score.score < 60 else ReviewSeverity.MEDIUM,
-                    title=f"质量问题：{_quality_dimension_name(score.dimension.value)}",
-                    description=_shorten_quality_description(score.weaknesses, score.dimension.value),
-                    suggestion=(score.suggestions[0] if score.suggestions else "请补充可验证证据并压缩主观判断。"),
-                    confidence=max(0.0, min(1.0, score.score / 100)),
+                    severity=ReviewSeverity.HIGH if weakest.score < 60 else ReviewSeverity.MEDIUM,
+                    title="整体质量建议",
+                    description=f"以下维度仍需加强：{dimension_names}。",
+                    suggestion=(
+                        weakest.suggestions[0]
+                        if weakest.suggestions
+                        else "请补充可验证证据，减少主观判断，并统一前后表述。"
+                    ),
+                    confidence=max(0.0, min(1.0, weakest.score / 100)),
                     metadata={
-                        "dimension": score.dimension.value,
-                        "score": score.score,
-                        "level": score.level.value,
+                        "dimensions": [item.dimension.value for item in quality_findings],
+                        "scores": {item.dimension.value: item.score for item in quality_findings},
                         "anchor_preference": "document_end",
                     },
                 )
@@ -141,10 +150,26 @@ def _fact_title(status: str) -> str:
     }.get(status, "事实问题")
 
 
-def _fact_suggestion(status: str, original: str) -> str:
-    if status in {"unverified", "disputed", "partial"}:
-        return "该内容需要复查。"
-    return original or "请复核该内容。"
+def _fact_suggestion(item: FactCheckResult) -> str:
+    status = item.verification_status.value
+    has_sources = bool(item.sources)
+
+    if status in {"incorrect", "disputed"}:
+        if has_sources:
+            return "检索到的网络信息与原文表述存在冲突，建议依据下列来源核对后改写。"
+        return "现有公开信息与原文表述存在冲突，建议补充权威来源后再保留。"
+
+    if status == "partial":
+        if has_sources:
+            return "检索到的网络信息只能部分支持原文表述，建议依据下列来源补全或修正。"
+        return "公开信息只能部分支持该表述，建议补充来源后再保留。"
+
+    if status == "unverified":
+        if has_sources:
+            return "检索到的网络信息未能直接证实该表述，建议依据下列来源核对后再保留。"
+        return "当前未检索到足够公开信息支持该表述，建议补充可验证来源后再保留。"
+
+    return item.suggestion or "请复核该内容。"
 
 
 def _quality_dimension_name(value: str) -> str:

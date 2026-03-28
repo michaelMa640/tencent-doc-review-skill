@@ -46,8 +46,10 @@ class MiniMaxStructuredOutputTests(unittest.IsolatedAsyncioTestCase):
 
         issues = await reviewer.review("价格为78元。\n\n价格为98元。")
 
-        self.assertEqual(len(issues), 1)
+        self.assertEqual(len(issues), 2)
         self.assertEqual(issues[0].title, "前后矛盾")
+        self.assertEqual(issues[0].source_excerpt, "价格为78元")
+        self.assertEqual(issues[1].source_excerpt, "价格为98元")
 
     async def test_quality_evaluator_accepts_wrapped_json(self):
         llm_client = Mock()
