@@ -221,9 +221,17 @@ class StructureMatcher:
         if numbered_match:
             return 2, numbered_match.group(2).strip()
 
+        ordered_chinese_match = re.match(r"^([一二三四五六七八九十]+)[、.．)]\s*(.+)$", line)
+        if ordered_chinese_match:
+            return 2, ordered_chinese_match.group(2).strip()
+
         chinese_match = re.match(r"^第[一二三四五六七八九十\d]+[章节]\s*(.+)$", line)
         if chinese_match:
             return 2, chinese_match.group(1).strip() or line
+
+        canonical_titles = {self._normalize(title) for title in SECTION_ALIAS_MAP}
+        if self._canonical_key(line) in canonical_titles:
+            return 2, line.strip()
 
         return None
 

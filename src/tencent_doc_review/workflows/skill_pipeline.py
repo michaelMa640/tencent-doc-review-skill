@@ -5,7 +5,9 @@ from __future__ import annotations
 import platform
 import re
 import tempfile
+import unicodedata
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import List, Optional
 
@@ -79,6 +81,7 @@ class SkillPipeline:
             purpose="document",
             download_format=DownloadFormat.DOCX,
         )
+        downloaded = self._ensure_stable_local_filename(downloaded, request)
 
         parsed_document = self.word_parser.parse(downloaded.file_path)
         document_text = self._render_document_text(parsed_document.paragraphs)
@@ -145,7 +148,7 @@ class SkillPipeline:
             source_document=request.source_document,
             target_location=request.target_location,
             local_word_path=str(downloaded.file_path),
-            annotated_word_path=str(annotated.output_path),
+            annotated_word_path=str(upload_source_path),
             remote_file_id=upload_result.remote_file_id,
             remote_url=upload_result.remote_url,
             generated_reports={"markdown": review_report_path},
@@ -168,6 +171,8 @@ class SkillPipeline:
                 "annotation_count": annotated.annotation_count,
                 "review_issue_count": len(review_result.review_issues),
                 "review_summary": review_result.summary,
+                "pre_compression_annotated_word_path": str(annotated.output_path),
+                "uploaded_local_word_path": str(upload_source_path),
                 "review_rules_path": get_default_review_rules_path(),
                 "review_structure_template_path": get_default_review_template_path(),
                 **compression_metadata,
@@ -240,14 +245,12 @@ class SkillPipeline:
         anchor = self._resolve_anchor(paragraphs, sentences, issue)
         comment_text = self._format_issue_comment(issue, metadata)
 
-        if metadata.get("anchor_preference") == "document_end" or anchor.strategy in {"document_end", "fallback"}:
+        if metadata.get("anchor_preference") == "document_end" or anchor.strategy == "document_end":
             metadata["render_mode"] = "summary_block"
             metadata.setdefault("anchor_reason", anchor.strategy)
-        elif not anchor.reliable and not issue.source_excerpt.strip():
-            metadata["render_mode"] = "summary_block"
-            metadata.setdefault("anchor_reason", "unreliable_paragraph_match")
         elif not anchor.reliable:
-            metadata.setdefault("anchor_reason", anchor.strategy or "approximate_paragraph_match")
+            metadata["render_mode"] = "summary_block"
+            metadata.setdefault("anchor_reason", anchor.strategy or "unreliable_anchor")
 
         return WordAnnotation(
             paragraph_index=anchor.paragraph_index,
@@ -273,8 +276,7 @@ class SkillPipeline:
             )
         ]
 
-        fact_comment = self._format_fact_detail_summary(review_result)
-        if fact_comment:
+        for fact_comment in self._build_fact_detail_summaries(review_result):
             annotations.append(
                 WordAnnotation(
                     paragraph_index=0,
@@ -366,38 +368,37 @@ class SkillPipeline:
         score -= min(15, language_fallback_count * 5)
         return max(0.0, min(100.0, score))
 
-    def _format_fact_detail_summary(self, review_result: AnalysisResult) -> str:
-        detail_blocks: List[str] = []
+    def _build_fact_detail_summaries(self, review_result: AnalysisResult) -> List[str]:
+        summaries: List[str] = []
         flagged_results = [
             item
             for item in review_result.fact_check_results
             if item.verification_status.value in {"incorrect", "disputed", "unverified", "partial"}
-            or item.search_trace.get("performed")
         ]
-        for index, item in enumerate(flagged_results, start=1):
+        for item in flagged_results:
             lines = [
-                f"{index}. 原文：{item.original_text or item.claim_content}",
-                f"   结论：{self._fact_status_label(item.verification_status.value)}",
+                f"原文：{item.original_text or item.claim_content}",
+                f"结论：{self._fact_status_label(item.verification_status.value)}",
             ]
             trace_lines = self._format_search_trace(item.search_trace)
             if trace_lines:
-                lines.append("   检索痕迹：")
-                lines.extend(f"   {line}" for line in trace_lines)
+                lines.append("检索痕迹：")
+                lines.extend(trace_lines)
             conflict_point = self._build_conflict_point(item)
             if conflict_point:
                 label = "冲突点" if item.verification_status.value in {"incorrect", "disputed", "partial", "unverified"} else "核查依据"
-                lines.append(f"   {label}：{conflict_point}")
+                lines.append(f"{label}：{conflict_point}")
             if item.sources:
-                lines.append("   搜索源：")
+                lines.append("搜索源：")
                 for source_index, source in enumerate(item.sources, start=1):
                     title = str(source.get("title") or "来源").strip()
                     url = str(source.get("url") or "").strip()
                     snippet = str(source.get("snippet") or "").strip()
-                    lines.append(f"   {source_index}. {title}" + (f" - {url}" if url else ""))
+                    lines.append(f"来源{source_index}：{title}" + (f" - {url}" if url else ""))
                     if snippet:
-                        lines.append(f"      搜索源原文：{snippet}")
-            detail_blocks.append("\n".join(lines))
-        return "\n\n".join(detail_blocks).strip()
+                        lines.append(f"搜索源原文：{snippet}")
+            summaries.append("\n".join(lines).strip())
+        return summaries
 
     def _fact_status_label(self, status: str) -> str:
         return {
@@ -495,6 +496,30 @@ class SkillPipeline:
             if substring_match is not None:
                 return AnchorResolution(paragraph_index=substring_match.index, reliable=True, strategy="substring")
 
+            fuzzy_sentence_match = self._find_best_fuzzy_sentence_match(
+                sentences,
+                normalized_excerpt,
+                preferred_paragraph,
+            )
+            if fuzzy_sentence_match is not None:
+                return AnchorResolution(
+                    paragraph_index=fuzzy_sentence_match,
+                    reliable=True,
+                    strategy="fuzzy_sentence_match",
+                )
+
+            fuzzy_paragraph_match = self._find_best_fuzzy_paragraph_match(
+                candidate_pool,
+                normalized_excerpt,
+                preferred_paragraph,
+            )
+            if fuzzy_paragraph_match is not None:
+                return AnchorResolution(
+                    paragraph_index=fuzzy_paragraph_match.index,
+                    reliable=True,
+                    strategy="fuzzy_paragraph_match",
+                )
+
         if issue.metadata.get("anchor_preference") == "document_end":
             return AnchorResolution(paragraph_index=visible_paragraphs[-1].index, reliable=False, strategy="document_end")
 
@@ -529,7 +554,43 @@ class SkillPipeline:
             sanitized = request.source_document.doc_id
         return f"{sanitized}-批注版{suffix}"
 
+    def _ensure_stable_local_filename(self, downloaded: DownloadedDocument, request: SkillRequest) -> DownloadedDocument:
+        source_title = (request.source_document.title or request.source_document.doc_id).strip()
+        sanitized_title = "".join(char for char in source_title if char not in '<>:"/\\|?*').strip().rstrip(".")
+        if not sanitized_title:
+            return downloaded
+
+        target_path = downloaded.file_path.with_name(f"{sanitized_title}{downloaded.file_path.suffix}")
+        if downloaded.file_path == target_path:
+            return downloaded
+
+        if target_path.exists():
+            target_path.unlink()
+        original_path = downloaded.file_path
+        downloaded.file_path.replace(target_path)
+        metadata = dict(downloaded.metadata)
+        metadata.setdefault("renamed_from", str(original_path))
+        metadata["stable_local_filename"] = target_path.name
+        return DownloadedDocument(
+            reference=downloaded.reference,
+            file_path=target_path,
+            download_format=downloaded.download_format,
+            filename=target_path.name,
+            purpose=downloaded.purpose,
+            metadata=metadata,
+        )
+
     def _normalize_text(self, text: str) -> str:
+        normalized = unicodedata.normalize("NFKC", text or "")
+        compact: List[str] = []
+        for char in normalized:
+            if char.isspace():
+                continue
+            category = unicodedata.category(char)
+            if category.startswith(("P", "S", "C")):
+                continue
+            compact.append(char.lower())
+        return "".join(compact)
         stripped = re.sub(r"\s+", "", text).lower()
         return re.sub(r"[:：，,。.;；!?！？、“”\"'‘’（）()\[\]{}<>《》#*_\-—/]+", "", stripped)
 
@@ -581,4 +642,56 @@ class SkillPipeline:
         if not candidates:
             return None
         candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+        return candidates[0][3]
+
+    def _find_best_fuzzy_paragraph_match(
+        self,
+        paragraphs: List[ParagraphNode],
+        normalized_excerpt: str,
+        preferred_paragraph: Optional[ParagraphNode],
+    ) -> Optional[ParagraphNode]:
+        if not normalized_excerpt:
+            return None
+
+        candidates: List[tuple[float, int, int, ParagraphNode]] = []
+        for order, paragraph in enumerate(paragraphs):
+            normalized_text = self._normalize_text(paragraph.text)
+            if not normalized_text:
+                continue
+            ratio = SequenceMatcher(None, normalized_excerpt, normalized_text).ratio()
+            if ratio < 0.78:
+                continue
+            distance = abs(paragraph.index - preferred_paragraph.index) if preferred_paragraph is not None else 0
+            candidates.append((ratio, distance, order, paragraph))
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (-item[0], item[1], item[2]))
+        return candidates[0][3]
+
+    def _find_best_fuzzy_sentence_match(
+        self,
+        sentences: List[SentenceNode],
+        normalized_excerpt: str,
+        preferred_paragraph: Optional[ParagraphNode],
+    ) -> Optional[int]:
+        if not normalized_excerpt:
+            return None
+
+        candidates: List[tuple[float, int, int, int]] = []
+        for order, sentence in enumerate(sentences):
+            if sentence.is_heading:
+                continue
+            normalized_text = self._normalize_text(sentence.text)
+            if not normalized_text:
+                continue
+            ratio = SequenceMatcher(None, normalized_excerpt, normalized_text).ratio()
+            if ratio < 0.78:
+                continue
+            distance = abs(sentence.paragraph_index - preferred_paragraph.index) if preferred_paragraph is not None else 0
+            candidates.append((ratio, distance, order, sentence.paragraph_index))
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (-item[0], item[1], item[2]))
         return candidates[0][3]

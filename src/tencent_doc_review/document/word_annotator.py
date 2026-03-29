@@ -105,11 +105,14 @@ class WordAnnotator:
     def _append_summary_section(self, document: DocumentObject, annotations: List[WordAnnotation]) -> None:
         document.add_page_break()
         document.add_heading("AI审核总结", level=1)
-        intro = document.add_paragraph()
-        intro.add_run("以下内容为整篇层面的审核结论，未挂在具体句子评论中。")
+        document.add_paragraph("以下内容为整篇层面的审核结论，未挂在具体句子评论中。")
 
         for index, annotation in enumerate(annotations, start=1):
-            paragraph = document.add_paragraph()
-            paragraph.add_run(f"{index}. 【{annotation.title}】").bold = True
-            if annotation.comment:
-                paragraph.add_run(f" {annotation.comment}")
+            title_paragraph = document.add_paragraph()
+            title_paragraph.add_run(f"{index}. 【{annotation.title}】").bold = True
+            if not annotation.comment:
+                continue
+            for line in str(annotation.comment).splitlines():
+                stripped = line.strip()
+                if stripped:
+                    document.add_paragraph(stripped)

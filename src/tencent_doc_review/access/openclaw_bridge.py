@@ -98,14 +98,16 @@ def export_document(settings: OpenClawBridgeSettings, payload: Dict[str, Any]) -
 def upload_document(settings: OpenClawBridgeSettings, payload: Dict[str, Any]) -> Dict[str, Any]:
     target = payload.get("target", {})
     local_path = Path(payload["local_path"])
+    remote_filename = str(payload.get("remote_filename", "")).strip()
     prompt = (
         "You are acting as a bridge for a Tencent Docs review skill. "
         "Upload the local Word document to the requested Tencent Docs destination. "
         f"Target space_type={target.get('space_type','')}, space_id={target.get('space_id','')}, "
         f"folder_id={target.get('folder_id','')}, path_hint={target.get('path_hint','')}. "
-        f"Local file path={local_path}. Remote filename={payload.get('remote_filename','')}. "
+        f"Local file path={local_path}. Required final visible document title={remote_filename}. "
+        "If the initial upload uses a temporary or local filename, rename or move the uploaded document so the final visible title exactly matches the required title. "
         "Do not explain. Do not use markdown code fences. "
-        'Return exactly one JSON object on success: {"uploaded_name":"uploaded_filename","remote_file_id":"remote_file_id","remote_url":"remote_url","metadata":{"source":"openclaw","mode":"upload"}}. '
+        'Return exactly one JSON object on success: {"uploaded_name":"final_visible_uploaded_filename","remote_file_id":"remote_file_id","remote_url":"remote_url","metadata":{"source":"openclaw","mode":"upload"}}. '
         'On failure return exactly: {"error":"error_message"}.'
     )
     response = run_openclaw(settings, prompt)
@@ -113,7 +115,7 @@ def upload_document(settings: OpenClawBridgeSettings, payload: Dict[str, Any]) -
     if "error" in payload_json:
         raise OpenClawBridgeError(payload_json["error"])
     return {
-        "uploaded_name": payload_json.get("uploaded_name") or payload.get("remote_filename") or local_path.name,
+        "uploaded_name": payload_json.get("uploaded_name") or remote_filename or local_path.name,
         "remote_file_id": payload_json.get("remote_file_id", ""),
         "remote_url": payload_json.get("remote_url", ""),
         "metadata": dict(payload_json.get("metadata", {})),
