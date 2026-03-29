@@ -20,7 +20,7 @@ from tencent_doc_review.access import (
     UploadTarget,
 )
 from tencent_doc_review.cli import main
-from tencent_doc_review.document.word_parser import ParagraphNode
+from tencent_doc_review.document.word_parser import ParagraphNode, SentenceNode
 from tencent_doc_review.domain import ReviewIssue, ReviewIssueType, ReviewSeverity
 from tencent_doc_review.skill import SkillRequest
 from tencent_doc_review.workflows import SkillPipeline
@@ -153,7 +153,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             location={"paragraph_index": 0},
         )
 
-        annotation = pipeline._to_word_annotation(paragraphs, issue)
+        annotation = pipeline._to_word_annotation(paragraphs, [], issue)
 
         self.assertEqual(annotation.paragraph_index, 2)
         self.assertNotIn("render_mode", annotation.metadata)
@@ -175,7 +175,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             location={"paragraph_index": 2},
         )
 
-        annotation = pipeline._to_word_annotation(paragraphs, issue)
+        annotation = pipeline._to_word_annotation(paragraphs, [], issue)
 
         self.assertEqual(annotation.paragraph_index, 2)
         self.assertNotIn("render_mode", annotation.metadata)
@@ -198,7 +198,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             location={"paragraph_index": 0},
         )
 
-        annotation = pipeline._to_word_annotation(paragraphs, issue)
+        annotation = pipeline._to_word_annotation(paragraphs, [], issue)
 
         self.assertEqual(annotation.metadata.get("render_mode"), "summary_block")
         self.assertEqual(annotation.metadata.get("anchor_reason"), "fallback")
@@ -225,13 +225,61 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-        annotation = pipeline._to_word_annotation(paragraphs, issue)
+        annotation = pipeline._to_word_annotation(paragraphs, [], issue)
 
         self.assertIn("问题：视频生成数字人", annotation.comment)
         self.assertIn("建议：检索到的网络信息未能直接证实该表述，建议依据下列来源核对后再保留。", annotation.comment)
         self.assertIn("1. 蝉镜数字人帮助文档 - https://example.com/help", annotation.comment)
         self.assertIn("2. 京东健康官网/蝉镜产品页面", annotation.comment)
         self.assertNotIn("[{'title':", annotation.comment)
+
+    def test_word_comment_includes_search_trace(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。"),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。",
+            suggestion="检索到的网络信息未能直接证实该表述，建议依据下列来源核对后再保留。",
+            source_excerpt="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。",
+            location={"paragraph_index": 1},
+            metadata={"search_trace": {"performed": True, "provider": "tavily", "raw_count": 5, "filtered_count": 2}},
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, [], issue)
+
+        self.assertIn("检索痕迹：", annotation.comment)
+        self.assertIn("已联网检索：tavily，候选 5 条，采纳 2 条", annotation.comment)
+
+    def test_sentence_level_anchor_prefers_original_sentence_mapping(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="文章标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="第一句说明背景。第二句说明该产品支持中英文多语种。"),
+        ]
+        sentences = [
+            SentenceNode(index=0, paragraph_index=0, text="文章标题", is_heading=True),
+            SentenceNode(index=1, paragraph_index=1, text="第一句说明背景。", paragraph_text=paragraphs[1].text),
+            SentenceNode(index=2, paragraph_index=1, text="第二句说明该产品支持中英文多语种。", paragraph_text=paragraphs[1].text),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="支持中英文多语种",
+            suggestion="该内容需要复查。",
+            source_excerpt="第二句说明该产品支持中英文多语种。",
+            location={"paragraph_index": 0},
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, sentences, issue)
+
+        self.assertEqual(annotation.paragraph_index, 1)
+        self.assertNotIn("render_mode", annotation.metadata)
 
     def test_render_document_text_keeps_original_heading_text(self):
         pipeline = SkillPipeline()

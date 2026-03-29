@@ -1,9 +1,10 @@
-"""Parse `.docx` files into a normalized paragraph-oriented structure."""
+"""Parse `.docx` files into normalized paragraph and sentence structures."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import re
 from typing import Dict, List
 
 from docx import Document
@@ -22,11 +23,24 @@ class ParagraphNode:
 
 
 @dataclass
+class SentenceNode:
+    """Original sentence block extracted from a Word paragraph."""
+
+    index: int
+    paragraph_index: int
+    text: str
+    paragraph_text: str = ""
+    is_heading: bool = False
+    metadata: Dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
 class ParsedWordDocument:
     """Structured representation of a parsed Word document."""
 
     source_path: Path
     paragraphs: List[ParagraphNode]
+    sentences: List[SentenceNode]
     title: str = ""
 
 
@@ -37,6 +51,8 @@ class WordParser:
         path = Path(file_path)
         document = Document(path)
         paragraphs: List[ParagraphNode] = []
+        sentences: List[SentenceNode] = []
+        sentence_index = 0
 
         for index, paragraph in enumerate(document.paragraphs):
             text = paragraph.text.strip()
@@ -52,11 +68,23 @@ class WordParser:
                     heading_level=heading_level,
                 )
             )
+            for sentence in self._split_sentences(text, is_heading=is_heading):
+                sentences.append(
+                    SentenceNode(
+                        index=sentence_index,
+                        paragraph_index=index,
+                        text=sentence,
+                        paragraph_text=text,
+                        is_heading=is_heading,
+                    )
+                )
+                sentence_index += 1
 
         title = next((node.text for node in paragraphs if node.text), path.stem)
         return ParsedWordDocument(
             source_path=path,
             paragraphs=paragraphs,
+            sentences=sentences,
             title=title,
         )
 
@@ -82,3 +110,14 @@ class WordParser:
             return 2
 
         return 0
+
+    def _split_sentences(self, text: str, is_heading: bool = False) -> List[str]:
+        stripped = text.strip()
+        if not stripped:
+            return []
+        if is_heading:
+            return [stripped]
+
+        parts = re.split(r"(?<=[。！？!?；;])\s+|(?<=[。！？!?；;])|(?<=\.)\s+(?=[A-Z])|\n+", stripped)
+        sentences = [part.strip() for part in parts if part.strip()]
+        return sentences or [stripped]

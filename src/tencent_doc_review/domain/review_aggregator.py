@@ -42,6 +42,7 @@ def aggregate_review_issues(
                     "claim_type": item.claim_type.value,
                     "verification_status": status,
                     "sources": item.sources,
+                    "search_trace": item.search_trace,
                 },
             )
         )

@@ -27,7 +27,7 @@ from ..document import (
     WordAnnotator,
     WordParser,
 )
-from ..document.word_parser import ParagraphNode
+from ..document.word_parser import ParagraphNode, SentenceNode
 from ..domain import ReviewIssue
 from ..llm.factory import create_llm_client, resolve_llm_settings
 from ..skill import SkillRequest, SkillResponse, SkillRuntimeInfo
@@ -87,7 +87,11 @@ class SkillPipeline:
             document_text=document_text,
             document_title=parsed_document.title or request.source_document.display_name,
         )
-        review_annotations = self._build_word_annotations(parsed_document.paragraphs, review_result.review_issues)
+        review_annotations = self._build_word_annotations(
+            parsed_document.paragraphs,
+            parsed_document.sentences,
+            review_result.review_issues,
+        )
 
         annotated_path = downloaded.file_path.with_name(f"{downloaded.file_path.stem}-annotated.docx")
         annotated = self.word_annotator.annotate(
@@ -217,13 +221,19 @@ class SkillPipeline:
     def _build_word_annotations(
         self,
         paragraphs: List[ParagraphNode],
+        sentences: List[SentenceNode],
         issues: List[ReviewIssue],
     ) -> List[WordAnnotation]:
-        return [self._to_word_annotation(paragraphs, issue) for issue in issues]
+        return [self._to_word_annotation(paragraphs, sentences, issue) for issue in issues]
 
-    def _to_word_annotation(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> WordAnnotation:
+    def _to_word_annotation(
+        self,
+        paragraphs: List[ParagraphNode],
+        sentences: List[SentenceNode],
+        issue: ReviewIssue,
+    ) -> WordAnnotation:
         metadata = dict(issue.metadata) if isinstance(issue.metadata, dict) else {}
-        anchor = self._resolve_anchor(paragraphs, issue)
+        anchor = self._resolve_anchor(paragraphs, sentences, issue)
         comment_text = self._format_issue_comment(issue, metadata)
 
         if metadata.get("anchor_preference") == "document_end" or anchor.strategy in {"document_end", "fallback"}:
@@ -254,6 +264,11 @@ class SkillPipeline:
         if suggestion:
             lines.append(f"建议：{suggestion}")
 
+        trace_lines = self._format_search_trace(metadata.get("search_trace"))
+        if trace_lines:
+            lines.append("检索痕迹：")
+            lines.extend(trace_lines)
+
         source_lines = self._format_sources(metadata.get("sources"))
         if source_lines:
             lines.append("来源：")
@@ -281,10 +296,27 @@ class SkillPipeline:
                 lines.append(f"{index}. {title}")
         return lines
 
-    def _resolve_paragraph_index(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> int:
-        return self._resolve_anchor(paragraphs, issue).paragraph_index
+    def _format_search_trace(self, search_trace: object) -> List[str]:
+        if not isinstance(search_trace, dict) or not search_trace.get("performed"):
+            return []
+        provider = str(search_trace.get("provider") or "unknown").strip()
+        raw_count = int(search_trace.get("raw_count") or 0)
+        filtered_count = int(search_trace.get("filtered_count") or 0)
+        lines = [f"- 已联网检索：{provider}，候选 {raw_count} 条，采纳 {filtered_count} 条"]
+        error = str(search_trace.get("error") or "").strip()
+        if error:
+            lines.append(f"- 检索异常：{error}")
+        return lines
 
-    def _resolve_anchor(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> AnchorResolution:
+    def _resolve_paragraph_index(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> int:
+        return self._resolve_anchor(paragraphs, [], issue).paragraph_index
+
+    def _resolve_anchor(
+        self,
+        paragraphs: List[ParagraphNode],
+        sentences: List[SentenceNode],
+        issue: ReviewIssue,
+    ) -> AnchorResolution:
         visible_paragraphs = [paragraph for paragraph in paragraphs if paragraph.text.strip()]
         if not visible_paragraphs:
             return AnchorResolution(paragraph_index=0, reliable=False, strategy="fallback")
@@ -300,6 +332,10 @@ class SkillPipeline:
 
         source_excerpt = issue.source_excerpt.strip()
         normalized_excerpt = self._normalize_text(source_excerpt)
+
+        sentence_match = self._find_sentence_match(sentences, normalized_excerpt, preferred_paragraph)
+        if sentence_match is not None:
+            return AnchorResolution(paragraph_index=sentence_match, reliable=True, strategy="sentence_match")
 
         if source_excerpt and preferred_paragraph is not None:
             preferred_text = self._normalize_text(preferred_paragraph.text)
@@ -373,6 +409,33 @@ class SkillPipeline:
                 continue
             distance = abs(paragraph.index - preferred_paragraph.index) if preferred_paragraph is not None else 0
             candidates.append((distance, position, order, paragraph))
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+        return candidates[0][3]
+
+    def _find_sentence_match(
+        self,
+        sentences: List[SentenceNode],
+        normalized_excerpt: str,
+        preferred_paragraph: Optional[ParagraphNode],
+    ) -> Optional[int]:
+        if not normalized_excerpt or not sentences:
+            return None
+
+        candidates: List[tuple[int, int, int, int]] = []
+        for order, sentence in enumerate(sentences):
+            if sentence.is_heading:
+                continue
+            normalized_text = self._normalize_text(sentence.text)
+            if not normalized_text:
+                continue
+            position = normalized_text.find(normalized_excerpt)
+            if position < 0 and normalized_excerpt.find(normalized_text) < 0:
+                continue
+            distance = abs(sentence.paragraph_index - preferred_paragraph.index) if preferred_paragraph is not None else 0
+            candidates.append((distance, position if position >= 0 else 0, order, sentence.paragraph_index))
 
         if not candidates:
             return None

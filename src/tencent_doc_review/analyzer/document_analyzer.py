@@ -145,6 +145,13 @@ class AnalysisResult:
             lines.extend(["## Fact Check", ""])
             for item in self.fact_check_results:
                 lines.append(f"- {item.original_text or item.claim_content}: {item.verification_status.value} ({item.confidence:.0%})")
+                if item.search_trace.get("performed"):
+                    lines.append(
+                        "  Search Trace: "
+                        f"{item.search_trace.get('provider', 'unknown')} "
+                        f"raw={item.search_trace.get('raw_count', 0)} "
+                        f"filtered={item.search_trace.get('filtered_count', 0)}"
+                    )
                 formatted_sources = self._format_sources_for_markdown(item.sources)
                 if formatted_sources:
                     lines.append(f"  Sources: {formatted_sources}")

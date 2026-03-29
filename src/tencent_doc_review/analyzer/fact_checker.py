@@ -94,6 +94,7 @@ class FactCheckResult:
     sources: List[Dict[str, str]] = field(default_factory=list)
     suggestion: str = ""
     position: Dict[str, Any] = field(default_factory=dict)
+    search_trace: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     verified_at: Optional[str] = None
 
@@ -109,6 +110,7 @@ class FactCheckResult:
             "sources": self.sources,
             "suggestion": self.suggestion,
             "position": self.position,
+            "search_trace": self.search_trace,
             "created_at": self.created_at,
             "verified_at": self.verified_at,
         }
@@ -310,7 +312,7 @@ class FactChecker:
             )
 
         context = context or {}
-        search_results = await self._search_claim(claim, context)
+        search_results, search_trace = await self._search_claim(claim, context)
         llm_error: Optional[Exception] = None
         try:
             response = await self._analyze_with_retry(
@@ -329,21 +331,25 @@ class FactChecker:
                     result.evidence = self._search_evidence(search_results)
                 if result.verification_status == VerificationStatus.UNVERIFIED and not result.suggestion:
                     result.suggestion = DEFAULT_RECHECK_SUGGESTION
+            result.search_trace = search_trace
             return self._apply_review_policy(claim, result, search_results)
         except Exception as exc:  # pragma: no cover - provider/network path
             llm_error = exc
             logger.warning("Fact verification failed for claim '{}': {}", claim.text, exc)
 
         if search_results:
+            fallback_result = self._build_search_only_result(claim, search_results, llm_error=llm_error)
+            fallback_result.search_trace = search_trace
             return self._apply_review_policy(
                 claim,
-                self._build_search_only_result(claim, search_results, llm_error=llm_error),
+                fallback_result,
                 search_results,
             )
 
         if getattr(self.search_client, "enabled", False):
             verification = await self.search_client.verify_fact(claim.text, claim.context)
             result = self._build_result_from_payload(claim, verification)
+            result.search_trace = search_trace
             if llm_error and not result.evidence:
                 result.evidence.append(f"LLM verification failed: {llm_error}")
             return self._apply_review_policy(claim, result, [])
@@ -362,6 +368,7 @@ class FactChecker:
         )
         if llm_error:
             fallback.evidence.append(f"LLM verification failed: {llm_error}")
+        fallback.search_trace = search_trace
         return self._apply_review_policy(claim, fallback, [])
 
     async def check(self, text: str, context: Optional[Dict[str, Any]] = None) -> List[FactCheckResult]:
@@ -429,16 +436,26 @@ class FactChecker:
         assert last_error is not None
         raise last_error
 
-    async def _search_claim(self, claim: Claim, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _search_claim(self, claim: Claim, context: Dict[str, Any]) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
         if not getattr(self.search_client, "enabled", False):
-            return []
+            return [], {"performed": False, "provider": getattr(self.search_client, "provider", "disabled"), "raw_count": 0, "filtered_count": 0}
         query = self._build_search_query(claim, context)
         try:
-            results = await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
-            return self._filter_search_results(claim, context, results)
+            raw_results = await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
+            filtered_results, trace = self._filter_search_results(claim, context, raw_results)
+            trace["performed"] = True
+            trace["query"] = query
+            return filtered_results, trace
         except Exception as exc:  # pragma: no cover - provider/network path
             logger.warning("Search verification failed for claim '{}': {}", claim.text, exc)
-            return []
+            return [], {
+                "performed": True,
+                "provider": getattr(self.search_client, "provider", "disabled"),
+                "raw_count": 0,
+                "filtered_count": 0,
+                "query": query,
+                "error": str(exc),
+            }
 
     def _build_search_query(self, claim: Claim, context: Dict[str, Any]) -> str:
         hints: List[str] = []
@@ -453,9 +470,13 @@ class FactChecker:
         claim: Claim,
         context: Dict[str, Any],
         results: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+    ) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
         if not results:
-            return []
+            return [], {
+                "provider": getattr(self.search_client, "provider", "disabled"),
+                "raw_count": 0,
+                "filtered_count": 0,
+            }
 
         product_tokens = self._extract_relevance_tokens(" ".join(str(context.get(key) or "") for key in ("product_name", "document_title", "topic")))
         claim_tokens = self._extract_relevance_tokens(claim.text)
@@ -487,7 +508,12 @@ class FactChecker:
 
             filtered.append(item)
 
-        return filtered[:3]
+        filtered = filtered[:3]
+        return filtered, {
+            "provider": getattr(self.search_client, "provider", "disabled"),
+            "raw_count": len(results),
+            "filtered_count": len(filtered),
+        }
 
     def _build_claim_extraction_prompt(self, text: str, context: Dict[str, Any]) -> str:
         context_block = json.dumps(context, ensure_ascii=False) if context else "{}"
