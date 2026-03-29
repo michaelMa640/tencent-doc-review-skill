@@ -242,6 +242,7 @@ class SearchClient:
                 {
                     "title": str(item.get("title") or item.get("url") or "来源"),
                     "url": str(item.get("url") or ""),
+                    "snippet": str(item.get("snippet") or "")[:240],
                 }
             )
         return sources
@@ -327,6 +328,8 @@ class FactChecker:
             if search_results:
                 if not result.sources:
                     result.sources = self.search_client._to_source_refs(search_results)
+                else:
+                    result.sources = self._merge_source_snippets(result.sources, search_results)
                 if not result.evidence:
                     result.evidence = self._search_evidence(search_results)
                 if result.verification_status == VerificationStatus.UNVERIFIED and not result.suggestion:
@@ -497,13 +500,15 @@ class FactChecker:
 
             product_hits = [token for token in product_tokens if token.lower() in haystack]
             claim_hits = [token for token in claim_tokens if token.lower() in haystack]
+            score = float(item.get("score") or 0.0)
 
-            # For product review claims, we require at least one product hint match.
-            if product_tokens and not product_hits:
+            if product_tokens and not product_hits and len(claim_hits) < 2 and score < 0.96:
                 continue
 
-            # Keep only results that mention claim-relevant wording or have strong source scores.
-            if not claim_hits and float(item.get("score") or 0.0) < 0.78:
+            if not claim_hits and not product_hits and score < 0.88:
+                continue
+
+            if product_hits and not claim_hits and score < 0.55:
                 continue
 
             filtered.append(item)
@@ -909,6 +914,7 @@ class FactChecker:
                     {
                         "title": str(item.get("title") or item.get("name") or item.get("url") or "来源"),
                         "url": normalized_url,
+                        "snippet": str(item.get("snippet") or item.get("content") or "").strip()[:240],
                     }
                 )
             elif item:
@@ -921,6 +927,38 @@ class FactChecker:
         if value:
             return [str(value).strip()]
         return []
+
+    def _merge_source_snippets(
+        self,
+        sources: List[Dict[str, str]],
+        search_results: List[Dict[str, Any]],
+    ) -> List[Dict[str, str]]:
+        snippet_by_url = {
+            str(item.get("url") or "").strip(): str(item.get("snippet") or "").strip()[:240]
+            for item in search_results
+            if str(item.get("url") or "").strip()
+        }
+        snippet_by_title = {
+            str(item.get("title") or "").strip(): str(item.get("snippet") or "").strip()[:240]
+            for item in search_results
+            if str(item.get("title") or "").strip()
+        }
+
+        merged: List[Dict[str, str]] = []
+        for source in sources:
+            url = str(source.get("url") or "").strip()
+            title = str(source.get("title") or "").strip()
+            snippet = str(source.get("snippet") or "").strip()
+            if not snippet:
+                snippet = snippet_by_url.get(url) or snippet_by_title.get(title) or ""
+            merged.append(
+                {
+                    "title": title or "来源",
+                    "url": url,
+                    "snippet": snippet,
+                }
+            )
+        return merged
 
     def _extract_relevance_tokens(self, text: str) -> List[str]:
         tokens: List[str] = []

@@ -20,6 +20,8 @@ from tencent_doc_review.access import (
     UploadTarget,
 )
 from tencent_doc_review.cli import main
+from tencent_doc_review.analyzer.document_analyzer import AnalysisResult, AnalysisType
+from tencent_doc_review.analyzer.fact_checker import ClaimType, FactCheckResult, VerificationStatus
 from tencent_doc_review.document.word_parser import ParagraphNode, SentenceNode
 from tencent_doc_review.domain import ReviewIssue, ReviewIssueType, ReviewSeverity
 from tencent_doc_review.skill import SkillRequest
@@ -291,6 +293,50 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         rendered = pipeline._render_document_text(paragraphs)
 
         self.assertEqual(rendered, "一、产品概述\n\n这是正文第一段。")
+
+    def test_build_word_annotations_includes_runtime_and_fact_detail_summary(self):
+        pipeline = SkillPipeline()
+        paragraphs = [ParagraphNode(index=0, text="标题", is_heading=True, heading_level=1)]
+        sentences: list[SentenceNode] = []
+        review_result = AnalysisResult(
+            analysis_type=AnalysisType.FULL,
+            timestamp="2026-03-29T10:00:00",
+            fact_check_results=[
+                FactCheckResult(
+                    original_text="生成的视频清晰度可达4K。",
+                    claim_type=ClaimType.DATA,
+                    claim_content="生成的视频清晰度可达4K。",
+                    verification_status=VerificationStatus.UNVERIFIED,
+                    confidence=0.6,
+                    suggestion="检索到的网络信息未能直接证实该表述，建议依据下列来源核对后再保留。",
+                    sources=[
+                        {
+                            "title": "蝉镜帮助中心",
+                            "url": "https://example.com/help",
+                            "snippet": "帮助中心提到支持高清导出，但未明确写 4K。",
+                        }
+                    ],
+                    search_trace={"performed": True, "provider": "tavily", "raw_count": 5, "filtered_count": 1},
+                )
+            ],
+            review_issues=[],
+        )
+        request = SkillRequest(
+            source_document=TencentDocReference(doc_id="doc-123", title="Skill Demo"),
+            target_location=UploadTarget(folder_id="folder-456", space_type="personal_space", path_hint="/review-results"),
+            llm_provider="deepseek",
+        )
+
+        annotations = pipeline._build_word_annotations(paragraphs, sentences, review_result, request)
+
+        titles = [item.title for item in annotations]
+        self.assertIn("审核运行情况", titles)
+        self.assertIn("事实核查详细情况", titles)
+        fact_detail = next(item for item in annotations if item.title == "事实核查详细情况")
+        self.assertEqual(fact_detail.metadata.get("render_mode"), "summary_block")
+        self.assertIn("原文：生成的视频清晰度可达4K。", fact_detail.comment)
+        self.assertIn("https://example.com/help", fact_detail.comment)
+        self.assertIn("搜索源原文：帮助中心提到支持高清导出，但未明确写 4K。", fact_detail.comment)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,18 @@ from typing import Any, Dict, List, Optional
 from ..llm.base import LLMClient
 
 
+SECTION_ALIAS_MAP = {
+    "产品概述": {"productoverview", "overview", "introduction"},
+    "目标用户与市场定位": {"targetusersandmarketpositioning", "targetuser", "marketpositioning"},
+    "核心功能与特性": {"corefeaturesandcharacteristics", "corefeatures", "features", "keyfeatures"},
+    "实际使用体验": {"actualusageexperience", "practicalexperience", "hands-onexperience", "experience"},
+    "竞品对比分析": {"competitorcomparisonanalysis", "competitiveanalysis", "comparison", "competitorcomparison"},
+    "优势与不足": {"strengthsandweaknesses", "advantagesanddisadvantages", "prosandcons"},
+    "价格与性价比": {"priceandcosteffectiveness", "pricecomparison", "pricingandvalue", "pricing"},
+    "结论与推荐建议": {"conclusionandrecommendations", "conclusion", "recommendations"},
+}
+
+
 class MatchStatus(Enum):
     MATCHED = "matched"
     MISSING = "missing"
@@ -107,13 +119,13 @@ class StructureMatcher:
             section for section in self._flatten_sections(template_root) if not self._is_template_container_title(section.title)
         ]
         document_sections = self._flatten_sections(document_root)
-        document_titles = {self._normalize(section.title): section for section in document_sections}
+        document_titles = {self._canonical_key(section.title): section for section in document_sections}
 
         matches: List[SectionMatch] = []
         matched_count = 0
 
         for expected in template_sections:
-            actual = document_titles.get(self._normalize(expected.title))
+            actual = document_titles.get(self._canonical_key(expected.title))
             if actual is not None:
                 matched_count += 1
                 matches.append(
@@ -239,6 +251,15 @@ class StructureMatcher:
     def _is_template_container_title(self, title: str) -> bool:
         normalized = self._normalize(title)
         return normalized.endswith("模板") or normalized in {"模板", "审核模板", "调研模板"}
+
+    def _canonical_key(self, title: str) -> str:
+        normalized = self._normalize(title)
+        for canonical_title, aliases in SECTION_ALIAS_MAP.items():
+            if normalized == self._normalize(canonical_title):
+                return self._normalize(canonical_title)
+            if normalized in aliases:
+                return self._normalize(canonical_title)
+        return normalized
 
 
 async def match_structure(

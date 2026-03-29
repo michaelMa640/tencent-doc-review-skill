@@ -90,7 +90,8 @@ class SkillPipeline:
         review_annotations = self._build_word_annotations(
             parsed_document.paragraphs,
             parsed_document.sentences,
-            review_result.review_issues,
+            review_result,
+            request,
         )
 
         annotated_path = downloaded.file_path.with_name(f"{downloaded.file_path.stem}-annotated.docx")
@@ -222,9 +223,12 @@ class SkillPipeline:
         self,
         paragraphs: List[ParagraphNode],
         sentences: List[SentenceNode],
-        issues: List[ReviewIssue],
+        review_result: AnalysisResult,
+        request: SkillRequest,
     ) -> List[WordAnnotation]:
-        return [self._to_word_annotation(paragraphs, sentences, issue) for issue in issues]
+        annotations = [self._to_word_annotation(paragraphs, sentences, issue) for issue in review_result.review_issues]
+        annotations.extend(self._build_summary_annotations(review_result, request))
+        return annotations
 
     def _to_word_annotation(
         self,
@@ -254,6 +258,34 @@ class SkillPipeline:
             metadata=metadata,
         )
 
+    def _build_summary_annotations(
+        self,
+        review_result: AnalysisResult,
+        request: SkillRequest,
+    ) -> List[WordAnnotation]:
+        annotations: List[WordAnnotation] = [
+            WordAnnotation(
+                paragraph_index=0,
+                title="审核运行情况",
+                comment=self._format_runtime_summary(review_result, request),
+                severity="low",
+                metadata={"render_mode": "summary_block", "anchor_preference": "document_end"},
+            )
+        ]
+
+        fact_comment = self._format_fact_detail_summary(review_result)
+        if fact_comment:
+            annotations.append(
+                WordAnnotation(
+                    paragraph_index=0,
+                    title="事实核查详细情况",
+                    comment=fact_comment,
+                    severity="medium",
+                    metadata={"render_mode": "summary_block", "anchor_preference": "document_end"},
+                )
+            )
+        return annotations
+
     def _format_issue_comment(self, issue: ReviewIssue, metadata: dict) -> str:
         lines: List[str] = []
         description = (issue.description or "").strip()
@@ -275,6 +307,115 @@ class SkillPipeline:
             lines.extend(source_lines)
 
         return "\n".join(lines).strip()
+
+    def _format_runtime_summary(self, review_result: AnalysisResult, request: SkillRequest) -> str:
+        lines: List[str] = [
+            f"审核时间：{review_result.timestamp}",
+            f"审核模型：{(request.llm_provider or 'deepseek').strip().lower()}",
+            f"审核过程评分：{self._estimate_process_score(review_result):.0f}/100",
+        ]
+
+        if review_result.quality_report is not None:
+            lines.append(
+                f"- 质量评估：正常，评分 {review_result.quality_report.overall_score:.1f}/100，等级 {review_result.quality_report.overall_level.value}"
+            )
+        else:
+            lines.append("- 质量评估：未生成结果")
+
+        if review_result.structure_match_result is not None:
+            lines.append(f"- 结构核对：正常，匹配度 {review_result.structure_match_result.overall_score:.1%}")
+        else:
+            lines.append("- 结构核对：未生成结果")
+
+        fact_fallback_count = sum(
+            1
+            for item in review_result.fact_check_results
+            if any("LLM verification failed" in evidence for evidence in item.evidence)
+        )
+        fact_search_count = sum(1 for item in review_result.fact_check_results if item.search_trace.get("performed"))
+        lines.append(
+            f"- 事实核查：{'正常' if review_result.fact_check_results else '未生成结果'}，"
+            f"核查 {len(review_result.fact_check_results)} 条，联网检索 {fact_search_count} 条，fallback {fact_fallback_count} 条"
+        )
+
+        language_fallback_count = sum(
+            1 for item in review_result.language_issues if str(item.metadata.get('fallback_reason') or '').strip()
+        )
+        lines.append(
+            f"- 语言审核：{'正常' if review_result.language_issues or language_fallback_count == 0 else '未生成结果'}，"
+            f"发现 {len(review_result.language_issues)} 条，fallback {language_fallback_count} 条"
+        )
+        lines.append(f"- 矛盾检查：发现 {len(review_result.consistency_issues)} 条")
+        return "\n".join(lines)
+
+    def _estimate_process_score(self, review_result: AnalysisResult) -> float:
+        score = 100.0
+        if review_result.structure_match_result is None:
+            score -= 15
+        if review_result.quality_report is None:
+            score -= 20
+        fact_fallback_count = sum(
+            1
+            for item in review_result.fact_check_results
+            if any("LLM verification failed" in evidence for evidence in item.evidence)
+        )
+        score -= min(20, fact_fallback_count * 5)
+        language_fallback_count = sum(
+            1 for item in review_result.language_issues if str(item.metadata.get("fallback_reason") or "").strip()
+        )
+        score -= min(15, language_fallback_count * 5)
+        return max(0.0, min(100.0, score))
+
+    def _format_fact_detail_summary(self, review_result: AnalysisResult) -> str:
+        detail_blocks: List[str] = []
+        flagged_results = [
+            item
+            for item in review_result.fact_check_results
+            if item.verification_status.value in {"incorrect", "disputed", "unverified", "partial"}
+            or item.search_trace.get("performed")
+        ]
+        for index, item in enumerate(flagged_results, start=1):
+            lines = [
+                f"{index}. 原文：{item.original_text or item.claim_content}",
+                f"   结论：{self._fact_status_label(item.verification_status.value)}",
+            ]
+            trace_lines = self._format_search_trace(item.search_trace)
+            if trace_lines:
+                lines.append("   检索痕迹：")
+                lines.extend(f"   {line}" for line in trace_lines)
+            conflict_point = self._build_conflict_point(item)
+            if conflict_point:
+                label = "冲突点" if item.verification_status.value in {"incorrect", "disputed", "partial", "unverified"} else "核查依据"
+                lines.append(f"   {label}：{conflict_point}")
+            if item.sources:
+                lines.append("   搜索源：")
+                for source_index, source in enumerate(item.sources, start=1):
+                    title = str(source.get("title") or "来源").strip()
+                    url = str(source.get("url") or "").strip()
+                    snippet = str(source.get("snippet") or "").strip()
+                    lines.append(f"   {source_index}. {title}" + (f" - {url}" if url else ""))
+                    if snippet:
+                        lines.append(f"      搜索源原文：{snippet}")
+            detail_blocks.append("\n".join(lines))
+        return "\n\n".join(detail_blocks).strip()
+
+    def _fact_status_label(self, status: str) -> str:
+        return {
+            "incorrect": "发现网络信息与原文冲突",
+            "disputed": "发现网络信息与原文存在冲突",
+            "partial": "网络信息仅能部分支持原文",
+            "unverified": "网络信息未能直接证实原文",
+            "confirmed": "未发现明显冲突",
+        }.get(status, status)
+
+    def _build_conflict_point(self, item: object) -> str:
+        suggestion = str(getattr(item, "suggestion", "") or "").strip()
+        if suggestion:
+            return suggestion
+        evidence = getattr(item, "evidence", None) or []
+        if evidence:
+            return str(evidence[0]).strip()
+        return ""
 
     def _format_sources(self, sources: object) -> List[str]:
         if not isinstance(sources, list):
