@@ -49,13 +49,19 @@ def aggregate_review_issues(
     if structure_match_result:
         missing = [match for match in structure_match_result.section_matches if match.status.value != "matched"]
         if missing:
+            missing_titles = [match.template_section.title for match in missing if match.template_section.title]
+            missing_text = "、".join(missing_titles)
+            supplement_actions: List[str] = []
+            for title in missing_titles[:5]:
+                supplement_actions.append(f"补充“{title}”部分的内容")
+            suggestion = "；".join(supplement_actions) if supplement_actions else "请补充缺失章节。"
             issues.append(
                 ReviewIssue(
                     issue_type=ReviewIssueType.STRUCTURE,
                     severity=ReviewSeverity.MEDIUM,
                     title="结构建议",
-                    description="文档结构与模板仍有差异，建议在正文末尾统一补齐缺失部分。",
-                    suggestion="请在文末补充缺失章节或合并相关内容，不需要逐段修改格式。",
+                    description=f"当前与模板相比仍缺少这些部分：{missing_text}。",
+                    suggestion=f"建议优先在正文中补齐以下内容：{suggestion}",
                     metadata={"anchor_preference": "document_end"},
                 )
             )

@@ -30,6 +30,33 @@ HARD_FACT_PATTERN = re.compile(
     r"\b20\d{2}\b|\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:亿|万|万元|亿美元|美元|元|人|次|家|MB|GB|秒|分钟)",
     re.IGNORECASE,
 )
+GENERIC_TOKEN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9\.\-]{1,}|[\u4e00-\u9fff]{2,8}")
+STOP_TOKENS = {
+    "产品",
+    "报告",
+    "调研",
+    "测评",
+    "译文",
+    "副本",
+    "功能",
+    "视频",
+    "数字人",
+    "生成",
+    "支持",
+    "用户",
+    "系统",
+    "平台",
+    "内容",
+    "效果",
+    "信息",
+    "公开",
+}
+BANNED_SOURCE_HINTS = (
+    "t.me/",
+    "telegram.",
+    "behance.net/search",
+    "pdf.dfcfw.com",
+)
 
 
 class VerificationStatus(Enum):
@@ -407,7 +434,8 @@ class FactChecker:
             return []
         query = self._build_search_query(claim, context)
         try:
-            return await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
+            results = await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
+            return self._filter_search_results(claim, context, results)
         except Exception as exc:  # pragma: no cover - provider/network path
             logger.warning("Search verification failed for claim '{}': {}", claim.text, exc)
             return []
@@ -419,6 +447,47 @@ class FactChecker:
             if value:
                 hints.append(value)
         return f"{claim.text} {' '.join(hints[:2])}".strip()
+
+    def _filter_search_results(
+        self,
+        claim: Claim,
+        context: Dict[str, Any],
+        results: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        if not results:
+            return []
+
+        product_tokens = self._extract_relevance_tokens(" ".join(str(context.get(key) or "") for key in ("product_name", "document_title", "topic")))
+        claim_tokens = self._extract_relevance_tokens(claim.text)
+        filtered: List[Dict[str, Any]] = []
+
+        for item in results:
+            haystack = " ".join(
+                [
+                    str(item.get("title") or ""),
+                    str(item.get("snippet") or ""),
+                    str(item.get("url") or ""),
+                    str(item.get("source") or ""),
+                ]
+            ).lower()
+
+            if any(bad in haystack for bad in BANNED_SOURCE_HINTS):
+                continue
+
+            product_hits = [token for token in product_tokens if token.lower() in haystack]
+            claim_hits = [token for token in claim_tokens if token.lower() in haystack]
+
+            # For product review claims, we require at least one product hint match.
+            if product_tokens and not product_hits:
+                continue
+
+            # Keep only results that mention claim-relevant wording or have strong source scores.
+            if not claim_hits and float(item.get("score") or 0.0) < 0.78:
+                continue
+
+            filtered.append(item)
+
+        return filtered[:3]
 
     def _build_claim_extraction_prompt(self, text: str, context: Dict[str, Any]) -> str:
         context_block = json.dumps(context, ensure_ascii=False) if context else "{}"
@@ -826,6 +895,23 @@ class FactChecker:
         if value:
             return [str(value).strip()]
         return []
+
+    def _extract_relevance_tokens(self, text: str) -> List[str]:
+        tokens: List[str] = []
+        for raw in GENERIC_TOKEN_PATTERN.findall(text or ""):
+            token = raw.strip().strip("[]()（）【】《》:：,.，。;；!?！？\"'")
+            if not token:
+                continue
+            lowered = token.lower()
+            if lowered in STOP_TOKENS:
+                continue
+            if token.isdigit():
+                continue
+            if len(token) == 1:
+                continue
+            tokens.append(token)
+        # Keep order but deduplicate.
+        return list(dict.fromkeys(tokens))
 
     def _safe_float(self, value: Any, default: float = 0.0) -> float:
         try:

@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, List, Optional
 from loguru import logger
 
 from ..config import get_settings
-from ..domain import ReviewIssue, ReviewReport, aggregate_review_issues, build_review_report
+from ..domain import ReviewIssue, ReviewIssueType, ReviewReport, aggregate_review_issues, build_review_report
 from ..llm.base import LLMClient
 from ..mcp_client import Comment, TencentDocMCPClient
 from .consistency_reviewer import ConsistencyReviewer
@@ -132,6 +132,14 @@ class AnalysisResult:
             )
             for match in self.structure_match_result.section_matches:
                 lines.append(f"- {match.template_section.title}: {match.status.value}")
+            lines.append("")
+        structure_issues = [item for item in self.review_issues if item.issue_type == ReviewIssueType.STRUCTURE]
+        if structure_issues:
+            lines.extend(["## Structure Issues", ""])
+            for item in structure_issues:
+                lines.append(f"- [{item.severity.value}] {item.title}: {item.description}")
+                if item.suggestion:
+                    lines.append(f"  Suggestion: {item.suggestion}")
             lines.append("")
         if self.fact_check_results:
             lines.extend(["## Fact Check", ""])
@@ -467,7 +475,9 @@ class DocumentAnalyzer:
         if structure_match_result:
             missing = [match for match in structure_match_result.section_matches if match.status.value == "missing"]
             if missing:
-                recommendations.append("如有必要，可在文末补充缺失章节总结。")
+                missing_titles = [match.template_section.title for match in missing if match.template_section.title]
+                if missing_titles:
+                    recommendations.append(f"请补齐这些缺失章节：{'、'.join(missing_titles)}。")
         return recommendations[:5]
 
 

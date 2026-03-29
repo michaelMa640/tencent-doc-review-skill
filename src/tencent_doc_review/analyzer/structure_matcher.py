@@ -103,7 +103,9 @@ class StructureMatcher:
         template_root = await self.parse_template(template_text, context)
         document_root = await self.parse_document(document_text, context)
 
-        template_sections = self._flatten_sections(template_root)
+        template_sections = [
+            section for section in self._flatten_sections(template_root) if not self._is_template_container_title(section.title)
+        ]
         document_sections = self._flatten_sections(document_root)
         document_titles = {self._normalize(section.title): section for section in document_sections}
 
@@ -199,6 +201,10 @@ class StructureMatcher:
         if markdown_match:
             return len(markdown_match.group(1)), markdown_match.group(2).strip()
 
+        roman_match = re.match(r"^([IVXLCM]+)[\.\)]\s+(.+)$", line, re.IGNORECASE)
+        if roman_match:
+            return 2, roman_match.group(2).strip()
+
         numbered_match = re.match(r"^(\d+)[\.\)]\s*(.+)$", line)
         if numbered_match:
             return 2, numbered_match.group(2).strip()
@@ -225,9 +231,14 @@ class StructureMatcher:
         normalized = re.sub(r"^\d+[\.\)、]\s*", "", normalized)
         normalized = re.sub(r"^[一二三四五六七八九十]+[\.\)、]\s*", "", normalized)
         normalized = re.sub(r"^(第[一二三四五六七八九十\d]+[章节部分篇])\s*", "", normalized)
+        normalized = re.sub(r"^[ivxlcm]+[\.\)]\s*", "", normalized)
         normalized = re.sub(r"[：:()（）\-_/]", "", normalized)
         normalized = re.sub(r"\s+", "", normalized)
         return normalized
+
+    def _is_template_container_title(self, title: str) -> bool:
+        normalized = self._normalize(title)
+        return normalized.endswith("模板") or normalized in {"模板", "审核模板", "调研模板"}
 
 
 async def match_structure(

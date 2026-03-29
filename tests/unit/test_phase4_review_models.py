@@ -27,6 +27,14 @@ class Phase4ReviewModelsTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(result.review_issues), 0)
         self.assertIn("issue_count", result.review_report.metrics)
         self.assertEqual(result.review_report.metrics["issue_count"], len(result.review_issues))
+        structure_issues = [item for item in result.review_issues if item.issue_type == ReviewIssueType.STRUCTURE]
+        self.assertEqual(len(structure_issues), 1)
+        self.assertIn("分析", structure_issues[0].description)
+        self.assertIn("补充“分析”部分的内容", structure_issues[0].suggestion)
+        markdown = result.to_markdown()
+        self.assertIn("## Structure Issues", markdown)
+        self.assertIn("当前与模板相比仍缺少这些部分", markdown)
+        self.assertIn("请补齐这些缺失章节：分析。", markdown)
 
     async def test_unified_review_serialization_is_stable(self):
         analyzer = DocumentAnalyzer(llm_client=MockLLMClient())
