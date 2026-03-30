@@ -17,6 +17,7 @@ from ..access import (
     DownloadedDocument,
     MCPDocumentClient,
     TencentDocReference,
+    UploadTarget,
     UploadManager,
     UploadResult,
 )
@@ -50,6 +51,21 @@ class SkillPipelineArtifacts:
 
 
 @dataclass
+class LocalReviewArtifacts:
+    source_path: str
+    annotated_word_path: str
+    upload_candidate_path: str
+    markdown_report_path: str
+    annotation_count: int
+    review_issue_count: int
+    review_summary: str
+    compression_applied: bool = False
+    compression_result_size: int = 0
+    compression_original_size: int = 0
+    compression_target_met: bool = True
+
+
+@dataclass
 class AnchorResolution:
     paragraph_index: int
     reliable: bool = False
@@ -72,6 +88,90 @@ class SkillPipeline:
         self.docx_compressor = docx_compressor or DocxCompressor()
         self.word_annotator = word_annotator or WordAnnotator()
         self.word_parser = word_parser or WordParser()
+
+    async def review_local_docx(
+        self,
+        input_path: str | Path,
+        title: str = "",
+        provider: str = "",
+        output_dir: str | Path = "",
+        max_upload_size_bytes: int = 10 * 1024 * 1024,
+    ) -> LocalReviewArtifacts:
+        source_path = Path(input_path)
+        if not source_path.exists():
+            raise FileNotFoundError(f"Input DOCX not found: {source_path}")
+
+        target_dir = Path(output_dir) if output_dir else source_path.parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        parsed_document = self.word_parser.parse(source_path)
+        document_title = title or parsed_document.title or source_path.stem
+        document_text = self._render_document_text(parsed_document.paragraphs)
+
+        request = SkillRequest(
+            source_document=TencentDocReference(doc_id=source_path.stem, title=document_title),
+            target_location=UploadTarget(
+                folder_id="",
+                space_id="",
+                space_type="personal_space",
+                path_hint="",
+                display_name="",
+            ),
+            llm_provider=provider or get_settings().llm_provider,
+        )
+        review_result = await self._review_document(
+            request=request,
+            document_text=document_text,
+            document_title=document_title,
+        )
+        review_annotations = self._build_word_annotations(
+            parsed_document.paragraphs,
+            parsed_document.sentences,
+            review_result,
+            request,
+        )
+
+        annotated_path = target_dir / f"{source_path.stem}-annotated.docx"
+        annotated = self.word_annotator.annotate(
+            source_path=source_path,
+            output_path=annotated_path,
+            annotations=review_annotations,
+            document_title=document_title,
+        )
+        review_report_path = self._write_markdown_report(annotated.output_path, review_result)
+
+        upload_candidate_path = annotated.output_path
+        compression_metadata = {
+            "compression_applied": False,
+            "compression_result_size": annotated.output_path.stat().st_size,
+            "compression_original_size": annotated.output_path.stat().st_size,
+            "compression_target_met": True,
+        }
+        if annotated.output_path.stat().st_size > max_upload_size_bytes:
+            compressed_path = annotated.output_path.with_name(f"{annotated.output_path.stem}-compressed.docx")
+            compression_result = self.docx_compressor.compress_to_target(
+                source_path=annotated.output_path,
+                output_path=compressed_path,
+                target_max_bytes=max_upload_size_bytes,
+            )
+            upload_candidate_path = compression_result.output_path
+            compression_metadata = {
+                "compression_applied": True,
+                "compression_result_size": compression_result.compressed_size,
+                "compression_original_size": compression_result.original_size,
+                "compression_target_met": compression_result.target_met,
+            }
+
+        return LocalReviewArtifacts(
+            source_path=str(source_path),
+            annotated_word_path=str(annotated.output_path),
+            upload_candidate_path=str(upload_candidate_path),
+            markdown_report_path=str(review_report_path),
+            annotation_count=annotated.annotation_count,
+            review_issue_count=len(review_result.review_issues),
+            review_summary=review_result.summary,
+            **compression_metadata,
+        )
 
     async def run(self, client: MCPDocumentClient, request: SkillRequest) -> SkillResponse:
         reference = self._build_source_reference(request)

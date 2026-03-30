@@ -247,7 +247,7 @@ def skill_run(
     bridge_executable: str,
     bridge_args: str,
     provider: str,
-) -> None:
+    ) -> None:
     """Run the shared skill workflow with a local MCP client implementation."""
     asyncio.run(
         _skill_run(
@@ -261,6 +261,28 @@ def skill_run(
             mcp_client_name=mcp_client_name,
             bridge_executable=bridge_executable,
             bridge_args=bridge_args,
+            provider=provider,
+        )
+    )
+
+
+@main.command("review-docx")
+@click.option("--input-docx", "input_docx", required=True, type=click.Path(exists=True))
+@click.option("--title", "title", default="", type=str)
+@click.option("--output-dir", "output_dir", default="", type=click.Path())
+@click.option("--provider", "provider", default="", type=str)
+def review_docx(
+    input_docx: str,
+    title: str,
+    output_dir: str,
+    provider: str,
+) -> None:
+    """Review a local DOCX and generate an annotated DOCX plus markdown report."""
+    asyncio.run(
+        _review_docx(
+            input_docx=input_docx,
+            title=title,
+            output_dir=output_dir,
             provider=provider,
         )
     )
@@ -338,6 +360,22 @@ async def _analyze(
         if doc_client is not None:
             await doc_client.close()
         await client.close()
+
+
+async def _review_docx(
+    input_docx: str,
+    title: str,
+    output_dir: str,
+    provider: str,
+) -> None:
+    settings = reload_settings()
+    artifacts = await SkillPipeline().review_local_docx(
+        input_path=input_docx,
+        title=title,
+        provider=provider or settings.llm_provider,
+        output_dir=output_dir,
+    )
+    click.echo(json.dumps(asdict(artifacts), ensure_ascii=False, indent=2, default=str))
 
 
 async def _debug_doc(doc_id: str) -> None:
