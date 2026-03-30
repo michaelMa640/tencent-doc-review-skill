@@ -531,7 +531,12 @@ class FactChecker:
         for item in results:
             updated = dict(item)
             source_text = str(item.get("raw_content") or item.get("snippet") or "").strip()
-            updated["snippet"] = self._select_relevant_source_snippet(claim.text, source_text)
+            snippet = self._select_relevant_source_snippet(claim.text, source_text)
+            if not snippet:
+                continue
+            updated["snippet"] = self._clean_source_snippet(snippet)
+            if not self._snippet_is_actionable(claim.text, updated["snippet"]):
+                continue
             refined.append(updated)
         return refined
 
@@ -592,6 +597,34 @@ class FactChecker:
                 chosen_segments.append(next_segment)
 
         return " ".join(chosen_segments)[:240]
+
+    def _snippet_is_actionable(self, claim_text: str, snippet: str) -> bool:
+        normalized_snippet = self._normalize_text(snippet)
+        if not normalized_snippet:
+            return False
+
+        claim_tokens = self._extract_relevance_tokens(claim_text)
+        numeric_tokens = re.findall(r"\d+(?:\.\d+)?", claim_text)
+        token_hits = sum(1 for token in claim_tokens if token.lower() in snippet.lower())
+        numeric_hits = sum(1 for token in numeric_tokens if token and token.lower() in snippet.lower())
+        non_year_numeric_hits = sum(
+            1
+            for token in numeric_tokens
+            if token and not re.fullmatch(r"20\d{2}", token) and token.lower() in snippet.lower()
+        )
+
+        if numeric_tokens:
+            if non_year_numeric_hits > 0:
+                return True
+            if any("." in token for token in numeric_tokens) and non_year_numeric_hits == 0:
+                return False
+            return numeric_hits >= 2 or token_hits >= 3
+        return token_hits >= 2
+
+    def _clean_source_snippet(self, text: str) -> str:
+        cleaned = re.sub(r"[*•#>\t]+", " ", text or "")
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
 
     def _build_claim_extraction_prompt(self, text: str, context: Dict[str, Any]) -> str:
         context_block = json.dumps(context, ensure_ascii=False) if context else "{}"
@@ -702,6 +735,12 @@ class FactChecker:
         if is_numeric:
             if status == VerificationStatus.UNVERIFIED:
                 if has_sources:
+                    if not self._has_actionable_sources(result.sources):
+                        result.verification_status = VerificationStatus.CONFIRMED
+                        result.suggestion = ""
+                        result.sources = []
+                        result.evidence = []
+                        return result
                     result.suggestion = (
                         result.suggestion
                         or "检索到的公开信息未能直接证实该数值表述，建议依据下列来源核对后再保留。"
@@ -723,6 +762,13 @@ class FactChecker:
             return result
 
         return result
+
+    def _has_actionable_sources(self, sources: List[Dict[str, str]]) -> bool:
+        for source in sources:
+            snippet = self._clean_source_snippet(str(source.get("snippet") or ""))
+            if len(self._normalize_text(snippet)) >= 12:
+                return True
+        return False
 
     def _build_search_only_result(
         self,

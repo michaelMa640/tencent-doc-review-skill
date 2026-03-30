@@ -64,6 +64,14 @@ LLM_PROVIDER=deepseek
 LLM_API_KEY=你的模型 key
 ```
 
+如果你要收集某次审核的详细调试证据，还可以额外填写：
+
+```env
+REVIEW_DEBUG_OUTPUT_DIR=E:\VibeCoding\tencent-doc-review\debug-output
+```
+
+这样 `review-docx` / `skill-run` 会把解析结果、审核结果、锚点和产物路径写到这个目录里。
+
 腾讯文档 MCP token 获取页面：
 
 - [腾讯文档 OpenClaw 场景页](https://docs.qq.com/scenario/open-claw.html?nlc=1)
@@ -73,6 +81,7 @@ LLM_API_KEY=你的模型 key
 ```bash
 openclaw --help
 tencent-doc-review doctor
+tencent-doc-review debug-config
 ```
 
 ### 4. 让 OpenClaw 发现这个 skill

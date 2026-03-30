@@ -11,14 +11,75 @@ from ..llm.base import LLMClient
 
 
 SECTION_ALIAS_MAP = {
-    "产品概述": {"productoverview", "overview", "introduction"},
-    "目标用户与市场定位": {"targetusersandmarketpositioning", "targetuser", "marketpositioning"},
-    "核心功能与特性": {"corefeaturesandcharacteristics", "corefeatures", "features", "keyfeatures"},
-    "实际使用体验": {"actualusageexperience", "practicalexperience", "hands-onexperience", "experience"},
-    "竞品对比分析": {"competitorcomparisonanalysis", "competitiveanalysis", "comparison", "competitorcomparison"},
-    "优势与不足": {"strengthsandweaknesses", "advantagesanddisadvantages", "prosandcons"},
-    "价格与性价比": {"priceandcosteffectiveness", "pricecomparison", "pricingandvalue", "pricing"},
-    "结论与推荐建议": {"conclusionandrecommendations", "conclusion", "recommendations"},
+    "产品概述": {
+        "productoverview",
+        "overview",
+        "introduction",
+        "产品简介",
+        "背景概述",
+    },
+    "目标用户与市场定位": {
+        "targetusersandmarketpositioning",
+        "targetuser",
+        "marketpositioning",
+        "目标用户",
+        "市场定位",
+        "目标用户和市场定位",
+        "目标人群与市场定位",
+    },
+    "核心功能与特性": {
+        "corefeaturesandcharacteristics",
+        "corefeatures",
+        "features",
+        "keyfeatures",
+        "核心功能",
+        "功能与特性",
+        "功能特性",
+    },
+    "实际使用体验": {
+        "actualusageexperience",
+        "practicalexperience",
+        "handsonexperience",
+        "experience",
+        "使用体验",
+        "实际体验",
+        "试用体验",
+    },
+    "竞品对比分析": {
+        "competitorcomparisonanalysis",
+        "competitiveanalysis",
+        "comparison",
+        "competitorcomparison",
+        "竞品分析",
+        "竞品对比",
+        "对比分析",
+    },
+    "优势与不足": {
+        "strengthsandweaknesses",
+        "advantagesanddisadvantages",
+        "prosandcons",
+        "优缺点",
+        "优势不足",
+    },
+    "价格与性价比": {
+        "priceandcosteffectiveness",
+        "pricecomparison",
+        "pricingandvalue",
+        "pricing",
+        "价格",
+        "性价比",
+        "价格对比",
+    },
+    "结论与推荐建议": {
+        "conclusionandrecommendations",
+        "conclusion",
+        "recommendations",
+        "结论建议",
+        "结论与建议",
+        "总结与建议",
+        "总结与推荐",
+        "推荐建议",
+    },
 }
 
 
@@ -68,11 +129,15 @@ class StructureMatchResult:
     @property
     def extra_sections(self) -> List[Section]:
         matched_titles = {
-            match.document_section.title
+            self._canonical_key(match.document_section.title)
             for match in self.section_matches
             if match.document_section is not None
         }
-        return [section for section in self.document_sections if section.title not in matched_titles]
+        return [
+            section
+            for section in self.document_sections
+            if self._canonical_key(section.title) not in matched_titles
+        ]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -90,9 +155,13 @@ class StructureMatchResult:
             ],
         }
 
+    def _canonical_key(self, title: str) -> str:
+        normalized = _normalize_title(title)
+        return _canonicalize_title(normalized) or normalized
+
 
 class StructureMatcher:
-    """Simple heading-based structure matcher."""
+    """Simple heading-based structure matcher with forgiving alias handling."""
 
     def __init__(
         self,
@@ -116,7 +185,9 @@ class StructureMatcher:
         document_root = await self.parse_document(document_text, context)
 
         template_sections = [
-            section for section in self._flatten_sections(template_root) if not self._is_template_container_title(section.title)
+            section
+            for section in self._flatten_sections(template_root)
+            if not self._is_template_container_title(section.title)
         ]
         document_sections = self._flatten_sections(document_root)
         document_titles = {self._canonical_key(section.title): section for section in document_sections}
@@ -211,27 +282,30 @@ class StructureMatcher:
     def _match_heading(self, line: str) -> Optional[tuple[int, str]]:
         markdown_match = re.match(r"^(#{1,6})\s+(.+)$", line)
         if markdown_match:
-            return len(markdown_match.group(1)), markdown_match.group(2).strip()
+            return len(markdown_match.group(1)), self._canonical_title_or_self(markdown_match.group(2).strip())
 
         roman_match = re.match(r"^([IVXLCM]+)[\.\)]\s+(.+)$", line, re.IGNORECASE)
         if roman_match:
-            return 2, roman_match.group(2).strip()
+            return 2, self._canonical_title_or_self(roman_match.group(2).strip())
 
         numbered_match = re.match(r"^(\d+)[\.\)]\s*(.+)$", line)
         if numbered_match:
-            return 2, numbered_match.group(2).strip()
+            return 2, self._canonical_title_or_self(numbered_match.group(2).strip())
 
-        ordered_chinese_match = re.match(r"^([一二三四五六七八九十]+)[、.．)]\s*(.+)$", line)
+        ordered_chinese_match = re.match(r"^([一二三四五六七八九十]+)[、\.．\)]\s*(.+)$", line)
         if ordered_chinese_match:
-            return 2, ordered_chinese_match.group(2).strip()
+            return 2, self._canonical_title_or_self(ordered_chinese_match.group(2).strip())
 
-        chinese_match = re.match(r"^第[一二三四五六七八九十\d]+[章节]\s*(.+)$", line)
+        chinese_match = re.match(r"^第[一二三四五六七八九十\d]+[章节部分篇]\s*(.+)$", line)
         if chinese_match:
-            return 2, chinese_match.group(1).strip() or line
+            title = chinese_match.group(1).strip() or line
+            return 2, self._canonical_title_or_self(title)
 
-        canonical_titles = {self._normalize(title) for title in SECTION_ALIAS_MAP}
-        if self._canonical_key(line) in canonical_titles:
-            return 2, line.strip()
+        canonical_title = _canonicalize_title(_normalize_title(line))
+        if canonical_title:
+            normalized_line = _normalize_title(line)
+            if len(normalized_line) <= max(len(_normalize_title(canonical_title)) + 14, 16):
+                return 2, canonical_title
 
         return None
 
@@ -246,28 +320,40 @@ class StructureMatcher:
         walk(root)
         return sections
 
-    def _normalize(self, title: str) -> str:
-        normalized = title.strip().lower()
-        normalized = re.sub(r"^\d+[\.\)、]\s*", "", normalized)
-        normalized = re.sub(r"^[一二三四五六七八九十]+[\.\)、]\s*", "", normalized)
-        normalized = re.sub(r"^(第[一二三四五六七八九十\d]+[章节部分篇])\s*", "", normalized)
-        normalized = re.sub(r"^[ivxlcm]+[\.\)]\s*", "", normalized)
-        normalized = re.sub(r"[：:()（）\-_/]", "", normalized)
-        normalized = re.sub(r"\s+", "", normalized)
-        return normalized
+    def _canonical_key(self, title: str) -> str:
+        normalized = _normalize_title(title)
+        return _canonicalize_title(normalized) or normalized
+
+    def _canonical_title_or_self(self, title: str) -> str:
+        normalized = _normalize_title(title)
+        return _canonicalize_title(normalized) or title
 
     def _is_template_container_title(self, title: str) -> bool:
-        normalized = self._normalize(title)
+        normalized = _normalize_title(title)
         return normalized.endswith("模板") or normalized in {"模板", "审核模板", "调研模板"}
 
-    def _canonical_key(self, title: str) -> str:
-        normalized = self._normalize(title)
-        for canonical_title, aliases in SECTION_ALIAS_MAP.items():
-            if normalized == self._normalize(canonical_title):
-                return self._normalize(canonical_title)
-            if normalized in aliases:
-                return self._normalize(canonical_title)
-        return normalized
+
+def _normalize_title(title: str) -> str:
+    normalized = title.strip().lower()
+    normalized = re.sub(r"^\d+[\.\)．、\s]*", "", normalized)
+    normalized = re.sub(r"^[一二三四五六七八九十]+[\.\)．、\s]*", "", normalized)
+    normalized = re.sub(r"^第[一二三四五六七八九十\d]+[章节部分篇]\s*", "", normalized)
+    normalized = re.sub(r"^[ivxlcm]+[\.\)]\s*", "", normalized)
+    normalized = re.sub(r"[：:（）()\-_/\[\]{}<>·•,，。！？!?\s]", "", normalized)
+    return normalized
+
+
+def _canonicalize_title(normalized: str) -> Optional[str]:
+    for canonical_title, aliases in SECTION_ALIAS_MAP.items():
+        canonical_key = _normalize_title(canonical_title)
+        if normalized == canonical_key or normalized in aliases:
+            return canonical_title
+        if len(normalized) >= 4 and (canonical_key in normalized or normalized in canonical_key):
+            return canonical_title
+        for alias in aliases:
+            if len(alias) >= 4 and (alias in normalized or normalized in alias):
+                return canonical_title
+    return None
 
 
 async def match_structure(

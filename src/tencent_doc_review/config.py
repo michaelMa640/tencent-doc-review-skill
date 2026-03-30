@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -16,13 +17,59 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for lean environments
     SettingsConfigDict = None
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ENV_OVERRIDE_KEYS = ("TENCENT_DOC_REVIEW_ENV_FILE", "TDR_ENV_FILE")
+
+
+def _discover_env_file_candidates() -> tuple[str, ...]:
+    candidates: list[str] = []
+
+    def add(path: Path | str | None) -> None:
+        if not path:
+            return
+        candidate = str(Path(path).expanduser())
+        if candidate not in candidates:
+            candidates.append(candidate)
+
+    for key in ENV_OVERRIDE_KEYS:
+        add(os.getenv(key))
+
+    cwd = Path.cwd().resolve()
+    add(cwd / ".env")
+    for parent in list(cwd.parents)[:5]:
+        add(parent / ".env")
+
+    add(PROJECT_ROOT / ".env")
+
+    if sys.executable:
+        executable_dir = Path(sys.executable).resolve().parent
+        add(executable_dir / ".env")
+        add(executable_dir.parent / ".env")
+
+    return tuple(candidates)
+
+
+ENV_FILE_CANDIDATES = _discover_env_file_candidates()
+
+
+def describe_env_file_candidates() -> list[dict[str, object]]:
+    """Return the searched .env locations for diagnostics."""
+    return [
+        {
+            "path": path,
+            "exists": Path(path).exists(),
+        }
+        for path in ENV_FILE_CANDIDATES
+    ]
+
+
 if BaseSettings is not None:
 
     class Settings(BaseSettings):
         """Application settings loaded from environment variables."""
 
         model_config = SettingsConfigDict(
-            env_file=".env",
+            env_file=ENV_FILE_CANDIDATES,
             env_file_encoding="utf-8",
             extra="ignore",
         )
@@ -64,6 +111,7 @@ if BaseSettings is not None:
         openclaw_mcp_bridge_args: str = Field(default="", alias="OPENCLAW_MCP_BRIDGE_ARGS")
         claude_code_mcp_bridge_executable: str = Field(default="", alias="CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE")
         claude_code_mcp_bridge_args: str = Field(default="", alias="CLAUDE_CODE_MCP_BRIDGE_ARGS")
+        review_debug_output_dir: str = Field(default="", alias="REVIEW_DEBUG_OUTPUT_DIR")
         log_level: str = Field(default="INFO")
 
 
@@ -71,16 +119,16 @@ else:
 
     def _load_env_file() -> dict[str, str]:
         values: dict[str, str] = {}
-        env_path = Path(".env")
-        if not env_path.exists():
-            return values
-
-        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#") or "=" not in line:
+        for raw_path in ENV_FILE_CANDIDATES:
+            env_path = Path(raw_path)
+            if not env_path.exists():
                 continue
-            key, value = line.split("=", 1)
-            values[key.strip()] = value.strip().strip('"').strip("'")
+            for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                values[key.strip()] = value.strip().strip('"').strip("'")
         return values
 
     _ENV_FILE_VALUES = _load_env_file()
@@ -129,6 +177,7 @@ else:
         openclaw_mcp_bridge_args: str = _get_env("OPENCLAW_MCP_BRIDGE_ARGS", "")
         claude_code_mcp_bridge_executable: str = _get_env("CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE", "")
         claude_code_mcp_bridge_args: str = _get_env("CLAUDE_CODE_MCP_BRIDGE_ARGS", "")
+        review_debug_output_dir: str = _get_env("REVIEW_DEBUG_OUTPUT_DIR", "")
         log_level: str = _get_env("LOG_LEVEL", "INFO")
 
 

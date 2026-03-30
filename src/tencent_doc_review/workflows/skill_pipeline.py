@@ -6,7 +6,9 @@ import platform
 import re
 import tempfile
 import unicodedata
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import List, Optional
@@ -63,6 +65,7 @@ class LocalReviewArtifacts:
     compression_result_size: int = 0
     compression_original_size: int = 0
     compression_target_met: bool = True
+    debug_bundle_path: str = ""
 
 
 @dataclass
@@ -89,12 +92,17 @@ class SkillPipeline:
         self.word_annotator = word_annotator or WordAnnotator()
         self.word_parser = word_parser or WordParser()
 
+    def _sanitize_filename_stem(self, value: str, fallback: str = "") -> str:
+        sanitized = "".join(char for char in (value or "").strip() if char not in '<>:"/\\|?*').strip().rstrip(".")
+        return sanitized or fallback
+
     async def review_local_docx(
         self,
         input_path: str | Path,
         title: str = "",
         provider: str = "",
         output_dir: str | Path = "",
+        debug_output_dir: str = "",
         max_upload_size_bytes: int = 10 * 1024 * 1024,
     ) -> LocalReviewArtifacts:
         source_path = Path(input_path)
@@ -131,7 +139,8 @@ class SkillPipeline:
             request,
         )
 
-        annotated_path = target_dir / f"{source_path.stem}-annotated.docx"
+        output_stem = self._sanitize_filename_stem(document_title, source_path.stem)
+        annotated_path = target_dir / f"{output_stem}-annotated.docx"
         annotated = self.word_annotator.annotate(
             source_path=source_path,
             output_path=annotated_path,
@@ -162,6 +171,21 @@ class SkillPipeline:
                 "compression_target_met": compression_result.target_met,
             }
 
+        debug_bundle_path = self._write_debug_bundle(
+            debug_output_dir=debug_output_dir,
+            document_title=document_title,
+            source_path=source_path,
+            parsed_document=parsed_document,
+            review_result=review_result,
+            annotations=review_annotations,
+            extra_metadata={
+                "annotated_word_path": str(annotated.output_path),
+                "upload_candidate_path": str(upload_candidate_path),
+                "markdown_report_path": str(review_report_path),
+                **compression_metadata,
+            },
+        )
+
         return LocalReviewArtifacts(
             source_path=str(source_path),
             annotated_word_path=str(annotated.output_path),
@@ -170,6 +194,7 @@ class SkillPipeline:
             annotation_count=annotated.annotation_count,
             review_issue_count=len(review_result.review_issues),
             review_summary=review_result.summary,
+            debug_bundle_path=debug_bundle_path,
             **compression_metadata,
         )
 
@@ -231,6 +256,22 @@ class SkillPipeline:
                 "compression_changed_entries": compression_result.changed_entries,
             }
 
+        debug_bundle_path = self._write_debug_bundle(
+            debug_output_dir=request.debug_output_dir,
+            document_title=request.source_document.display_name or request.source_document.title or request.source_document.doc_id,
+            source_path=downloaded.file_path,
+            parsed_document=parsed_document,
+            review_result=review_result,
+            annotations=review_annotations,
+            extra_metadata={
+                "annotated_word_path": str(annotated.output_path),
+                "upload_candidate_path": str(upload_source_path),
+                "markdown_report_path": str(review_report_path),
+                "download_source_path": downloaded.metadata.get("source_path", ""),
+                **compression_metadata,
+            },
+        )
+
         upload_result = await self.upload_manager.upload_via_mcp(
             client=client,
             local_path=upload_source_path,
@@ -275,6 +316,7 @@ class SkillPipeline:
                 "uploaded_local_word_path": str(upload_source_path),
                 "review_rules_path": get_default_review_rules_path(),
                 "review_structure_template_path": get_default_review_template_path(),
+                "debug_bundle_path": debug_bundle_path,
                 **compression_metadata,
             },
         )
@@ -455,16 +497,29 @@ class SkillPipeline:
         if review_result.structure_match_result is None:
             score -= 15
         if review_result.quality_report is None:
-            score -= 20
+            score -= 25
+        else:
+            if review_result.quality_report.overall_score <= 1:
+                score -= 50
+            elif review_result.quality_report.overall_score < 40:
+                score -= 25
         fact_fallback_count = sum(
             1
             for item in review_result.fact_check_results
             if any("LLM verification failed" in evidence for evidence in item.evidence)
         )
+        if not review_result.fact_check_results:
+            score -= 15
+        else:
+            fact_search_count = sum(1 for item in review_result.fact_check_results if item.search_trace.get("performed"))
+            if fact_search_count == 0:
+                score -= 20
         score -= min(20, fact_fallback_count * 5)
         language_fallback_count = sum(
             1 for item in review_result.language_issues if str(item.metadata.get("fallback_reason") or "").strip()
         )
+        if not review_result.language_issues and review_result.quality_report is not None and review_result.quality_report.overall_score <= 1:
+            score -= 10
         score -= min(15, language_fallback_count * 5)
         return max(0.0, min(100.0, score))
 
@@ -638,6 +693,49 @@ class SkillPipeline:
         report_path.write_text(ReportGenerator().render(review_result, "markdown"), encoding="utf-8")
         return str(report_path)
 
+    def _write_debug_bundle(
+        self,
+        debug_output_dir: str,
+        document_title: str,
+        source_path: Path,
+        parsed_document,
+        review_result: AnalysisResult,
+        annotations: List[WordAnnotation],
+        extra_metadata: dict,
+    ) -> str:
+        if not debug_output_dir:
+            return ""
+
+        bundle_root = Path(debug_output_dir)
+        bundle_root.mkdir(parents=True, exist_ok=True)
+        run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+        run_name = f"{run_id}-{self._sanitize_filename_stem(document_title, source_path.stem)}"
+        bundle_dir = bundle_root / run_name
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+
+        payload = {
+            "document_title": document_title,
+            "source_path": str(source_path),
+            "generated_at": datetime.now().isoformat(),
+            "config_snapshot": {
+                "llm_provider": get_settings().llm_provider,
+                "review_rules_path": get_default_review_rules_path(),
+                "review_structure_template_path": get_default_review_template_path(),
+            },
+            "parsed_document": {
+                "paragraphs": [asdict(item) for item in parsed_document.paragraphs],
+                "sentences": [asdict(item) for item in parsed_document.sentences],
+            },
+            "analysis_result": review_result.to_dict(),
+            "annotations": [asdict(item) for item in annotations],
+            "artifacts": extra_metadata,
+        }
+        (bundle_dir / "debug-bundle.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return str(bundle_dir)
+
     def _render_document_text(self, paragraphs: List[ParagraphNode]) -> str:
         lines: List[str] = []
         for paragraph in paragraphs:
@@ -649,14 +747,12 @@ class SkillPipeline:
 
     def _build_remote_filename(self, request: SkillRequest, suffix: str) -> str:
         base_title = (request.source_document.title or request.source_document.doc_id).strip()
-        sanitized = "".join(char for char in base_title if char not in '<>:"/\\|?*').strip().rstrip(".")
-        if not sanitized:
-            sanitized = request.source_document.doc_id
+        sanitized = self._sanitize_filename_stem(base_title, request.source_document.doc_id)
         return f"{sanitized}-批注版{suffix}"
 
     def _ensure_stable_local_filename(self, downloaded: DownloadedDocument, request: SkillRequest) -> DownloadedDocument:
         source_title = (request.source_document.title or request.source_document.doc_id).strip()
-        sanitized_title = "".join(char for char in source_title if char not in '<>:"/\\|?*').strip().rstrip(".")
+        sanitized_title = self._sanitize_filename_stem(source_title)
         if not sanitized_title:
             return downloaded
 
