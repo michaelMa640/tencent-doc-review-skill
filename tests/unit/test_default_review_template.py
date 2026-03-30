@@ -20,5 +20,5 @@ def test_default_review_rules_is_available() -> None:
     content = read_default_review_rules()
 
     assert path.endswith("default_product_research_review_rules.md")
-    assert "语言问题核查" in content
+    assert "语言问题审核" in content
     assert "事实核查" in content

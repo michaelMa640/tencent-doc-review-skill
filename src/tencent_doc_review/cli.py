@@ -5,6 +5,10 @@ from __future__ import annotations
 import asyncio
 import json
 import platform
+import shlex
+import shutil
+import subprocess
+import sys
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
@@ -25,7 +29,11 @@ from .access import (
 from .analyzer.document_analyzer import DocumentAnalyzer
 from .llm.factory import create_llm_client, resolve_llm_settings
 from .skill import SkillRequest, SkillRuntimeInfo
-from .templates import get_default_review_template_path, read_default_review_template
+from .templates import (
+    get_default_review_rules_path,
+    get_default_review_template_path,
+    read_default_review_template,
+)
 from .tencent_doc_client import TencentDocClient
 from .workflows import SkillPipeline
 from .writers import DocAppendWriter, ReportGenerator
@@ -35,6 +43,42 @@ def _read_text(path: Optional[str]) -> Optional[str]:
     if not path:
         return None
     return Path(path).read_text(encoding="utf-8")
+
+
+def _default_openclaw_bridge_script() -> Path:
+    return Path(__file__).resolve().parent / "access" / "openclaw_bridge.py"
+
+
+def _detect_python_executable() -> str:
+    if sys.executable:
+        return sys.executable
+    return shutil.which("python") or shutil.which("python3") or ""
+
+
+def _detect_openclaw_executable() -> str:
+    for name in ("openclaw.cmd", "openclaw"):
+        resolved = shutil.which(name)
+        if resolved:
+            return resolved
+
+    appdata = Path.home() / "AppData" / "Roaming" / "npm" / "openclaw.cmd"
+    if appdata.exists():
+        return str(appdata)
+
+    return ""
+
+
+def _build_default_openclaw_bridge_args_text(openclaw_executable: str) -> str:
+    bridge_script = _default_openclaw_bridge_script()
+    args = [
+        str(bridge_script),
+        "--openclaw-executable",
+        openclaw_executable,
+        "--agent-id",
+        "main",
+        "--no-local",
+    ]
+    return subprocess.list2cmdline(args) if platform.system().lower() == "windows" else shlex.join(args)
 
 
 def _create_tencent_doc_client() -> TencentDocClient:
@@ -60,18 +104,27 @@ def doctor() -> None:
     """Show local configuration status."""
     settings = get_settings()
     click.echo("Configuration")
+    click.echo("  Mode notes:")
+    click.echo("    - OpenClaw / Claude Code MCP mode: mainly uses bridge configuration and Tencent Docs MCP token/login state")
+    click.echo("    - Tencent Docs OpenAPI direct mode: requires TENCENT_DOCS_TOKEN / CLIENT_ID / OPEN_ID")
     click.echo(f"  LLM_PROVIDER: {settings.llm_provider}")
     click.echo(f"  LLM_API_KEY: {'set' if (settings.llm_api_key or settings.deepseek_api_key) else 'missing'}")
     click.echo(f"  DEEPSEEK_API_KEY: {'set' if settings.deepseek_api_key else 'missing'}")
     click.echo(f"  MINIMAX_API_KEY: {'set' if settings.minimax_api_key else 'missing'}")
     click.echo(f"  TENCENT_DOCS_TOKEN: {'set' if settings.tencent_docs_token else 'missing'}")
-    click.echo(f"  TENCENT_DOCS_CLIENT_ID: {'set' if settings.tencent_docs_client_id else 'missing'}")
-    click.echo(f"  TENCENT_DOCS_OPEN_ID: {'set' if settings.tencent_docs_open_id else 'missing'}")
+    click.echo("  Tencent Docs OpenAPI direct mode only:")
+    click.echo(f"    TENCENT_DOCS_CLIENT_ID: {'set' if settings.tencent_docs_client_id else 'missing'}")
+    click.echo(f"    TENCENT_DOCS_OPEN_ID: {'set' if settings.tencent_docs_open_id else 'missing'}")
     click.echo(f"  SEARCH_PROVIDER: {settings.search_provider}")
     click.echo(f"  SEARCH_API_KEY: {'set' if settings.search_api_key else 'missing'}")
     click.echo(f"  SKILL_MCP_CLIENT: {settings.skill_mcp_client}")
-    click.echo(f"  OPENCLAW_MCP_BRIDGE_EXECUTABLE: {'set' if settings.openclaw_mcp_bridge_executable else 'missing'}")
+    auto_openclaw = _detect_openclaw_executable()
+    auto_python = _detect_python_executable()
+    click.echo(f"  OPENCLAW_MCP_BRIDGE_EXECUTABLE: {'set' if settings.openclaw_mcp_bridge_executable else 'auto' if auto_python else 'missing'}")
+    click.echo(f"  OPENCLAW executable discoverable: {'yes' if auto_openclaw else 'no'}")
     click.echo(f"  CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE: {'set' if settings.claude_code_mcp_bridge_executable else 'missing'}")
+    click.echo(f"  REVIEW_RULES_TEMPLATE_PATH: {get_default_review_rules_path()}")
+    click.echo(f"  REVIEW_STRUCTURE_TEMPLATE_PATH: {get_default_review_template_path()}")
 
 
 @main.command("debug-doc")
@@ -109,7 +162,7 @@ def skill_info() -> None:
     payload["default_mcp_client"] = settings.skill_mcp_client
     payload["available_mcp_clients"] = {
         "mock": True,
-        "openclaw": bool(settings.openclaw_mcp_bridge_executable),
+        "openclaw": bool(settings.openclaw_mcp_bridge_executable or (_detect_python_executable() and _detect_openclaw_executable())),
         "claude_code": bool(settings.claude_code_mcp_bridge_executable),
     }
     click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -416,16 +469,32 @@ def _create_skill_mcp_client(
     if normalized_name == "mock":
         return _MockMCPClient()
     if normalized_name == "openclaw":
-        executable = bridge_executable or settings.openclaw_mcp_bridge_executable
+        executable = bridge_executable or settings.openclaw_mcp_bridge_executable or _detect_python_executable()
         args_text = bridge_args or settings.openclaw_mcp_bridge_args
         if not executable:
-            raise click.UsageError("OPENCLAW_MCP_BRIDGE_EXECUTABLE is required for --mcp-client openclaw.")
+            raise click.UsageError(
+                "Unable to determine how to start the OpenClaw bridge. "
+                "Please set OPENCLAW_MCP_BRIDGE_EXECUTABLE or pass --bridge-executable."
+            )
+        if not args_text:
+            openclaw_executable = _detect_openclaw_executable()
+            if not openclaw_executable:
+                raise click.UsageError(
+                    "Unable to locate the OpenClaw executable automatically. "
+                    "Please make sure openclaw/openclaw.cmd is in PATH, or set OPENCLAW_MCP_BRIDGE_ARGS "
+                    "or pass --bridge-args explicitly."
+                )
+            bridge_script = _default_openclaw_bridge_script()
+            if not bridge_script.exists():
+                raise click.UsageError(f"OpenClaw bridge script not found: {bridge_script}")
+            args_text = _build_default_openclaw_bridge_args_text(openclaw_executable)
         return CommandMCPClient(
             build_bridge_config(
                 client_name="openclaw",
                 executable=executable,
                 args_text=args_text,
                 timeout_seconds=settings.mcp_bridge_timeout,
+                env={"TENCENT_DOCS_TOKEN": settings.tencent_docs_token} if settings.tencent_docs_token else {},
             )
         )
     if normalized_name == "claude_code":
@@ -439,6 +508,7 @@ def _create_skill_mcp_client(
                 executable=executable,
                 args_text=args_text,
                 timeout_seconds=settings.mcp_bridge_timeout,
+                env={"TENCENT_DOCS_TOKEN": settings.tencent_docs_token} if settings.tencent_docs_token else {},
             )
         )
     raise click.UsageError(f"Unsupported MCP client: {client_name}")

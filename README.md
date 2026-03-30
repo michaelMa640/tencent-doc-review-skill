@@ -1,67 +1,142 @@
-# Tencent Doc Review Skill
+﻿# Tencent Doc Review Skill
 
-基于 LLM 的腾讯文档审核与 Word 批注工具。
+基于 LLM 的文章审核与 Word 批注工具。
 
-当前已经跑通过的主链路是：
+当前主流程是：
 
-1. 通过 OpenClaw + 腾讯文档 MCP 下载原始 `.docx`
-2. 在本地生成带原生 Word 评论气泡的批注版 `.docx`
-3. 超过 10MB 时自动压缩
-4. 上传到腾讯文档指定位置
+1. 通过 OpenClaw 或其他 bridge 下载腾讯文档对应的 `.docx`
+2. 在本地执行语言审核、事实核查、结构核对、前后矛盾检查
+3. 生成带 Word 原生评论气泡的批注版 `.docx`
+4. 文件超过 10MB 时自动压缩
+5. 上传批注版到腾讯文档指定位置
 
-当前默认主模型是 `DeepSeek`，`MiniMax M2.7` 可作为并存备选模型。  
-审核默认模板面向“产品调研报告”场景，支持：
+当前默认主模型是 `DeepSeek`，`MiniMax M2.7` 可以作为备选模型共存。
 
-- 语言问题审核
-- 事实核查
-- 结构完整性核对
-- 前后矛盾检查
-- 文末审核运行简报
+## 腾讯文档接入方式说明
 
-## 当前状态
+当前项目支持两种不同的腾讯文档接入方式，但**当前面向用户的主路径是 OpenClaw + 腾讯文档 MCP**。OpenAPI 直连保留给开发调试和兼容用途。
 
-当前真实验证情况：
+### 1. OpenClaw + 腾讯文档 MCP
 
-- 本地 `analyze` 可用
-- OpenClaw 工作流已做过多轮真实联调
-- Windows 已真实跑通
-- macOS 代码路径已兼容，但你自己的 OpenClaw / Claude Code bridge 仍需本机联调
-- Claude Code 在架构上已支持，但还没有像 OpenClaw 一样做完真实腾讯文档端到端验证
+这是我们之前做真实下载、上传、批注联调时实际使用的路径。
 
-一句话说：
+特点：
 
-- 如果你现在要落地使用，优先走 `OpenClaw`
-- 如果你后面要接 `Claude Code`，当前代码基础已经有了，但还需要做 bridge 实机验证
+- 通过 `OpenClaw CLI` 调腾讯文档 MCP
+- 由 OpenClaw / 腾讯文档 MCP 负责登录态和 token
+- 本项目本身**不会直接读取** `TENCENT_DOCS_CLIENT_ID` 和 `TENCENT_DOCS_OPEN_ID`
+- 但我们建议你仍然把 **MCP token** 统一填在本项目 `.env` 的 `TENCENT_DOCS_TOKEN` 里，项目会把它透传给 bridge 子进程
+- 你主要需要配置的是：
+  - `TENCENT_DOCS_TOKEN`
+  - `SKILL_MCP_CLIENT=openclaw`
+  - bridge 配置通常可以留空，程序会自动推断
 
-## 目录
+关于 token 获取，腾讯文档 MCP 官方说明页在这里：
+
+- [腾讯文档 MCP 概述](https://docs.qq.com/open/document/mcp/)
+- 官方文档中给出的 token 获取跳转入口会进入这个页面：[腾讯文档 OpenClaw 场景页](https://docs.qq.com/scenario/open-claw.html)
+
+根据官方文档，腾讯文档 MCP 是“基于 Open API 的能力兼容 MCP 协议，需要登录 QQ/微信后方可操作对应账号的数据”。这意味着如果你走 MCP 路径，`client_id/open_id` 不需要用户在这个项目里手工填写，但 **token 仍然需要获取**。[腾讯文档 MCP 概述](https://docs.qq.com/open/document/mcp/)
+
+推荐做法：
+
+1. 打开 [腾讯文档 OpenClaw 场景页](https://docs.qq.com/scenario/open-claw.html?nlc=1)
+2. 按页面提示登录腾讯文档
+3. 在页面里获取或重置 token
+4. 把 token 填到 `.env` 的 `TENCENT_DOCS_TOKEN`
+
+### 2. 项目内置 Tencent Docs OpenAPI 直连
+
+这是项目里保留的一条直连能力，主要给开发调试：
+
+- `analyze --doc-id`
+- `debug-doc`
+- `list-files`
+
+这条链路使用的是 [tencent_doc_client.py](/E:/VibeCoding/tencent-doc-review/src/tencent_doc_review/tencent_doc_client.py)，代码里会**同时强制检查**：
+
+- `TENCENT_DOCS_TOKEN`
+- `TENCENT_DOCS_CLIENT_ID`
+- `TENCENT_DOCS_OPEN_ID`
+
+少任意一个都会直接报错。
+
+## 用户需要改哪些文件
+
+用户层主要只需要关心两类文件：
+
+### 1. 统一配置文件
+
+- [`.env.example`](/E:/VibeCoding/tencent-doc-review/.env.example)
+- 实际使用时复制为 `.env`
+
+这里统一配置：
+
+- 默认模型与 API Key
+- 搜索配置
+- MCP bridge 配置
+- OpenClaw / Claude Code bridge 配置
+- 当前使用哪套模板
+
+当前默认使用场景下，用户通常**不需要**填写 OpenAPI 直连那组 `TENCENT_DOCS_*` 字段。
+当前默认使用场景下，用户通常只需要填写：
+
+- `TENCENT_DOCS_TOKEN`
+- `SKILL_MCP_CLIENT`
+
+`OPENCLAW_MCP_BRIDGE_EXECUTABLE` 和 `OPENCLAW_MCP_BRIDGE_ARGS` 在 OpenClaw 主路径下通常可以留空，程序会自动：
+
+- 使用当前 Python 解释器启动 bridge
+- 使用项目内置的 [openclaw_bridge.py](/E:/VibeCoding/tencent-doc-review/src/tencent_doc_review/access/openclaw_bridge.py)
+- 在系统 PATH 或常见安装目录中查找 `openclaw` / `openclaw.cmd`
+
+只有在自动探测失败时，才需要手动填写这两项。
+
+### 2. 模板目录
+
+- [`templates`](/E:/VibeCoding/tencent-doc-review/templates)
+
+这里单独存放模板内容本身：
+
+- [`default_product_research_review_rules.md`](/E:/VibeCoding/tencent-doc-review/templates/default_product_research_review_rules.md)
+- [`default_product_research_structure_template.md`](/E:/VibeCoding/tencent-doc-review/templates/default_product_research_structure_template.md)
+
+也就是说：
+
+- 想切换“用哪套模板”，改 `.env`
+- 想修改“模板正文内容”，改 `templates/`
+
+## 项目目录
 
 ```text
-src/tencent_doc_review/
-  access/        # OpenClaw / Claude Code bridge 与 MCP 访问层
-  analyzer/      # 语言、事实、结构、矛盾审核器
-  document/      # Word 解析、原生评论写入、压缩
-  domain/        # 统一审核结果模型
-  llm/           # DeepSeek / MiniMax provider
-  skill/         # skill 输入输出协议
-  templates/     # 默认审核规则与结构模板
-  workflows/     # 主 workflow
-  writers/       # Markdown / JSON / HTML 报告输出
-
-downloads/       # 本地下载、批注版、压缩版输出目录
-tests/           # 单元测试
+E:\VibeCoding\tencent-doc-review
+├─ .env.example
+├─ README.md
+├─ templates/
+├─ downloads/
+├─ tests/
+└─ src/tencent_doc_review/
+   ├─ access/
+   ├─ analyzer/
+   ├─ document/
+   ├─ domain/
+   ├─ llm/
+   ├─ skill/
+   ├─ templates/   # 包内 fallback，不建议直接修改
+   ├─ workflows/
+   └─ writers/
 ```
 
-## 运行环境
+## 环境要求
 
 ### Python
 
-- Python `>=3.10`
-- 已验证环境：Python `3.13.5`
-- 推荐：Python `3.11` 或 `3.12`
+- Python `>= 3.10`
+- 推荐 Python `3.11` 或 `3.12`
 
-### 运行时依赖
+### Python 依赖
 
-核心 Python 依赖来自 [pyproject.toml](/E:/VibeCoding/tencent-doc-review/pyproject.toml)：
+核心依赖见 [`pyproject.toml`](/E:/VibeCoding/tencent-doc-review/pyproject.toml)：
 
 - `httpx`
 - `pydantic`
@@ -69,7 +144,6 @@ tests/           # 单元测试
 - `python-docx`
 - `Pillow`
 - `loguru`
-- `pyyaml`
 - `click`
 - `rich`
 - `tqdm`
@@ -88,28 +162,20 @@ tests/           # 单元测试
 
 ### 外部依赖
 
-根据使用方式不同，还需要这些外部条件：
+根据使用方式不同，还需要：
 
 - 纯本地审核：
-  - 一个可用的 LLM API key
+  - 一个可用的 LLM API Key
 - 联网事实核查：
-  - 一个可用的搜索 API key，目前已接入 `Tavily`
-- 腾讯文档 skill 工作流：
+  - 一个可用的搜索 API Key，目前接入的是 `Tavily`
+- 腾讯文档端到端：
   - 可用的 `OpenClaw CLI`
-  - OpenClaw 中腾讯文档 MCP 可正常登录并可操作你的文档
+  - OpenClaw 中腾讯文档 MCP 已登录且可正常访问你的文档
+  - 如果使用 OpenClaw + 腾讯文档 MCP，请优先在腾讯文档 OpenClaw 场景页完成 token 获取或登录流程：[腾讯文档 OpenClaw 场景页](https://docs.qq.com/scenario/open-claw.html)
 
 ## Windows 部署
 
-### 1. 准备 Python
-
-建议先确认：
-
-```powershell
-python --version
-pip --version
-```
-
-如果你使用虚拟环境：
+### 1. 创建虚拟环境
 
 ```powershell
 cd E:\VibeCoding\tencent-doc-review
@@ -122,7 +188,6 @@ python -m venv .venv
 运行时安装：
 
 ```powershell
-cd E:\VibeCoding\tencent-doc-review
 pip install -e .
 ```
 
@@ -132,60 +197,13 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-如果你习惯 `requirements.txt`：
-
-```powershell
-pip install -r requirements.txt
-```
-
 ### 3. 配置环境变量
-
-复制模板：
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-然后编辑 [\.env.example](/E:/VibeCoding/tencent-doc-review/.env.example) 对应字段，至少填下面一组。
-
-DeepSeek 默认配置：
-
-```env
-LLM_PROVIDER=deepseek
-LLM_API_KEY=your_deepseek_key
-LLM_BASE_URL=https://api.deepseek.com/v1
-LLM_MODEL=deepseek-chat
-```
-
-MiniMax 可选配置：
-
-```env
-LLM_PROVIDER=minimax
-LLM_API_KEY=your_minimax_key
-LLM_BASE_URL=https://api.minimaxi.com/v1
-LLM_MODEL=MiniMax-M2.7
-```
-
-联网事实核查配置：
-
-```env
-SEARCH_PROVIDER=tavily
-SEARCH_API_KEY=your_tavily_key
-SEARCH_BASE_URL=https://api.tavily.com/search
-SEARCH_MAX_RESULTS=5
-SEARCH_TIMEOUT=20
-SEARCH_DEPTH=basic
-SEARCH_TOPIC=general
-```
-
-OpenClaw bridge 配置示例：
-
-```env
-SKILL_MCP_CLIENT=openclaw
-MCP_BRIDGE_TIMEOUT=240
-OPENCLAW_MCP_BRIDGE_EXECUTABLE=python
-OPENCLAW_MCP_BRIDGE_ARGS=E:\VibeCoding\tencent-doc-review\src\tencent_doc_review\access\openclaw_bridge.py --openclaw-executable C:\Users\你的用户名\AppData\Roaming\npm\openclaw.cmd --agent-id main --no-local
-```
+然后编辑 [`.env.example`](/E:/VibeCoding/tencent-doc-review/.env.example) 对应字段，填入你自己的 `.env`。
 
 ### 4. 验证配置
 
@@ -195,16 +213,7 @@ tencent-doc-review doctor
 
 ## macOS 部署
 
-### 1. 准备 Python
-
-建议确认：
-
-```bash
-python3 --version
-pip3 --version
-```
-
-创建虚拟环境：
+### 1. 创建虚拟环境
 
 ```bash
 cd /path/to/tencent-doc-review
@@ -216,11 +225,6 @@ source .venv/bin/activate
 
 ```bash
 pip install -e .
-```
-
-开发依赖：
-
-```bash
 pip install -e ".[dev]"
 ```
 
@@ -230,39 +234,104 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-macOS 的 OpenClaw bridge 一般是这样配置：
-
-```env
-SKILL_MCP_CLIENT=openclaw
-MCP_BRIDGE_TIMEOUT=240
-OPENCLAW_MCP_BRIDGE_EXECUTABLE=python3
-OPENCLAW_MCP_BRIDGE_ARGS=/path/to/tencent-doc-review/src/tencent_doc_review/access/openclaw_bridge.py --openclaw-executable openclaw --agent-id main --no-local
-```
-
-如果你的 `openclaw` 不在 PATH 里，改成绝对路径。
-
 ### 4. 验证配置
 
 ```bash
 tencent-doc-review doctor
 ```
 
-## 默认审核模板
+## `.env` 里建议关注的关键字段
 
-当前默认模板分成两层：
+### 默认模型
 
-- 审核规则：[default_product_research_review_rules.md](/E:/VibeCoding/tencent-doc-review/src/tencent_doc_review/templates/default_product_research_review_rules.md)
-- 结构模板：[default_product_research_structure_template.md](/E:/VibeCoding/tencent-doc-review/src/tencent_doc_review/templates/default_product_research_structure_template.md)
-
-CLI 中可以直接用：
-
-```bash
-tencent-doc-review analyze --input-file article.md --default-template --output report.md
+```env
+LLM_PROVIDER=deepseek
+LLM_API_KEY=your_key
+LLM_BASE_URL=https://api.deepseek.com/v1
+LLM_MODEL=deepseek-chat
 ```
 
-## 本地审核用法
+### MiniMax 备选模型
 
-### 1. 审核本地文件
+```env
+MINIMAX_API_KEY=your_minimax_key
+MINIMAX_BASE_URL=https://api.minimaxi.com/v1
+MINIMAX_MODEL=MiniMax-M2.7
+```
+
+### 搜索配置
+
+```env
+SEARCH_PROVIDER=tavily
+SEARCH_API_KEY=your_tavily_key
+SEARCH_BASE_URL=https://api.tavily.com/search
+SEARCH_MAX_RESULTS=5
+SEARCH_TIMEOUT=20
+SEARCH_DEPTH=basic
+SEARCH_TOPIC=general
+```
+
+### 模板路径选择
+
+```env
+REVIEW_RULES_TEMPLATE_PATH=templates/default_product_research_review_rules.md
+REVIEW_STRUCTURE_TEMPLATE_PATH=templates/default_product_research_structure_template.md
+```
+
+### OpenClaw bridge
+
+Windows 示例：
+
+```env
+TENCENT_DOCS_TOKEN=your_tencent_docs_mcp_token
+SKILL_MCP_CLIENT=openclaw
+MCP_BRIDGE_TIMEOUT=240
+# 通常留空，程序会自动推断
+OPENCLAW_MCP_BRIDGE_EXECUTABLE=
+OPENCLAW_MCP_BRIDGE_ARGS=
+```
+
+macOS 示例：
+
+```env
+TENCENT_DOCS_TOKEN=your_tencent_docs_mcp_token
+SKILL_MCP_CLIENT=openclaw
+MCP_BRIDGE_TIMEOUT=240
+# 通常留空，程序会自动推断
+OPENCLAW_MCP_BRIDGE_EXECUTABLE=
+OPENCLAW_MCP_BRIDGE_ARGS=
+```
+
+如果你走的是 OpenClaw + 腾讯文档 MCP，通常不需要在本项目里再额外填写 `TENCENT_DOCS_CLIENT_ID / TENCENT_DOCS_OPEN_ID`，但仍然建议填写 `TENCENT_DOCS_TOKEN`。
+
+如果自动探测失败，再手动补：
+
+- `OPENCLAW_MCP_BRIDGE_EXECUTABLE`
+  - Windows 通常填 `python`
+  - macOS 通常填 `python3`
+- `OPENCLAW_MCP_BRIDGE_ARGS`
+  - 一般是：
+    - `openclaw_bridge.py` 的路径
+    - `--openclaw-executable`
+    - 你的 `openclaw` 或 `openclaw.cmd` 路径
+    - `--agent-id main --no-local`
+
+也就是说，正常情况下你现在只需要填 `TENCENT_DOCS_TOKEN`，然后直接运行 `skill-run --mcp-client openclaw` 就够了。
+
+## 默认模板说明
+
+当前默认模板分两层：
+
+- 审核规则模板：
+  - [`default_product_research_review_rules.md`](/E:/VibeCoding/tencent-doc-review/templates/default_product_research_review_rules.md)
+- 结构模板：
+  - [`default_product_research_structure_template.md`](/E:/VibeCoding/tencent-doc-review/templates/default_product_research_structure_template.md)
+
+代码会优先读取根目录 [`templates`](/E:/VibeCoding/tencent-doc-review/templates)。
+
+## 本地审核命令
+
+使用默认模板审核本地文件：
 
 ```bash
 tencent-doc-review analyze --input-file article.md --default-template --output report.md
@@ -280,13 +349,7 @@ tencent-doc-review analyze --input-file article.md --default-template --format j
 tencent-doc-review analyze --input-file article.md --default-template --format html --output report.html
 ```
 
-### 2. 审核腾讯文档正文并生成报告
-
-```bash
-tencent-doc-review analyze --doc-id "your_doc_id" --default-template --output report.md
-```
-
-## Skill 工作流用法
+## Skill 工作流命令
 
 ### Windows + OpenClaw
 
@@ -299,8 +362,6 @@ tencent-doc-review skill-run ^
   --target-path "/更改" ^
   --download-dir "E:\VibeCoding\tencent-doc-review\downloads" ^
   --mcp-client openclaw ^
-  --bridge-executable python ^
-  --bridge-args "E:\VibeCoding\tencent-doc-review\src\tencent_doc_review\access\openclaw_bridge.py --openclaw-executable C:\Users\你的用户名\AppData\Roaming\npm\openclaw.cmd --agent-id main --no-local" ^
   --provider deepseek
 ```
 
@@ -315,116 +376,70 @@ tencent-doc-review skill-run \
   --target-path "/更改" \
   --download-dir "/path/to/tencent-doc-review/downloads" \
   --mcp-client openclaw \
-  --bridge-executable python3 \
-  --bridge-args "/path/to/tencent-doc-review/src/tencent_doc_review/access/openclaw_bridge.py --openclaw-executable openclaw --agent-id main --no-local" \
   --provider deepseek
 ```
 
-### 输出内容
-
-`skill-run` 会生成：
-
-- 原始下载 Word
-- 批注版 Word
-- 压缩后的上传版 Word
-- Markdown 审核报告
-
-当前批注形式：
-
-- 句级问题：Word 原生评论气泡
-- 整篇层面问题：文末 `AI审核总结`
-
 ## Claude Code 说明
 
-当前代码已经预留 `claude_code` 入口：
+当前项目：
 
+- 已预留 `claude_code` 入口
 - CLI 已支持 `--mcp-client claude_code`
-- 协议层已抽象
-- bridge 配置入口已留好
+- 协议层与 bridge 层都已抽象
 
 但需要明确：
 
-- `OpenClaw` 已做真实腾讯文档联调
-- `Claude Code` 目前还是“架构支持，待真实 bridge 验证”
+- `OpenClaw` 已完成真实腾讯文档联调
+- `Claude Code` 目前还是“架构支持，待 bridge 实机联调”
 
-也就是说：
+如果现在要稳定使用，仍然优先推荐 `OpenClaw`。
 
-- 可以为 Claude Code 接入
-- 但目前项目默认推荐的生产使用路径仍然是 `OpenClaw`
+## 输出产物
 
-## 输出与日志
-
-### 常见输出文件
-
-在 [downloads](/E:/VibeCoding/tencent-doc-review/downloads) 下常见产物有：
+在 [`downloads`](/E:/VibeCoding/tencent-doc-review/downloads) 下通常会生成：
 
 - `*-annotated.docx`
 - `*-annotated-compressed.docx`
 - `*.review.md`
 
-### 审核运行简报
+Word 文末会写入：
 
-当前 Word 文末会写入：
-
-- 审核时间戳
+- 审核时间
 - 审核模型
 - 审核过程评分
-- 质量评估状态
-- 结构核对状态
-- 事实核查状态
-- 语言审核状态
-- 矛盾检查状态
+- 各模块运行情况
+- fallback 情况
 
 ## 常见问题
 
-### 1. 为什么上传后的文件名不对？
+### 为什么模板找不到？
 
-当前版本已经修复“临时目录名跑到远端标题里”的问题。  
-如果仍然出现异常，优先检查：
+现在请优先看根目录：
 
-- 你是否运行的是旧版本代码
-- OpenClaw 是否复用了旧上下文
-- 目标腾讯文档是否其实是旧上传链接
+- [`templates`](/E:/VibeCoding/tencent-doc-review/templates)
 
-### 2. 为什么批注会跑到最后一段？
+不要优先去 `src/tencent_doc_review/templates` 里找。
+
+### 为什么上传后的文件名不对？
+
+当前版本已经修复“临时下载目录名跑到腾讯文档标题里”的问题。
+
+如果你还看到旧名称，优先确认是不是打开了旧上传链接。
+
+### 为什么批注会跑到最后一段？
 
 当前逻辑已经改成：
 
 - 能可靠命中原文段落时，挂原文
 - 找不到可靠锚点时，进入文末 `AI审核总结`
 
-如果你还看到“批注挂在正文最后一段”，优先排查是否打开的是旧上传文档。
-
-### 3. 为什么事实核查有时没有侧边批注？
-
-因为现在的策略是：
-
-- 只有“有问题的事实项”才进入事实核查详细输出
-- 确认无问题的事实，不会堆到文末
-- 搜索层如果没有找到可靠冲突来源，也不会强行标红
-
-### 4. 为什么重新运行时本地文件覆盖失败？
-
-如果某个 `.docx` 正被 Word、WPS 或腾讯文档同步进程占用，压缩阶段可能失败。  
-最稳妥的方式：
-
-- 关闭正在打开的目标文件
-- 或换一个新的 `--download-dir`
-
-### 5. Windows 中文路径安全吗？
-
-当前项目能处理中文路径，但在某些 PowerShell / 控制台编码场景下，终端显示可能乱码。  
-如果你只关心稳定运行，优先建议：
-
-- 项目目录用正常英文路径
-- 输出目录可用英文或中文，但要确保当前 Python 进程有写权限
+如果仍然看到挂正文最后一段，优先确认是不是旧版本产物。
 
 ## 开发验证
 
-运行核心回归：
-
 ```bash
 pytest tests/unit/test_phaseE_skill_workflow.py -q
+pytest tests/unit/test_default_review_template.py -q
 python -m compileall src/tencent_doc_review
 ```
 
