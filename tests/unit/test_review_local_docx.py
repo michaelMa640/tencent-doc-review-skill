@@ -1,3 +1,4 @@
+import json
 import shutil
 import sys
 import unittest
@@ -15,7 +16,7 @@ from tencent_doc_review.workflows.skill_pipeline import SkillPipeline
 
 
 class ReviewLocalDocxTests(unittest.IsolatedAsyncioTestCase):
-    async def test_review_local_docx_generates_annotated_docx_report_and_debug_bundle(self):
+    async def test_review_local_docx_generates_annotated_docx_report_and_issue_safe_debug_bundle(self):
         tmp_path = PROJECT_ROOT / "downloads" / f"test-review-local-{uuid.uuid4().hex[:8]}"
         tmp_path.mkdir(parents=True, exist_ok=True)
         try:
@@ -42,8 +43,18 @@ class ReviewLocalDocxTests(unittest.IsolatedAsyncioTestCase):
             self.assertGreaterEqual(artifacts.annotation_count, 1)
             self.assertTrue(artifacts.review_summary)
             self.assertIn("RIVE产品调研报告-Michael-annotated.docx", artifacts.annotated_word_path)
-            self.assertTrue(artifacts.debug_bundle_path)
-            self.assertTrue(Path(artifacts.debug_bundle_path, "debug-bundle.json").exists())
+
+            debug_bundle_path = Path(artifacts.debug_bundle_path)
+            self.assertTrue(debug_bundle_path.exists())
+            self.assertEqual(debug_bundle_path.suffix, ".json")
+            self.assertIn("tdr-debug-", debug_bundle_path.name)
+            self.assertIn("RIVE产品调研报告-Michael", debug_bundle_path.name)
+
+            payload = json.loads(debug_bundle_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["bundle_version"], 1)
+            self.assertIn("redaction_notice", payload)
+            self.assertEqual(payload["config_snapshot"]["llm_provider"], "deepseek")
+            self.assertNotIn(str(PROJECT_ROOT), json.dumps(payload, ensure_ascii=False))
         finally:
             shutil.rmtree(tmp_path, ignore_errors=True)
 

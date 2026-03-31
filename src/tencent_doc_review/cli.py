@@ -16,7 +16,7 @@ from typing import Optional
 
 import click
 
-from .config import describe_env_file_candidates, get_settings, reload_settings
+from .config import describe_env_file_candidates, get_effective_debug_output_dir, get_settings, reload_settings
 from .access import (
     CommandMCPClient,
     MCPBridgeError,
@@ -123,7 +123,7 @@ def doctor() -> None:
     click.echo(f"  OPENCLAW_MCP_BRIDGE_EXECUTABLE: {'set' if settings.openclaw_mcp_bridge_executable else 'auto' if auto_python else 'missing'}")
     click.echo(f"  OPENCLAW executable discoverable: {'yes' if auto_openclaw else 'no'}")
     click.echo(f"  CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE: {'set' if settings.claude_code_mcp_bridge_executable else 'missing'}")
-    click.echo(f"  REVIEW_DEBUG_OUTPUT_DIR: {settings.review_debug_output_dir or '(disabled)'}")
+    click.echo(f"  REVIEW_DEBUG_OUTPUT_DIR: {get_effective_debug_output_dir(settings.review_debug_output_dir)}")
     click.echo(f"  REVIEW_RULES_TEMPLATE_PATH: {get_default_review_rules_path()}")
     click.echo(f"  REVIEW_STRUCTURE_TEMPLATE_PATH: {get_default_review_template_path()}")
 
@@ -145,7 +145,7 @@ def debug_config() -> None:
             "search_provider": settings.search_provider,
             "search_api_key": bool(settings.search_api_key),
             "skill_mcp_client": settings.skill_mcp_client,
-            "review_debug_output_dir": settings.review_debug_output_dir,
+            "review_debug_output_dir": get_effective_debug_output_dir(settings.review_debug_output_dir),
             "review_rules_template_path": get_default_review_rules_path(),
             "review_structure_template_path": get_default_review_template_path(),
         },
@@ -407,7 +407,7 @@ async def _review_docx(
         title=title,
         provider=provider or settings.llm_provider,
         output_dir=output_dir,
-        debug_output_dir=debug_dir or settings.review_debug_output_dir,
+        debug_output_dir=get_effective_debug_output_dir(debug_dir or settings.review_debug_output_dir),
     )
     click.echo(json.dumps(asdict(artifacts), ensure_ascii=False, indent=2, default=str))
 
@@ -503,7 +503,7 @@ async def _skill_run(
             display_name=target_path or target_folder_id,
         ),
         download_directory=download_dir,
-        debug_output_dir=debug_dir or settings.review_debug_output_dir,
+        debug_output_dir=get_effective_debug_output_dir(debug_dir or settings.review_debug_output_dir),
         llm_provider=provider or settings.llm_provider,
     )
     try:

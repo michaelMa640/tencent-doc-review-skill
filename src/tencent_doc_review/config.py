@@ -63,6 +63,19 @@ def describe_env_file_candidates() -> list[dict[str, object]]:
     ]
 
 
+def get_default_debug_output_dir() -> str:
+    """Return the default issue-safe debug bundle directory."""
+    return str(PROJECT_ROOT / "debug-output")
+
+
+def get_effective_debug_output_dir(configured_value: str = "") -> str:
+    """Resolve the effective debug output directory."""
+    candidate = (configured_value or "").strip()
+    if candidate:
+        return str(Path(candidate).expanduser())
+    return get_default_debug_output_dir()
+
+
 if BaseSettings is not None:
 
     class Settings(BaseSettings):

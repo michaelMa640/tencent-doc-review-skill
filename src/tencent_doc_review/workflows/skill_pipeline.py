@@ -7,11 +7,13 @@ import re
 import tempfile
 import unicodedata
 import json
+import os
+import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from ..access import (
     DownloadFormat,
@@ -24,7 +26,7 @@ from ..access import (
     UploadResult,
 )
 from ..analyzer.document_analyzer import AnalysisResult, DocumentAnalyzer
-from ..config import get_settings
+from ..config import PROJECT_ROOT, get_effective_debug_output_dir, get_settings
 from ..document import (
     AnnotatedWordDocument,
     DocxCompressor,
@@ -703,38 +705,107 @@ class SkillPipeline:
         annotations: List[WordAnnotation],
         extra_metadata: dict,
     ) -> str:
-        if not debug_output_dir:
-            return ""
-
-        bundle_root = Path(debug_output_dir)
+        settings = get_settings()
+        bundle_root = Path(get_effective_debug_output_dir(debug_output_dir)).expanduser()
         bundle_root.mkdir(parents=True, exist_ok=True)
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-        run_name = f"{run_id}-{self._sanitize_filename_stem(document_title, source_path.stem)}"
-        bundle_dir = bundle_root / run_name
-        bundle_dir.mkdir(parents=True, exist_ok=True)
+        provider = (settings.llm_provider or "unknown").strip().lower()
+        run_name = f"tdr-debug-{run_id}-{self._sanitize_filename_stem(document_title, source_path.stem)}-{provider}.json"
+        bundle_path = bundle_root / run_name
 
         payload = {
+            "bundle_version": 1,
+            "redaction_notice": "This debug bundle is intended for issue uploads. Local paths, usernames, and docs.qq.com document IDs are redacted.",
             "document_title": document_title,
-            "source_path": str(source_path),
+            "source_path": self._redact_for_issue(str(source_path)),
             "generated_at": datetime.now().isoformat(),
             "config_snapshot": {
-                "llm_provider": get_settings().llm_provider,
+                "llm_provider": settings.llm_provider,
                 "review_rules_path": get_default_review_rules_path(),
                 "review_structure_template_path": get_default_review_template_path(),
+                "review_debug_output_dir": settings.review_debug_output_dir,
             },
             "parsed_document": {
-                "paragraphs": [asdict(item) for item in parsed_document.paragraphs],
-                "sentences": [asdict(item) for item in parsed_document.sentences],
+                "paragraphs": [self._build_issue_safe_paragraph_payload(item) for item in parsed_document.paragraphs],
+                "sentences": [self._build_issue_safe_sentence_payload(item) for item in parsed_document.sentences],
             },
-            "analysis_result": review_result.to_dict(),
-            "annotations": [asdict(item) for item in annotations],
-            "artifacts": extra_metadata,
+            "analysis_result": self._redact_for_issue(review_result.to_dict()),
+            "annotations": self._redact_for_issue([asdict(item) for item in annotations]),
+            "artifacts": self._redact_for_issue(extra_metadata),
         }
-        (bundle_dir / "debug-bundle.json").write_text(
+        bundle_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        return str(bundle_dir)
+        return str(bundle_path)
+
+    def _build_issue_safe_paragraph_payload(self, paragraph: ParagraphNode) -> dict[str, Any]:
+        payload = asdict(paragraph)
+        text = payload.pop("text", "")
+        payload["text_preview"] = self._preview_text(text)
+        payload["text_length"] = len(text)
+        return self._redact_for_issue(payload)
+
+    def _build_issue_safe_sentence_payload(self, sentence: SentenceNode) -> dict[str, Any]:
+        payload = asdict(sentence)
+        text = payload.pop("text", "")
+        payload["text_preview"] = self._preview_text(text)
+        payload["text_length"] = len(text)
+        return self._redact_for_issue(payload)
+
+    def _preview_text(self, text: str, max_chars: int = 220) -> str:
+        compact = re.sub(r"\s+", " ", (text or "").strip())
+        if len(compact) <= max_chars:
+            return compact
+        return compact[: max_chars - 1] + "…"
+
+    def _redact_for_issue(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return {key: self._redact_for_issue(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._redact_for_issue(item) for item in value]
+        if isinstance(value, tuple):
+            return [self._redact_for_issue(item) for item in value]
+        if isinstance(value, str):
+            return self._redact_string(value)
+        return value
+
+    def _redact_string(self, value: str) -> str:
+        redacted = value or ""
+
+        substitutions = [
+            (str(Path.home()), "<HOME>"),
+            (str(Path(tempfile.gettempdir())), "<TMP>"),
+            (str(Path.cwd()), "<CWD>"),
+            (str(PROJECT_ROOT), "<PROJECT_ROOT>"),
+            (str(Path(sys.executable).resolve()) if sys.executable else "", "<PYTHON_EXECUTABLE>"),
+        ]
+
+        for original, replacement in substitutions:
+            if original:
+                redacted = redacted.replace(original, replacement)
+
+        redacted = re.sub(
+            r"(?i)https://docs\.qq\.com/(doc|sheet|slide|desktop|space)/[A-Za-z0-9$._-]+",
+            lambda match: f"https://docs.qq.com/{match.group(1)}/<DOC_ID>",
+            redacted,
+        )
+        redacted = re.sub(
+            r"(?i)([A-Za-z]:\\Users\\)[^\\]+",
+            r"\1<USER>",
+            redacted,
+        )
+        redacted = re.sub(
+            r"(?i)(/Users/)[^/]+",
+            r"\1<USER>",
+            redacted,
+        )
+        redacted = re.sub(
+            r"(?i)(token|api[_-]?key|secret)\s*[:=]\s*['\"]?([A-Za-z0-9._\-]{8,})['\"]?",
+            r"\1=<REDACTED>",
+            redacted,
+        )
+        return redacted
 
     def _render_document_text(self, paragraphs: List[ParagraphNode]) -> str:
         lines: List[str] = []
