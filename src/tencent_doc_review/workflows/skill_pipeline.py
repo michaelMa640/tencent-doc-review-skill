@@ -6,10 +6,14 @@ import platform
 import re
 import tempfile
 import unicodedata
-from dataclasses import dataclass
+import json
+import os
+import sys
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from ..access import (
     DownloadFormat,
@@ -17,11 +21,12 @@ from ..access import (
     DownloadedDocument,
     MCPDocumentClient,
     TencentDocReference,
+    UploadTarget,
     UploadManager,
     UploadResult,
 )
 from ..analyzer.document_analyzer import AnalysisResult, DocumentAnalyzer
-from ..config import get_settings
+from ..config import PROJECT_ROOT, get_effective_debug_output_dir, get_settings
 from ..document import (
     AnnotatedWordDocument,
     DocxCompressor,
@@ -50,6 +55,22 @@ class SkillPipelineArtifacts:
 
 
 @dataclass
+class LocalReviewArtifacts:
+    source_path: str
+    annotated_word_path: str
+    upload_candidate_path: str
+    markdown_report_path: str
+    annotation_count: int
+    review_issue_count: int
+    review_summary: str
+    compression_applied: bool = False
+    compression_result_size: int = 0
+    compression_original_size: int = 0
+    compression_target_met: bool = True
+    debug_bundle_path: str = ""
+
+
+@dataclass
 class AnchorResolution:
     paragraph_index: int
     reliable: bool = False
@@ -72,6 +93,112 @@ class SkillPipeline:
         self.docx_compressor = docx_compressor or DocxCompressor()
         self.word_annotator = word_annotator or WordAnnotator()
         self.word_parser = word_parser or WordParser()
+
+    def _sanitize_filename_stem(self, value: str, fallback: str = "") -> str:
+        sanitized = "".join(char for char in (value or "").strip() if char not in '<>:"/\\|?*').strip().rstrip(".")
+        return sanitized or fallback
+
+    async def review_local_docx(
+        self,
+        input_path: str | Path,
+        title: str = "",
+        provider: str = "",
+        output_dir: str | Path = "",
+        debug_output_dir: str = "",
+        max_upload_size_bytes: int = 10 * 1024 * 1024,
+    ) -> LocalReviewArtifacts:
+        source_path = Path(input_path)
+        if not source_path.exists():
+            raise FileNotFoundError(f"Input DOCX not found: {source_path}")
+
+        target_dir = Path(output_dir) if output_dir else source_path.parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        parsed_document = self.word_parser.parse(source_path)
+        document_title = title or parsed_document.title or source_path.stem
+        document_text = self._render_document_text(parsed_document.paragraphs)
+
+        request = SkillRequest(
+            source_document=TencentDocReference(doc_id=source_path.stem, title=document_title),
+            target_location=UploadTarget(
+                folder_id="",
+                space_id="",
+                space_type="personal_space",
+                path_hint="",
+                display_name="",
+            ),
+            llm_provider=provider or get_settings().llm_provider,
+        )
+        review_result = await self._review_document(
+            request=request,
+            document_text=document_text,
+            document_title=document_title,
+        )
+        review_annotations = self._build_word_annotations(
+            parsed_document.paragraphs,
+            parsed_document.sentences,
+            review_result,
+            request,
+        )
+
+        output_stem = self._sanitize_filename_stem(document_title, source_path.stem)
+        annotated_path = target_dir / f"{output_stem}-annotated.docx"
+        annotated = self.word_annotator.annotate(
+            source_path=source_path,
+            output_path=annotated_path,
+            annotations=review_annotations,
+            document_title=document_title,
+        )
+        review_report_path = self._write_markdown_report(annotated.output_path, review_result)
+
+        upload_candidate_path = annotated.output_path
+        compression_metadata = {
+            "compression_applied": False,
+            "compression_result_size": annotated.output_path.stat().st_size,
+            "compression_original_size": annotated.output_path.stat().st_size,
+            "compression_target_met": True,
+        }
+        if annotated.output_path.stat().st_size > max_upload_size_bytes:
+            compressed_path = annotated.output_path.with_name(f"{annotated.output_path.stem}-compressed.docx")
+            compression_result = self.docx_compressor.compress_to_target(
+                source_path=annotated.output_path,
+                output_path=compressed_path,
+                target_max_bytes=max_upload_size_bytes,
+            )
+            upload_candidate_path = compression_result.output_path
+            compression_metadata = {
+                "compression_applied": True,
+                "compression_result_size": compression_result.compressed_size,
+                "compression_original_size": compression_result.original_size,
+                "compression_target_met": compression_result.target_met,
+            }
+
+        debug_bundle_path = self._write_debug_bundle(
+            debug_output_dir=debug_output_dir,
+            document_title=document_title,
+            source_path=source_path,
+            parsed_document=parsed_document,
+            review_result=review_result,
+            annotations=review_annotations,
+            extra_metadata={
+                "annotated_word_path": str(annotated.output_path),
+                "upload_candidate_path": str(upload_candidate_path),
+                "markdown_report_path": str(review_report_path),
+                **compression_metadata,
+            },
+        )
+
+        return LocalReviewArtifacts(
+            source_path=str(source_path),
+            annotated_word_path=str(annotated.output_path),
+            upload_candidate_path=str(upload_candidate_path),
+            markdown_report_path=str(review_report_path),
+            annotation_count=annotated.annotation_count,
+            review_issue_count=len(review_result.review_issues),
+            review_summary=review_result.summary,
+            debug_bundle_path=debug_bundle_path,
+            **compression_metadata,
+        )
 
     async def run(self, client: MCPDocumentClient, request: SkillRequest) -> SkillResponse:
         reference = self._build_source_reference(request)
@@ -131,6 +258,22 @@ class SkillPipeline:
                 "compression_changed_entries": compression_result.changed_entries,
             }
 
+        debug_bundle_path = self._write_debug_bundle(
+            debug_output_dir=request.debug_output_dir,
+            document_title=request.source_document.display_name or request.source_document.title or request.source_document.doc_id,
+            source_path=downloaded.file_path,
+            parsed_document=parsed_document,
+            review_result=review_result,
+            annotations=review_annotations,
+            extra_metadata={
+                "annotated_word_path": str(annotated.output_path),
+                "upload_candidate_path": str(upload_source_path),
+                "markdown_report_path": str(review_report_path),
+                "download_source_path": downloaded.metadata.get("source_path", ""),
+                **compression_metadata,
+            },
+        )
+
         upload_result = await self.upload_manager.upload_via_mcp(
             client=client,
             local_path=upload_source_path,
@@ -175,6 +318,7 @@ class SkillPipeline:
                 "uploaded_local_word_path": str(upload_source_path),
                 "review_rules_path": get_default_review_rules_path(),
                 "review_structure_template_path": get_default_review_template_path(),
+                "debug_bundle_path": debug_bundle_path,
                 **compression_metadata,
             },
         )
@@ -355,16 +499,29 @@ class SkillPipeline:
         if review_result.structure_match_result is None:
             score -= 15
         if review_result.quality_report is None:
-            score -= 20
+            score -= 25
+        else:
+            if review_result.quality_report.overall_score <= 1:
+                score -= 50
+            elif review_result.quality_report.overall_score < 40:
+                score -= 25
         fact_fallback_count = sum(
             1
             for item in review_result.fact_check_results
             if any("LLM verification failed" in evidence for evidence in item.evidence)
         )
+        if not review_result.fact_check_results:
+            score -= 15
+        else:
+            fact_search_count = sum(1 for item in review_result.fact_check_results if item.search_trace.get("performed"))
+            if fact_search_count == 0:
+                score -= 20
         score -= min(20, fact_fallback_count * 5)
         language_fallback_count = sum(
             1 for item in review_result.language_issues if str(item.metadata.get("fallback_reason") or "").strip()
         )
+        if not review_result.language_issues and review_result.quality_report is not None and review_result.quality_report.overall_score <= 1:
+            score -= 10
         score -= min(15, language_fallback_count * 5)
         return max(0.0, min(100.0, score))
 
@@ -538,6 +695,118 @@ class SkillPipeline:
         report_path.write_text(ReportGenerator().render(review_result, "markdown"), encoding="utf-8")
         return str(report_path)
 
+    def _write_debug_bundle(
+        self,
+        debug_output_dir: str,
+        document_title: str,
+        source_path: Path,
+        parsed_document,
+        review_result: AnalysisResult,
+        annotations: List[WordAnnotation],
+        extra_metadata: dict,
+    ) -> str:
+        settings = get_settings()
+        bundle_root = Path(get_effective_debug_output_dir(debug_output_dir)).expanduser()
+        bundle_root.mkdir(parents=True, exist_ok=True)
+        run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+        provider = (settings.llm_provider or "unknown").strip().lower()
+        run_name = f"tdr-debug-{run_id}-{self._sanitize_filename_stem(document_title, source_path.stem)}-{provider}.json"
+        bundle_path = bundle_root / run_name
+
+        payload = {
+            "bundle_version": 1,
+            "redaction_notice": "This debug bundle is intended for issue uploads. Local paths, usernames, and docs.qq.com document IDs are redacted.",
+            "document_title": document_title,
+            "source_path": self._redact_for_issue(str(source_path)),
+            "generated_at": datetime.now().isoformat(),
+            "config_snapshot": {
+                "llm_provider": settings.llm_provider,
+                "review_rules_path": get_default_review_rules_path(),
+                "review_structure_template_path": get_default_review_template_path(),
+                "review_debug_output_dir": settings.review_debug_output_dir,
+            },
+            "parsed_document": {
+                "paragraphs": [self._build_issue_safe_paragraph_payload(item) for item in parsed_document.paragraphs],
+                "sentences": [self._build_issue_safe_sentence_payload(item) for item in parsed_document.sentences],
+            },
+            "analysis_result": self._redact_for_issue(review_result.to_dict()),
+            "annotations": self._redact_for_issue([asdict(item) for item in annotations]),
+            "artifacts": self._redact_for_issue(extra_metadata),
+        }
+        bundle_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return str(bundle_path)
+
+    def _build_issue_safe_paragraph_payload(self, paragraph: ParagraphNode) -> dict[str, Any]:
+        payload = asdict(paragraph)
+        text = payload.pop("text", "")
+        payload["text_preview"] = self._preview_text(text)
+        payload["text_length"] = len(text)
+        return self._redact_for_issue(payload)
+
+    def _build_issue_safe_sentence_payload(self, sentence: SentenceNode) -> dict[str, Any]:
+        payload = asdict(sentence)
+        text = payload.pop("text", "")
+        payload["text_preview"] = self._preview_text(text)
+        payload["text_length"] = len(text)
+        return self._redact_for_issue(payload)
+
+    def _preview_text(self, text: str, max_chars: int = 220) -> str:
+        compact = re.sub(r"\s+", " ", (text or "").strip())
+        if len(compact) <= max_chars:
+            return compact
+        return compact[: max_chars - 1] + "…"
+
+    def _redact_for_issue(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return {key: self._redact_for_issue(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._redact_for_issue(item) for item in value]
+        if isinstance(value, tuple):
+            return [self._redact_for_issue(item) for item in value]
+        if isinstance(value, str):
+            return self._redact_string(value)
+        return value
+
+    def _redact_string(self, value: str) -> str:
+        redacted = value or ""
+
+        substitutions = [
+            (str(Path.home()), "<HOME>"),
+            (str(Path(tempfile.gettempdir())), "<TMP>"),
+            (str(Path.cwd()), "<CWD>"),
+            (str(PROJECT_ROOT), "<PROJECT_ROOT>"),
+            (str(Path(sys.executable).resolve()) if sys.executable else "", "<PYTHON_EXECUTABLE>"),
+        ]
+
+        for original, replacement in substitutions:
+            if original:
+                redacted = redacted.replace(original, replacement)
+
+        redacted = re.sub(
+            r"(?i)https://docs\.qq\.com/(doc|sheet|slide|desktop|space)/[A-Za-z0-9$._-]+",
+            lambda match: f"https://docs.qq.com/{match.group(1)}/<DOC_ID>",
+            redacted,
+        )
+        redacted = re.sub(
+            r"(?i)([A-Za-z]:\\Users\\)[^\\]+",
+            r"\1<USER>",
+            redacted,
+        )
+        redacted = re.sub(
+            r"(?i)(/Users/)[^/]+",
+            r"\1<USER>",
+            redacted,
+        )
+        redacted = re.sub(
+            r"(?i)(token|api[_-]?key|secret)\s*[:=]\s*['\"]?([A-Za-z0-9._\-]{8,})['\"]?",
+            r"\1=<REDACTED>",
+            redacted,
+        )
+        return redacted
+
     def _render_document_text(self, paragraphs: List[ParagraphNode]) -> str:
         lines: List[str] = []
         for paragraph in paragraphs:
@@ -549,14 +818,12 @@ class SkillPipeline:
 
     def _build_remote_filename(self, request: SkillRequest, suffix: str) -> str:
         base_title = (request.source_document.title or request.source_document.doc_id).strip()
-        sanitized = "".join(char for char in base_title if char not in '<>:"/\\|?*').strip().rstrip(".")
-        if not sanitized:
-            sanitized = request.source_document.doc_id
+        sanitized = self._sanitize_filename_stem(base_title, request.source_document.doc_id)
         return f"{sanitized}-批注版{suffix}"
 
     def _ensure_stable_local_filename(self, downloaded: DownloadedDocument, request: SkillRequest) -> DownloadedDocument:
         source_title = (request.source_document.title or request.source_document.doc_id).strip()
-        sanitized_title = "".join(char for char in source_title if char not in '<>:"/\\|?*').strip().rstrip(".")
+        sanitized_title = self._sanitize_filename_stem(source_title)
         if not sanitized_title:
             return downloaded
 

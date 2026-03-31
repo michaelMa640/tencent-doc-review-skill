@@ -16,7 +16,7 @@ from typing import Optional
 
 import click
 
-from .config import get_settings, reload_settings
+from .config import describe_env_file_candidates, get_effective_debug_output_dir, get_settings, reload_settings
 from .access import (
     CommandMCPClient,
     MCPBridgeError,
@@ -123,8 +123,34 @@ def doctor() -> None:
     click.echo(f"  OPENCLAW_MCP_BRIDGE_EXECUTABLE: {'set' if settings.openclaw_mcp_bridge_executable else 'auto' if auto_python else 'missing'}")
     click.echo(f"  OPENCLAW executable discoverable: {'yes' if auto_openclaw else 'no'}")
     click.echo(f"  CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE: {'set' if settings.claude_code_mcp_bridge_executable else 'missing'}")
+    click.echo(f"  REVIEW_DEBUG_OUTPUT_DIR: {get_effective_debug_output_dir(settings.review_debug_output_dir)}")
     click.echo(f"  REVIEW_RULES_TEMPLATE_PATH: {get_default_review_rules_path()}")
     click.echo(f"  REVIEW_STRUCTURE_TEMPLATE_PATH: {get_default_review_template_path()}")
+
+
+@main.command("debug-config")
+def debug_config() -> None:
+    """Print config discovery details for troubleshooting in different runtimes."""
+    settings = reload_settings()
+    payload = {
+        "cwd": str(Path.cwd()),
+        "python_executable": sys.executable,
+        "env_candidates": describe_env_file_candidates(),
+        "config_status": {
+            "llm_provider": settings.llm_provider,
+            "llm_api_key": bool(settings.llm_api_key or settings.deepseek_api_key or settings.minimax_api_key),
+            "deepseek_api_key": bool(settings.deepseek_api_key),
+            "minimax_api_key": bool(settings.minimax_api_key),
+            "tencent_docs_token": bool(settings.tencent_docs_token),
+            "search_provider": settings.search_provider,
+            "search_api_key": bool(settings.search_api_key),
+            "skill_mcp_client": settings.skill_mcp_client,
+            "review_debug_output_dir": get_effective_debug_output_dir(settings.review_debug_output_dir),
+            "review_rules_template_path": get_default_review_rules_path(),
+            "review_structure_template_path": get_default_review_template_path(),
+        },
+    }
+    click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 @main.command("debug-doc")
@@ -235,6 +261,7 @@ def analyze(
 @click.option("--bridge-executable", "bridge_executable", default="", type=str)
 @click.option("--bridge-args", "bridge_args", default="", type=str)
 @click.option("--provider", "provider", default="", type=str, help="LLM provider used during review.")
+@click.option("--debug-dir", "debug_dir", default="", type=click.Path(), help="Write a local debug bundle for this run.")
 def skill_run(
     doc_id: str,
     title: str,
@@ -247,7 +274,8 @@ def skill_run(
     bridge_executable: str,
     bridge_args: str,
     provider: str,
-) -> None:
+    debug_dir: str,
+    ) -> None:
     """Run the shared skill workflow with a local MCP client implementation."""
     asyncio.run(
         _skill_run(
@@ -262,6 +290,32 @@ def skill_run(
             bridge_executable=bridge_executable,
             bridge_args=bridge_args,
             provider=provider,
+            debug_dir=debug_dir,
+        )
+    )
+
+
+@main.command("review-docx")
+@click.option("--input-docx", "input_docx", required=True, type=click.Path(exists=True))
+@click.option("--title", "title", default="", type=str)
+@click.option("--output-dir", "output_dir", default="", type=click.Path())
+@click.option("--provider", "provider", default="", type=str)
+@click.option("--debug-dir", "debug_dir", default="", type=click.Path(), help="Write a local debug bundle for this run.")
+def review_docx(
+    input_docx: str,
+    title: str,
+    output_dir: str,
+    provider: str,
+    debug_dir: str,
+) -> None:
+    """Review a local DOCX and generate an annotated DOCX plus markdown report."""
+    asyncio.run(
+        _review_docx(
+            input_docx=input_docx,
+            title=title,
+            output_dir=output_dir,
+            provider=provider,
+            debug_dir=debug_dir,
         )
     )
 
@@ -340,6 +394,24 @@ async def _analyze(
         await client.close()
 
 
+async def _review_docx(
+    input_docx: str,
+    title: str,
+    output_dir: str,
+    provider: str,
+    debug_dir: str,
+) -> None:
+    settings = reload_settings()
+    artifacts = await SkillPipeline().review_local_docx(
+        input_path=input_docx,
+        title=title,
+        provider=provider or settings.llm_provider,
+        output_dir=output_dir,
+        debug_output_dir=get_effective_debug_output_dir(debug_dir or settings.review_debug_output_dir),
+    )
+    click.echo(json.dumps(asdict(artifacts), ensure_ascii=False, indent=2, default=str))
+
+
 async def _debug_doc(doc_id: str) -> None:
     doc_client = _create_tencent_doc_client()
     try:
@@ -411,6 +483,7 @@ async def _skill_run(
     bridge_executable: str,
     bridge_args: str,
     provider: str,
+    debug_dir: str,
 ) -> None:
     settings = reload_settings()
     client = _create_skill_mcp_client(
@@ -430,6 +503,7 @@ async def _skill_run(
             display_name=target_path or target_folder_id,
         ),
         download_directory=download_dir,
+        debug_output_dir=get_effective_debug_output_dir(debug_dir or settings.review_debug_output_dir),
         llm_provider=provider or settings.llm_provider,
     )
     try:

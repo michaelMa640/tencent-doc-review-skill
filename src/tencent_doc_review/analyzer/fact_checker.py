@@ -214,7 +214,7 @@ class SearchClient:
                 "max_results": num_results,
                 "include_answer": False,
                 "include_images": False,
-                "include_raw_content": False,
+                "include_raw_content": True,
             },
         )
         response.raise_for_status()
@@ -229,6 +229,7 @@ class SearchClient:
                     "title": str(item.get("title") or url or "来源"),
                     "url": url,
                     "snippet": str(item.get("content") or item.get("raw_content") or ""),
+                    "raw_content": str(item.get("raw_content") or ""),
                     "source": host,
                     "score": item.get("score"),
                 }
@@ -446,6 +447,7 @@ class FactChecker:
         try:
             raw_results = await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
             filtered_results, trace = self._filter_search_results(claim, context, raw_results)
+            filtered_results = self._refine_search_result_snippets(claim, filtered_results)
             trace["performed"] = True
             trace["query"] = query
             return filtered_results, trace
@@ -519,6 +521,110 @@ class FactChecker:
             "raw_count": len(results),
             "filtered_count": len(filtered),
         }
+
+    def _refine_search_result_snippets(
+        self,
+        claim: Claim,
+        results: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        refined: List[Dict[str, Any]] = []
+        for item in results:
+            updated = dict(item)
+            source_text = str(item.get("raw_content") or item.get("snippet") or "").strip()
+            snippet = self._select_relevant_source_snippet(claim.text, source_text)
+            if not snippet:
+                continue
+            updated["snippet"] = self._clean_source_snippet(snippet)
+            if not self._snippet_is_actionable(claim.text, updated["snippet"]):
+                continue
+            refined.append(updated)
+        return refined
+
+    def _select_relevant_source_snippet(self, claim_text: str, source_text: str) -> str:
+        cleaned = str(source_text or "").strip()
+        if not cleaned:
+            return ""
+
+        segments = [segment.strip() for segment in re.split(r"(?<=[。！？!?；;])\s+|\n+", cleaned) if segment.strip()]
+        if len(segments) <= 1:
+            segments = [
+                segment.strip()
+                for segment in re.split(r"(?<=[。！？!?；;])|(?:\r?\n)+", cleaned)
+                if segment and segment.strip()
+            ]
+        if not segments:
+            return cleaned[:240]
+
+        claim_tokens = self._extract_relevance_tokens(claim_text)
+        numeric_tokens = re.findall(r"\d+(?:\.\d+)?(?:%|K|M|G|亿|万|元|美元|分钟|秒|年)?", claim_text, re.IGNORECASE)
+        normalized_claim = self._normalize_text(claim_text)
+
+        scored: List[tuple[float, int, str]] = []
+        for index, segment in enumerate(segments):
+            normalized_segment = self._normalize_text(segment)
+            if not normalized_segment:
+                continue
+
+            token_hits = sum(1 for token in claim_tokens if token.lower() in segment.lower())
+            numeric_hits = sum(1 for token in numeric_tokens if token and token.lower() in segment.lower())
+            ratio = 0.0
+            try:
+                from difflib import SequenceMatcher
+
+                ratio = SequenceMatcher(None, normalized_claim, normalized_segment).ratio()
+            except Exception:
+                ratio = 0.0
+
+            contains_bonus = 1.5 if normalized_claim and (normalized_claim in normalized_segment or normalized_segment in normalized_claim) else 0.0
+            score = token_hits + numeric_hits * 2 + ratio + contains_bonus
+            scored.append((score, index, segment))
+
+        if not scored:
+            return cleaned[:240]
+
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        best_score, best_index, best_segment = scored[0]
+        if best_score <= 0:
+            return cleaned[:240]
+
+        chosen_segments = [best_segment]
+        if best_index + 1 < len(segments):
+            next_segment = segments[best_index + 1]
+            next_score = 0
+            next_score += sum(1 for token in claim_tokens if token.lower() in next_segment.lower())
+            next_score += sum(1 for token in numeric_tokens if token and token.lower() in next_segment.lower()) * 2
+            if next_score > 0 and len(best_segment) + len(next_segment) < 260:
+                chosen_segments.append(next_segment)
+
+        return " ".join(chosen_segments)[:240]
+
+    def _snippet_is_actionable(self, claim_text: str, snippet: str) -> bool:
+        normalized_snippet = self._normalize_text(snippet)
+        if not normalized_snippet:
+            return False
+
+        claim_tokens = self._extract_relevance_tokens(claim_text)
+        numeric_tokens = re.findall(r"\d+(?:\.\d+)?", claim_text)
+        token_hits = sum(1 for token in claim_tokens if token.lower() in snippet.lower())
+        numeric_hits = sum(1 for token in numeric_tokens if token and token.lower() in snippet.lower())
+        non_year_numeric_hits = sum(
+            1
+            for token in numeric_tokens
+            if token and not re.fullmatch(r"20\d{2}", token) and token.lower() in snippet.lower()
+        )
+
+        if numeric_tokens:
+            if non_year_numeric_hits > 0:
+                return True
+            if any("." in token for token in numeric_tokens) and non_year_numeric_hits == 0:
+                return False
+            return numeric_hits >= 2 or token_hits >= 3
+        return token_hits >= 2
+
+    def _clean_source_snippet(self, text: str) -> str:
+        cleaned = re.sub(r"[*•#>\t]+", " ", text or "")
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
 
     def _build_claim_extraction_prompt(self, text: str, context: Dict[str, Any]) -> str:
         context_block = json.dumps(context, ensure_ascii=False) if context else "{}"
@@ -629,6 +735,12 @@ class FactChecker:
         if is_numeric:
             if status == VerificationStatus.UNVERIFIED:
                 if has_sources:
+                    if not self._has_actionable_sources(result.sources):
+                        result.verification_status = VerificationStatus.CONFIRMED
+                        result.suggestion = ""
+                        result.sources = []
+                        result.evidence = []
+                        return result
                     result.suggestion = (
                         result.suggestion
                         or "检索到的公开信息未能直接证实该数值表述，建议依据下列来源核对后再保留。"
@@ -650,6 +762,13 @@ class FactChecker:
             return result
 
         return result
+
+    def _has_actionable_sources(self, sources: List[Dict[str, str]]) -> bool:
+        for source in sources:
+            snippet = self._clean_source_snippet(str(source.get("snippet") or ""))
+            if len(self._normalize_text(snippet)) >= 12:
+                return True
+        return False
 
     def _build_search_only_result(
         self,

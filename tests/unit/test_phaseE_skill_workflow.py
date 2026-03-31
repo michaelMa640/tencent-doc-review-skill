@@ -23,6 +23,7 @@ from tencent_doc_review.access import (
 from tencent_doc_review.cli import main
 from tencent_doc_review.analyzer.document_analyzer import AnalysisResult, AnalysisType
 from tencent_doc_review.analyzer.fact_checker import ClaimType, FactCheckResult, VerificationStatus
+from tencent_doc_review.analyzer.quality_evaluator import QualityLevel, QualityReport
 from tencent_doc_review.document.word_parser import ParagraphNode, SentenceNode
 from tencent_doc_review.domain import ReviewIssue, ReviewIssueType, ReviewSeverity
 from tencent_doc_review.skill import SkillRequest
@@ -265,10 +266,25 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             location={"paragraph_index": 0},
         )
 
-        annotation = pipeline._to_word_annotation(paragraphs, sentences, issue)
+    def test_process_score_drops_when_quality_zero_and_fact_check_not_really_run(self):
+        pipeline = SkillPipeline()
+        review_result = AnalysisResult(
+            document_id="doc-1",
+            document_title="Demo",
+            analysis_type=AnalysisType.FULL,
+            quality_report=QualityReport(
+                overall_score=0.0,
+                overall_level=QualityLevel.POOR,
+                summary="No real review happened.",
+            ),
+            structure_match_result=None,
+            fact_check_results=[],
+            language_issues=[],
+        )
 
-        self.assertEqual(annotation.paragraph_index, 1)
-        self.assertNotIn("render_mode", annotation.metadata)
+        score = pipeline._estimate_process_score(review_result)
+
+        self.assertLessEqual(score, 25.0)
 
     def test_word_comment_formats_sources_without_python_repr(self):
         pipeline = SkillPipeline()

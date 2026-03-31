@@ -19,6 +19,7 @@ class SkillRequest:
     output_formats: List[str] = field(default_factory=lambda: ["markdown"])
     keep_local_artifacts: bool = True
     download_directory: str = ""
+    debug_output_dir: str = ""
     max_upload_size_bytes: int = 10 * 1024 * 1024
     use_default_template: bool = True
     metadata: Dict[str, object] = field(default_factory=dict)

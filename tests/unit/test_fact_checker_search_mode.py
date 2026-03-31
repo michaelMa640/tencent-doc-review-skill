@@ -12,6 +12,23 @@ from tencent_doc_review.analyzer.fact_checker import FactChecker, SearchClient, 
 
 
 class FactCheckerSearchModeTests(unittest.IsolatedAsyncioTestCase):
+    def test_refined_source_snippet_prefers_conflicting_segment_not_leading_text(self):
+        checker = FactChecker(llm_client=Mock(), search_client=Mock(spec=SearchClient))
+
+        claim = "生成的视频清晰度可达4K。"
+        source_text = (
+            "这是页面开头的产品介绍，主要介绍品牌历史、团队背景和一般功能概览。"
+            "更多内容集中在编辑能力、模板体系和人物形象定制。"
+            "官方说明提到当前导出清晰度最高支持 1080P，尚未开放 4K 视频导出。"
+            "部分高级套餐可以提升帧率与渲染优先级。"
+        )
+
+        snippet = checker._select_relevant_source_snippet(claim, source_text)
+
+        self.assertIn("1080P", snippet)
+        self.assertIn("4K", snippet)
+        self.assertNotIn("品牌历史", snippet)
+
     async def test_fact_checker_prefers_search_backed_verification(self):
         llm_client = Mock()
         llm_client.analyze = AsyncMock(

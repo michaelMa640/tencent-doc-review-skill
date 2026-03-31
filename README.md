@@ -2,6 +2,157 @@
 
 基于 LLM 的文章审核与 Word 批注工具。
 
+> 先说结论：
+>
+> - 这个项目当前**需要先安装**，因为真正执行审核的是本地命令 `tencent-doc-review`
+> - `skills/` 目录里的内容只是 **OpenClaw 原生 skill 的说明、调用模板和工作流约定**
+> - 所以不是“把整个仓库随便丢进 OpenClaw 的 skill 文件夹里就能直接运行”
+> - 推荐做法是：**把这个仓库当成 OpenClaw 工作区来用**；或者先安装项目，再把 [skills/tencent_doc_review_native](E:/VibeCoding/tencent-doc-review/skills/tencent_doc_review_native) 单独复制到 OpenClaw 的 `skills/` 目录
+
+## 5 分钟上手
+
+第一次接触这个项目，按下面 5 步走就够了。
+
+### 1. 安装项目
+
+Windows:
+
+```powershell
+cd <project-root>
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .
+```
+
+macOS:
+
+```bash
+cd /path/to/tencent-doc-review
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+安装完成后，本地会有命令：
+
+```bash
+tencent-doc-review
+```
+
+### 2. 配置 `.env`
+
+复制模板：
+
+Windows:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+macOS:
+
+```bash
+cp .env.example .env
+```
+
+最少建议填写：
+
+```env
+TENCENT_DOCS_TOKEN=你的腾讯文档 MCP token
+SKILL_MCP_CLIENT=openclaw
+LLM_PROVIDER=deepseek
+LLM_API_KEY=你的模型 key
+```
+
+默认情况下，`review-docx` 和 `skill-run` 每次都会自动生成调试包，默认目录是：
+
+```text
+<project-root>/debug-output
+```
+
+如果你想改位置，还可以额外填写：
+
+```env
+REVIEW_DEBUG_OUTPUT_DIR=<project-root>/debug-output
+```
+
+这样调试包会改写到你指定的目录。无论默认目录还是自定义目录，程序都会生成一个**可直接上传到 issue 的单文件调试包**，文件名类似：
+
+```text
+tdr-debug-20260330-153012-RIVE产品调研报告-Michael-deepseek.json
+```
+
+调试包会自动对本地用户名、绝对路径、腾讯文档文档 ID 做脱敏。
+
+腾讯文档 MCP token 获取页面：
+
+- [腾讯文档 OpenClaw 场景页](https://docs.qq.com/scenario/open-claw.html?nlc=1)
+
+### 3. 确认环境正常
+
+```bash
+openclaw --help
+tencent-doc-review doctor
+tencent-doc-review debug-config
+```
+
+如果 OpenClaw 在它自己的工作区里调用本项目，程序会自动尝试从多个位置寻找 `.env`。
+如果你的环境比较特殊，也可以显式指定：
+
+Windows:
+
+```powershell
+$env:TENCENT_DOC_REVIEW_ENV_FILE="C:\path\to\your\.env"
+```
+
+macOS:
+
+```bash
+export TENCENT_DOC_REVIEW_ENV_FILE="/path/to/your/.env"
+```
+
+### 4. 让 OpenClaw 发现这个 skill
+
+推荐方式：
+
+- 直接把这个仓库作为 OpenClaw 工作区打开
+- 因为仓库里已经带了原生 skill：
+  - [skills/tencent_doc_review_native/SKILL.md](E:/VibeCoding/tencent-doc-review/skills/tencent_doc_review_native/SKILL.md)
+
+如果你的 OpenClaw 工作区不是这个仓库，也可以：
+
+- 先安装本项目
+- 再把 [skills/tencent_doc_review_native](E:/VibeCoding/tencent-doc-review/skills/tencent_doc_review_native) 复制或软链接到：
+  - `<workspace>/skills/tencent_doc_review_native`
+  - 或 `~/.openclaw/skills/tencent_doc_review_native`
+
+### 5. 在 OpenClaw 里直接使用
+
+推荐这样说：
+
+```text
+请使用 tencent_doc_review_native skill 审核这篇腾讯文档：
+https://docs.qq.com/doc/你的文档ID
+
+要求：
+1. 下载为 Word
+2. 生成带原生 Word 评论气泡的批注版
+3. 上传到我指定的腾讯文档文件夹
+4. 返回新文档链接和审核摘要
+```
+
+这个 skill 内部会调用本地命令：
+
+```bash
+tencent-doc-review review-docx --input-docx "<本地docx路径>" --title "<文档标题>"
+```
+
+也就是说：
+
+- `skills/` 目录负责告诉 OpenClaw“什么时候该用这个 skill、该跑什么命令”
+- `tencent-doc-review` 负责真正执行审核
+- 两者缺一不可
+
 当前主流程是：
 
 1. 通过 OpenClaw 或其他 bridge 下载腾讯文档对应的 `.docx`
@@ -90,6 +241,14 @@
 - 使用项目内置的 [openclaw_bridge.py](/E:/VibeCoding/tencent-doc-review/src/tencent_doc_review/access/openclaw_bridge.py)
 - 在系统 PATH 或常见安装目录中查找 `openclaw` / `openclaw.cmd`
 
+默认情况下，`review-docx` / `skill-run` 的调试包会自动输出到：
+
+```text
+<project-root>/debug-output
+```
+
+只有你想改位置时，才需要在 `.env` 里填写 `REVIEW_DEBUG_OUTPUT_DIR`。
+
 只有在自动探测失败时，才需要手动填写这两项。
 
 ### 2. 模板目录
@@ -112,6 +271,7 @@
 E:\VibeCoding\tencent-doc-review
 ├─ .env.example
 ├─ README.md
+├─ skills/
 ├─ templates/
 ├─ downloads/
 ├─ tests/
@@ -126,6 +286,41 @@ E:\VibeCoding\tencent-doc-review
    ├─ workflows/
    └─ writers/
 ```
+
+## OpenClaw 原生 Skill 包
+
+仓库里已经带了可直接加载的 OpenClaw skill 目录：
+
+- [`skills/tencent_doc_review_native/SKILL.md`](/E:/VibeCoding/tencent-doc-review/skills/tencent_doc_review_native/SKILL.md)
+
+如果你把这个仓库本身作为 OpenClaw 工作区使用，那么 `skills/` 会被 OpenClaw 自动发现。
+
+如果你的 OpenClaw 工作区不是这个仓库，可以把下面这个目录复制或软链接到：
+
+- `<workspace>/skills/tencent_doc_review_native`
+或
+- `~/.openclaw/skills/tencent_doc_review_native`
+
+这个原生 skill 的工作方式是：
+
+1. OpenClaw 自己通过腾讯文档 MCP 下载 `.docx`
+2. 本项目通过本地命令处理已下载的 `.docx`
+3. OpenClaw 再把批注版 `.docx` 上传回腾讯文档
+
+也就是说，原生 skill 模式下**不建议**在 OpenClaw 内再次调用 `tencent-doc-review skill-run`，而应该使用下面这个本地命令：
+
+```bash
+tencent-doc-review review-docx --input-docx "<本地docx路径>" --title "<文档标题>"
+```
+
+这个命令会返回 JSON，里面包含：
+
+- `annotated_word_path`
+- `upload_candidate_path`
+- `markdown_report_path`
+- `review_summary`
+
+OpenClaw 原生 skill 应该上传 `upload_candidate_path`，而不是原始下载文件。
 
 ## 环境要求
 
@@ -178,7 +373,7 @@ E:\VibeCoding\tencent-doc-review
 ### 1. 创建虚拟环境
 
 ```powershell
-cd E:\VibeCoding\tencent-doc-review
+cd <project-root>
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
@@ -360,7 +555,7 @@ tencent-doc-review skill-run ^
   --target-folder-id "your_target_folder_id" ^
   --target-space-type personal_space ^
   --target-path "/更改" ^
-  --download-dir "E:\VibeCoding\tencent-doc-review\downloads" ^
+  --download-dir "<project-root>\\downloads" ^
   --mcp-client openclaw ^
   --provider deepseek
 ```
