@@ -126,6 +126,9 @@ def doctor() -> None:
     click.echo(f"  REVIEW_DEBUG_OUTPUT_DIR: {get_effective_debug_output_dir(settings.review_debug_output_dir)}")
     click.echo(f"  REVIEW_RULES_TEMPLATE_PATH: {get_default_review_rules_path()}")
     click.echo(f"  REVIEW_STRUCTURE_TEMPLATE_PATH: {get_default_review_template_path()}")
+    click.echo("  ENV candidates:")
+    for candidate in describe_env_file_candidates():
+        click.echo(f"    - {candidate['path']} ({'exists' if candidate['exists'] else 'missing'})")
 
 
 @main.command("debug-config")

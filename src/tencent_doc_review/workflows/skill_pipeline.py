@@ -499,23 +499,23 @@ class SkillPipeline:
         if review_result.structure_match_result is None:
             score -= 15
         if review_result.quality_report is None:
+            score -= 40
+        elif review_result.quality_report.overall_score <= 0:
+            score -= 35
+        elif review_result.quality_report.overall_score <= 1:
+            score -= 50
+        elif review_result.quality_report.overall_score < 40:
             score -= 25
-        else:
-            if review_result.quality_report.overall_score <= 1:
-                score -= 50
-            elif review_result.quality_report.overall_score < 40:
-                score -= 25
         fact_fallback_count = sum(
             1
             for item in review_result.fact_check_results
             if any("LLM verification failed" in evidence for evidence in item.evidence)
         )
+        fact_search_count = sum(1 for item in review_result.fact_check_results if item.search_trace.get("performed"))
+        if review_result.fact_check_results and fact_search_count == 0:
+            score -= 20
         if not review_result.fact_check_results:
-            score -= 15
-        else:
-            fact_search_count = sum(1 for item in review_result.fact_check_results if item.search_trace.get("performed"))
-            if fact_search_count == 0:
-                score -= 20
+            score -= 25
         score -= min(20, fact_fallback_count * 5)
         language_fallback_count = sum(
             1 for item in review_result.language_issues if str(item.metadata.get("fallback_reason") or "").strip()
@@ -523,6 +523,8 @@ class SkillPipeline:
         if not review_result.language_issues and review_result.quality_report is not None and review_result.quality_report.overall_score <= 1:
             score -= 10
         score -= min(15, language_fallback_count * 5)
+        if review_result.quality_report is None and not review_result.fact_check_results and not review_result.language_issues:
+            score = min(score, 10.0)
         return max(0.0, min(100.0, score))
 
     def _build_fact_detail_summaries(self, review_result: AnalysisResult) -> List[str]:
