@@ -1,0 +1,3755 @@
+{
+  "bundle_version": 1,
+  "redaction_notice": "This debug bundle is intended for issue uploads. Local paths, usernames, and docs.qq.com document IDs are redacted.",
+  "document_title": "妙多AI产品调研报告-Michael",
+  "source_path": "<HOME>\\.openclaw\\workspace\\downloads\\miao_report.docx",
+  "generated_at": "2026-04-02T10:55:41.779238",
+  "config_snapshot": {
+    "llm_provider": "deepseek",
+    "review_rules_path": "E:\\VibeCoding\\tencent-doc-review\\templates\\default_product_research_review_rules.md",
+    "review_structure_template_path": "E:\\VibeCoding\\tencent-doc-review\\templates\\default_product_research_structure_template.md",
+    "review_debug_output_dir": ""
+  },
+  "parsed_document": {
+    "paragraphs": [
+      {
+        "index": 0,
+        "style_name": "Heading 1",
+        "is_heading": true,
+        "heading_level": 1,
+        "metadata": {},
+        "text_preview": "妙多AI产品调研报告-Michael",
+        "text_length": 18
+      },
+      {
+        "index": 1,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "1.产品概述",
+        "text_length": 6
+      },
+      {
+        "index": 2,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "基础信息：妙多AI（英文名：Motiff）是由猿辅导团队孵化，于2024年正式发布的下一代AI原生界面设计工具。",
+        "text_length": 56
+      },
+      {
+        "index": 3,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "类型与定位：这是一款基于Web的AI原生UI/UX设计平台，定位为“AI时代的设计工具”，旨在超越传统的协作工具（如Figma），通过AI驱动生产力变革。",
+        "text_length": 77
+      },
+      {
+        "index": 4,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "核心价值：通过自研的UI大模型，帮助设计师从繁琐的重复劳动中解放，实现“意图到设计”的跨越，大幅提升初稿生成与系统维护效率。",
+        "text_length": 62
+      },
+      {
+        "index": 5,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "2.目标用户与市场定位",
+        "text_length": 11
+      },
+      {
+        "index": 6,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "目标用户：",
+        "text_length": 5
+      },
+      {
+        "index": 7,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "职业：UI/UX设计师、产品经理、前端开发人员。",
+        "text_length": 24
+      },
+      {
+        "index": 8,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "典型场景：快速原型制作、大规模设计系统维护、出海产品的多语言适配、从设计稿到代码的自动化落地。",
+        "text_length": 47
+      },
+      {
+        "index": 9,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "核心痛点：传统工具（如Figma）虽解决了协同问题，但设计师仍需耗费大量时间进行手动布点、组件对齐及繁杂的文档及设计系统的维护。",
+        "text_length": 64
+      },
+      {
+        "index": 10,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "市场潜力：",
+        "text_length": 5
+      },
+      {
+        "index": 11,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "行业规模扩张：全球用户体验（UX）服务市场在2024年为46.8亿美元，预计2025年将增至64.0亿美元，并以36%的复合年增长率在2032年达到549.3亿美元",
+        "text_length": 82
+      },
+      {
+        "index": 12,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "3.核心功能与特性",
+        "text_length": 9
+      },
+      {
+        "index": 13,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI生成UI：支持“文本生成”与“图片引用生成”。用户输入一段需求（如“植物护理App首页”），系统可自动生成具备完整结构的高保真设计稿，并且可以随时用文字来继续调整样式。",
+        "text_length": 86
+      },
+      {
+        "index": 14,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI设计系统：包括设计风格的学习、设计系统的自动创建、维护与一致性检查，能从历史稿件中自动提炼组件和样式。",
+        "text_length": 53
+      },
+      {
+        "index": 15,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "智能编辑与魔法框：通过“智能编辑”可直接指令修改布局；“魔法框”则允许用户在任意区域框选并生成建议模块。",
+        "text_length": 52
+      },
+      {
+        "index": 16,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "MCP：通过API将设计数据集成到本地IDE中，配合AI编程工具（如Claude-3.5-Sonnet）直接生成React等代码。",
+        "text_length": 65
+      },
+      {
+        "index": 17,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "实际使用体验",
+        "text_length": 6
+      },
+      {
+        "index": 18,
+        "style_name": "Heading 4",
+        "is_heading": true,
+        "heading_level": 4,
+        "metadata": {},
+        "text_preview": "界面生成测试",
+        "text_length": 6
+      },
+      {
+        "index": 19,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "以创建一个数字化个人财务管理 App作为案例进行测试",
+        "text_length": 26
+      },
+      {
+        "index": 20,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "首先我使用了如下的prompt希望妙多能帮我生成首页的UI：",
+        "text_length": 30
+      },
+      {
+        "index": 21,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 22,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 23,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "很快妙多就给我生成了一个产品主页的界面，并且完全符合我的prompt需求，本操作消耗14积分。",
+        "text_length": 47
+      },
+      {
+        "index": 24,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "下面测试一下样式修改功能：",
+        "text_length": 13
+      },
+      {
+        "index": 25,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "我选中了“最近交易”这部分然后告诉AI我的需求如下",
+        "text_length": 25
+      },
+      {
+        "index": 26,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 27,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 28,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 29,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "上图是妙多修改好的设计稿，可以看到妙多对语义理解非常准确，也能够正确映射到相应的设计样式上，这不操作消耗13积分。但是这一步出现了文字错位的问题，尝试使用AI继续进行完善。",
+        "text_length": 86
+      },
+      {
+        "index": 30,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 31,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 32,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "部分缺失有修复，但是还存在一部分问题没有修复好，本步骤消耗7积分。",
+        "text_length": 33
+      },
+      {
+        "index": 33,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 34,
+        "style_name": "Heading 4",
+        "is_heading": true,
+        "heading_level": 4,
+        "metadata": {},
+        "text_preview": "设计系统生成",
+        "text_length": 6
+      },
+      {
+        "index": 35,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "我们利用妙多提供的素材尝试设计系统的自动生成。设计系统的维护是很多比较大型的公司都会比较头疼的，却又是必须要做的一件事情。单纯的界面生成可能价值并没有很高，但如果妙多能够对设计系统的生成和维护起到帮助那么对于中大型公司来说将会非常有价值。",
+        "text_length": 119
+      },
+      {
+        "index": 36,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 37,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "如上图所示，妙多提供的素材是一个完整的音乐类APP界面，只需要点击右上角的AI设计系统创建按钮然后选择需要让妙多参考的设计稿妙多就会开始对设计稿进行识别。",
+        "text_length": 77
+      },
+      {
+        "index": 38,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 39,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 40,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "识别出来的结果如下图：",
+        "text_length": 11
+      },
+      {
+        "index": 41,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 42,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 43,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 44,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 45,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 46,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "妙多将设计稿的组件进行了功能性区分和提炼，产生了颜色、排版、效果和图标四个分类，总的来说效果超出我的意料，但还是存在问题。提炼出来的内容并不全面，例如按钮的样式并没有提炼出来，这个缺点使这个功能有些食之无味弃之可惜。不过优点是妙多通过AI生成设计系统并没有消耗很多积分。",
+        "text_length": 135
+      },
+      {
+        "index": 47,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 48,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "流程顺畅性：注册流程极简，支持浏览器直接访问，新手引导覆盖了AI面板的核心操作。",
+        "text_length": 40
+      },
+      {
+        "index": 49,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "界面与交互：UI界面与主流设计工具相似，降低了迁移成本。AI面板作为独立交互核心，操作反馈实时可见。",
+        "text_length": 50
+      },
+      {
+        "index": 50,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "问题记录：虽然文字生成UI效果惊艳，但在部分情况下仍然会出现界面错乱的问题，生成的布局仍需人工微调。对于设计系统的生成上也仍然存在欠缺，距离人手工进行样式的整理还有一定的差距，而这点也使得这个功能被采用的可能性大大降低。",
+        "text_length": 110
+      },
+      {
+        "index": 51,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "5.竞品对比分析",
+        "text_length": 8
+      },
+      {
+        "index": 52,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "直接竞品：Figma,Adobe XD,MasterGo。",
+        "text_length": 29
+      },
+      {
+        "index": 53,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "对比维度：",
+        "text_length": 5
+      },
+      {
+        "index": 54,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "性能：妙多支持100万级图层，优于Figma的80万上限。",
+        "text_length": 29
+      },
+      {
+        "index": 55,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI深度：Figma的AI偏向辅助插件，二妙多是AI驱动，具备更强的风格学习能力，AI功能对UI设计的赋能更加直接和全面。",
+        "text_length": 61
+      },
+      {
+        "index": 56,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "text_length": 32
+      },
+      {
+        "index": 57,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "差异化优势：可以感受到妙多是对标Figma进行的开发，因此大部分Figma拥有的功能妙多都支持，同时妙多支持将公网网址一键转化为可编辑的设计稿、并且可以直接选择设计稿进行设计系统的生成，这两个功能属于兴奋型需求。",
+        "text_length": 106
+      },
+      {
+        "index": 58,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "6.优势与不足",
+        "text_length": 7
+      },
+      {
+        "index": 59,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "核心优势：",
+        "text_length": 5
+      },
+      {
+        "index": 60,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI生成能力不仅美观且具备生产级结构（非单纯贴图）。",
+        "text_length": 26
+      },
+      {
+        "index": 61,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "设计系统自动维护功能极大降低了企业管理成本，并且降低了设计师的压力，也易于设计标准的建立和执行。",
+        "text_length": 48
+      },
+      {
+        "index": 62,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "主要不足：",
+        "text_length": 5
+      },
+      {
+        "index": 63,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "当前版本在生成UI设计稿时，偶有内容缺失或错位。",
+        "text_length": 24
+      },
+      {
+        "index": 64,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "当前AI所能生成的UI风格偏模板化，更加偏实用性而非设计感，另外在用户体验的把握上还有所欠缺，需要人类设计师来补全这部分内容。",
+        "text_length": 63
+      },
+      {
+        "index": 65,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "虽然AI生成设计系统是一个兴奋性需求，但是该功能目前有比较明显的欠缺，AI提炼的UI样式并不全面。",
+        "text_length": 49
+      },
+      {
+        "index": 66,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "品牌生态（插件社区）相比Figma仍有差距，此外Figma在行业中的地位难以撼动。",
+        "text_length": 41
+      },
+      {
+        "index": 67,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "价格与性价比",
+        "text_length": 6
+      },
+      {
+        "index": 68,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 69,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "定价模式：采用“基础免费+订阅”模式。",
+        "text_length": 19
+      },
+      {
+        "index": 70,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "text_length": 48
+      },
+      {
+        "index": 71,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "性价比评估：一般。",
+        "text_length": 9
+      },
+      {
+        "index": 72,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "虽然目前妙多已经解决了设计师的部分痛点需求，但是其投入产出比仍需考虑，另外目前妙多所生产出来的质量仍然处于比较基础的UI甚至是原型的水平，在目前企业对于UI和UX的质量要求越来越高的时期可能妙多能起到的作用仍然有限。并且目前的UI大多需要动效的配合，在这方面上妙多还有所欠缺。",
+        "text_length": 138
+      },
+      {
+        "index": 73,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "8.结论与推荐建议",
+        "text_length": 9
+      },
+      {
+        "index": 74,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "推荐结论：比较推荐。",
+        "text_length": 10
+      },
+      {
+        "index": 75,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "适用场景：适合寻求AI提效的设计团队、初创公司及需要快速响应海外多语言市场的项目。",
+        "text_length": 41
+      },
+      {
+        "index": 76,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 77,
+        "style_name": "Heading 1",
+        "is_heading": true,
+        "heading_level": 1,
+        "metadata": {},
+        "text_preview": "Motiff AI Product Research Report",
+        "text_length": 33
+      },
+      {
+        "index": 78,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "1. Product Overview",
+        "text_length": 19
+      },
+      {
+        "index": 79,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Basic Information: Motiff is the next-generation AI-native interface design tool incubated by the Yuanfudao team and officially released in 2024.",
+        "text_length": 145
+      },
+      {
+        "index": 80,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Type & Positioning: This is a Web-based AI-native UI/UX design platform, positioned as a \"Design Tool for the AI Era,\" aiming to surpass traditional collaboration tools (like Figma) and drive productivity transformation…",
+        "text_length": 231
+      },
+      {
+        "index": 81,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Core Value: Through its self-developed UI Large Model, it helps designers liberate themselves from tedious repetitive labor, achieving the leap from \"Intention to Design,\" and significantly improving efficiency in initi…",
+        "text_length": 262
+      },
+      {
+        "index": 82,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "2. Target User & Market Positioning",
+        "text_length": 35
+      },
+      {
+        "index": 83,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Target Users:",
+        "text_length": 13
+      },
+      {
+        "index": 84,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Occupation: UI/UX Designers, Product Managers, Front-end Developers.",
+        "text_length": 68
+      },
+      {
+        "index": 85,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Typical Scenarios: Rapid prototyping, large-scale design system maintenance, multi-language adaptation for overseas products, and automated implementation from design drafts to code.",
+        "text_length": 182
+      },
+      {
+        "index": 86,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Core Pain Points: Although traditional tools (like Figma) solved collaboration issues, designers still spend a large amount of time on manual layout, component alignment, and the maintenance of complex documentation and…",
+        "text_length": 235
+      },
+      {
+        "index": 87,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Market Potential:",
+        "text_length": 17
+      },
+      {
+        "index": 88,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Industry Scale Expansion: The global User Experience (UX) services market was 4.68 billion USD in 2024. It is expected to grow to 6.40 billion USD by 2025 and reach 54.93 billion USD by 2032, with a compound annual grow…",
+        "text_length": 241
+      },
+      {
+        "index": 89,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "3. Core Functions & Features",
+        "text_length": 28
+      },
+      {
+        "index": 90,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI UI Generation: Supports \"Text-to-Design\" and \"Image Reference Generation.\" Users input a requirement (e.g., \"Plant Care App Homepage\"), and the system automatically generates a high-fidelity design draft with a compl…",
+        "text_length": 287
+      },
+      {
+        "index": 91,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI Design System: Includes design style learning, automatic creation, maintenance, and consistency checking of design systems. It can automatically extract components and styles from historical drafts.",
+        "text_length": 201
+      },
+      {
+        "index": 92,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Smart Editing & Magic Box: \"Smart Editing\" allows direct layout modification via commands; the \"Magic Box\" allows users to select any area and generate suggested modules.",
+        "text_length": 170
+      },
+      {
+        "index": 93,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "MCP: Integrates design data into local IDEs via API, working with AI programming tools (like Claude-3.5-Sonnet) to directly generate code such as React.",
+        "text_length": 152
+      },
+      {
+        "index": 94,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "4. Actual User Experience",
+        "text_length": 25
+      },
+      {
+        "index": 95,
+        "style_name": "Heading 4",
+        "is_heading": true,
+        "heading_level": 4,
+        "metadata": {},
+        "text_preview": "Interface Generation Test",
+        "text_length": 25
+      },
+      {
+        "index": 96,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Testing with the creation of a Digital Personal Finance Management App as a case study.",
+        "text_length": 87
+      },
+      {
+        "index": 97,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "First, I used the following prompt hoping Motiff could help me generate the homepage UI:",
+        "text_length": 88
+      },
+      {
+        "index": 98,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 99,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 100,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Motiff quickly generated a product homepage interface that completely met my prompt requirements. This operation consumed 14 credits.",
+        "text_length": 133
+      },
+      {
+        "index": 101,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Testing Style Modification Functions:",
+        "text_length": 37
+      },
+      {
+        "index": 102,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "I selected the \"Recent Transactions\" part and told the AI my requirements as follows:",
+        "text_length": 85
+      },
+      {
+        "index": 103,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 104,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 105,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "The image above shows the design draft modified by Motiff. It can be seen that Motiff's semantic understanding is very accurate and can correctly map to the corresponding design styles. This operation consumed 13 credit…",
+        "text_length": 329
+      },
+      {
+        "index": 106,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 107,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Some parts were fixed, but there are still some issues that were not fully repaired. This step consumed 7 credits.",
+        "text_length": 114
+      },
+      {
+        "index": 108,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 109,
+        "style_name": "Heading 4",
+        "is_heading": true,
+        "heading_level": 4,
+        "metadata": {},
+        "text_preview": "Design System Generation",
+        "text_length": 24
+      },
+      {
+        "index": 110,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "We used assets provided by Motiff to attempt the automatic generation of a design system. Maintenance of design systems is a headache for many large companies but is a necessary task. Pure interface generation might not…",
+        "text_length": 371
+      },
+      {
+        "index": 111,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "As shown in the image above, the asset provided by Motiff is a complete Music App interface. You only need to click the \"AI Design System Creation\" button in the top right corner and select the design draft Motiff shoul…",
+        "text_length": 283
+      },
+      {
+        "index": 112,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 113,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "The recognition results are shown below:",
+        "text_length": 40
+      },
+      {
+        "index": 114,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 115,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 116,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 117,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 118,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon. Overall, the effect exceeded my expectations, but issues still exist. T…",
+        "text_length": 511
+      },
+      {
+        "index": 119,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Process Smoothness: The registration process is extremely minimal, supports direct browser access, and the novice guide covers the core operations of the AI panel.",
+        "text_length": 163
+      },
+      {
+        "index": 120,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Interface & Interaction: The UI interface is similar to mainstream design tools, reducing migration costs. The AI panel serves as an independent interaction core, with real-time feedback visibility.",
+        "text_length": 198
+      },
+      {
+        "index": 121,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Issue Record: Although the Text-to-UI effect is stunning, interface disorder still occurs in some cases, and generated layouts still require manual fine-tuning. There are also deficiencies in the generation of design sy…",
+        "text_length": 354
+      },
+      {
+        "index": 122,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "5. Competitor Comparison Analysis",
+        "text_length": 33
+      },
+      {
+        "index": 123,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Direct Competitors: Figma, Adobe XD, MasterGo.",
+        "text_length": 46
+      },
+      {
+        "index": 124,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Comparison Dimensions:",
+        "text_length": 22
+      },
+      {
+        "index": 125,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Performance: Motiff supports 1 million layers, superior to Figma's 800,000 limit.",
+        "text_length": 81
+      },
+      {
+        "index": 126,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI Depth: Figma's AI leans towards auxiliary plugins, whereas Motiff is AI-driven with stronger style learning capabilities, making AI empowerment for UI design more direct and comprehensive.",
+        "text_length": 191
+      },
+      {
+        "index": 127,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Price: Motiff Pro is only ¥24/month, significantly lower than Figma's pricing system.",
+        "text_length": 85
+      },
+      {
+        "index": 128,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Differentiation Advantage: It is palpable that Motiff was developed with Figma as a benchmark; therefore, Motiff supports most features Figma has. Additionally, Motiff supports one-click conversion of public URLs into e…",
+        "text_length": 371
+      },
+      {
+        "index": 129,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "6. Advantages & Disadvantages",
+        "text_length": 29
+      },
+      {
+        "index": 130,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Core Advantages:",
+        "text_length": 16
+      },
+      {
+        "index": 131,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "AI generation capabilities are not only aesthetic but possess production-grade structure (not simple flat images).",
+        "text_length": 114
+      },
+      {
+        "index": 132,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "The automatic design system maintenance function greatly reduces enterprise management costs, lowers pressure on designers, and facilitates the establishment and execution of design standards.",
+        "text_length": 192
+      },
+      {
+        "index": 133,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Main Deficiencies:",
+        "text_length": 18
+      },
+      {
+        "index": 134,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "In the current version, content is occasionally missing or misaligned when generating UI design drafts.",
+        "text_length": 103
+      },
+      {
+        "index": 135,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "The current UI styles generated by AI tend to be template-like, leaning more towards utility than \"design feel.\" There is also a lack of grasp on user experience, requiring human designers to complete this part.",
+        "text_length": 211
+      },
+      {
+        "index": 136,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Although AI design system generation is an \"Excitement Need,\" the function currently has obvious deficiencies, as the UI styles extracted by AI are not comprehensive.",
+        "text_length": 166
+      },
+      {
+        "index": 137,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "The brand ecosystem (plugin community) still lags behind Figma, and Figma's status in the industry is difficult to shake.",
+        "text_length": 121
+      },
+      {
+        "index": 138,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "7. Price & Cost-Effectiveness",
+        "text_length": 29
+      },
+      {
+        "index": 139,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      },
+      {
+        "index": 140,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Pricing Model: Uses a \"Basic Free + Subscription\" model.",
+        "text_length": 56
+      },
+      {
+        "index": 141,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Specific Prices: Basic Version is free (100 credits/month); Professional Version ¥90/month; Enterprise Version ¥200/month; Group Version ¥300/month.",
+        "text_length": 148
+      },
+      {
+        "index": 142,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Cost-Effectiveness Assessment: Average.",
+        "text_length": 39
+      },
+      {
+        "index": 143,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Although Motiff has solved some of the designers' pain point needs, its Return on Investment (ROI) still needs consideration. Additionally, the quality currently produced by Motiff remains at a relatively basic UI or ev…",
+        "text_length": 468
+      },
+      {
+        "index": 144,
+        "style_name": "Heading 3",
+        "is_heading": true,
+        "heading_level": 3,
+        "metadata": {},
+        "text_preview": "8. Conclusion & Recommendations",
+        "text_length": 31
+      },
+      {
+        "index": 145,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Recommendation Conclusion: Relatively Recommended.",
+        "text_length": 50
+      },
+      {
+        "index": 146,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "Applicable Scenarios: Suitable for design teams seeking AI efficiency, startups, and projects requiring rapid response for overseas multi-language markets.",
+        "text_length": 155
+      },
+      {
+        "index": 147,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "",
+        "text_length": 0
+      }
+    ],
+    "sentences": [
+      {
+        "index": 0,
+        "paragraph_index": 0,
+        "paragraph_text": "妙多AI产品调研报告-Michael",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "妙多AI产品调研报告-Michael",
+        "text_length": 18
+      },
+      {
+        "index": 1,
+        "paragraph_index": 1,
+        "paragraph_text": "1.产品概述",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "1.产品概述",
+        "text_length": 6
+      },
+      {
+        "index": 2,
+        "paragraph_index": 2,
+        "paragraph_text": "基础信息：妙多AI（英文名：Motiff）是由猿辅导团队孵化，于2024年正式发布的下一代AI原生界面设计工具。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "基础信息：妙多AI（英文名：Motiff）是由猿辅导团队孵化，于2024年正式发布的下一代AI原生界面设计工具。",
+        "text_length": 56
+      },
+      {
+        "index": 3,
+        "paragraph_index": 3,
+        "paragraph_text": "类型与定位：这是一款基于Web的AI原生UI/UX设计平台，定位为“AI时代的设计工具”，旨在超越传统的协作工具（如Figma），通过AI驱动生产力变革。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "类型与定位：这是一款基于Web的AI原生UI/UX设计平台，定位为“AI时代的设计工具”，旨在超越传统的协作工具（如Figma），通过AI驱动生产力变革。",
+        "text_length": 77
+      },
+      {
+        "index": 4,
+        "paragraph_index": 4,
+        "paragraph_text": "核心价值：通过自研的UI大模型，帮助设计师从繁琐的重复劳动中解放，实现“意图到设计”的跨越，大幅提升初稿生成与系统维护效率。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "核心价值：通过自研的UI大模型，帮助设计师从繁琐的重复劳动中解放，实现“意图到设计”的跨越，大幅提升初稿生成与系统维护效率。",
+        "text_length": 62
+      },
+      {
+        "index": 5,
+        "paragraph_index": 5,
+        "paragraph_text": "2.目标用户与市场定位",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "2.目标用户与市场定位",
+        "text_length": 11
+      },
+      {
+        "index": 6,
+        "paragraph_index": 6,
+        "paragraph_text": "目标用户：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "目标用户：",
+        "text_length": 5
+      },
+      {
+        "index": 7,
+        "paragraph_index": 7,
+        "paragraph_text": "职业：UI/UX设计师、产品经理、前端开发人员。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "职业：UI/UX设计师、产品经理、前端开发人员。",
+        "text_length": 24
+      },
+      {
+        "index": 8,
+        "paragraph_index": 8,
+        "paragraph_text": "典型场景：快速原型制作、大规模设计系统维护、出海产品的多语言适配、从设计稿到代码的自动化落地。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "典型场景：快速原型制作、大规模设计系统维护、出海产品的多语言适配、从设计稿到代码的自动化落地。",
+        "text_length": 47
+      },
+      {
+        "index": 9,
+        "paragraph_index": 9,
+        "paragraph_text": "核心痛点：传统工具（如Figma）虽解决了协同问题，但设计师仍需耗费大量时间进行手动布点、组件对齐及繁杂的文档及设计系统的维护。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "核心痛点：传统工具（如Figma）虽解决了协同问题，但设计师仍需耗费大量时间进行手动布点、组件对齐及繁杂的文档及设计系统的维护。",
+        "text_length": 64
+      },
+      {
+        "index": 10,
+        "paragraph_index": 10,
+        "paragraph_text": "市场潜力：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "市场潜力：",
+        "text_length": 5
+      },
+      {
+        "index": 11,
+        "paragraph_index": 11,
+        "paragraph_text": "行业规模扩张：全球用户体验（UX）服务市场在2024年为46.8亿美元，预计2025年将增至64.0亿美元，并以36%的复合年增长率在2032年达到549.3亿美元",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "行业规模扩张：全球用户体验（UX）服务市场在2024年为46.8亿美元，预计2025年将增至64.0亿美元，并以36%的复合年增长率在2032年达到549.3亿美元",
+        "text_length": 82
+      },
+      {
+        "index": 12,
+        "paragraph_index": 12,
+        "paragraph_text": "3.核心功能与特性",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "3.核心功能与特性",
+        "text_length": 9
+      },
+      {
+        "index": 13,
+        "paragraph_index": 13,
+        "paragraph_text": "AI生成UI：支持“文本生成”与“图片引用生成”。用户输入一段需求（如“植物护理App首页”），系统可自动生成具备完整结构的高保真设计稿，并且可以随时用文字来继续调整样式。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI生成UI：支持“文本生成”与“图片引用生成”。",
+        "text_length": 25
+      },
+      {
+        "index": 14,
+        "paragraph_index": 13,
+        "paragraph_text": "AI生成UI：支持“文本生成”与“图片引用生成”。用户输入一段需求（如“植物护理App首页”），系统可自动生成具备完整结构的高保真设计稿，并且可以随时用文字来继续调整样式。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "用户输入一段需求（如“植物护理App首页”），系统可自动生成具备完整结构的高保真设计稿，并且可以随时用文字来继续调整样式。",
+        "text_length": 61
+      },
+      {
+        "index": 15,
+        "paragraph_index": 14,
+        "paragraph_text": "AI设计系统：包括设计风格的学习、设计系统的自动创建、维护与一致性检查，能从历史稿件中自动提炼组件和样式。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI设计系统：包括设计风格的学习、设计系统的自动创建、维护与一致性检查，能从历史稿件中自动提炼组件和样式。",
+        "text_length": 53
+      },
+      {
+        "index": 16,
+        "paragraph_index": 15,
+        "paragraph_text": "智能编辑与魔法框：通过“智能编辑”可直接指令修改布局；“魔法框”则允许用户在任意区域框选并生成建议模块。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "智能编辑与魔法框：通过“智能编辑”可直接指令修改布局；",
+        "text_length": 27
+      },
+      {
+        "index": 17,
+        "paragraph_index": 15,
+        "paragraph_text": "智能编辑与魔法框：通过“智能编辑”可直接指令修改布局；“魔法框”则允许用户在任意区域框选并生成建议模块。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "“魔法框”则允许用户在任意区域框选并生成建议模块。",
+        "text_length": 25
+      },
+      {
+        "index": 18,
+        "paragraph_index": 16,
+        "paragraph_text": "MCP：通过API将设计数据集成到本地IDE中，配合AI编程工具（如Claude-3.5-Sonnet）直接生成React等代码。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "MCP：通过API将设计数据集成到本地IDE中，配合AI编程工具（如Claude-3.5-Sonnet）直接生成React等代码。",
+        "text_length": 65
+      },
+      {
+        "index": 19,
+        "paragraph_index": 17,
+        "paragraph_text": "实际使用体验",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "实际使用体验",
+        "text_length": 6
+      },
+      {
+        "index": 20,
+        "paragraph_index": 18,
+        "paragraph_text": "界面生成测试",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "界面生成测试",
+        "text_length": 6
+      },
+      {
+        "index": 21,
+        "paragraph_index": 19,
+        "paragraph_text": "以创建一个数字化个人财务管理 App作为案例进行测试",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "以创建一个数字化个人财务管理 App作为案例进行测试",
+        "text_length": 26
+      },
+      {
+        "index": 22,
+        "paragraph_index": 20,
+        "paragraph_text": "首先我使用了如下的prompt希望妙多能帮我生成首页的UI：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "首先我使用了如下的prompt希望妙多能帮我生成首页的UI：",
+        "text_length": 30
+      },
+      {
+        "index": 23,
+        "paragraph_index": 23,
+        "paragraph_text": "很快妙多就给我生成了一个产品主页的界面，并且完全符合我的prompt需求，本操作消耗14积分。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "很快妙多就给我生成了一个产品主页的界面，并且完全符合我的prompt需求，本操作消耗14积分。",
+        "text_length": 47
+      },
+      {
+        "index": 24,
+        "paragraph_index": 24,
+        "paragraph_text": "下面测试一下样式修改功能：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "下面测试一下样式修改功能：",
+        "text_length": 13
+      },
+      {
+        "index": 25,
+        "paragraph_index": 25,
+        "paragraph_text": "我选中了“最近交易”这部分然后告诉AI我的需求如下",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "我选中了“最近交易”这部分然后告诉AI我的需求如下",
+        "text_length": 25
+      },
+      {
+        "index": 26,
+        "paragraph_index": 29,
+        "paragraph_text": "上图是妙多修改好的设计稿，可以看到妙多对语义理解非常准确，也能够正确映射到相应的设计样式上，这不操作消耗13积分。但是这一步出现了文字错位的问题，尝试使用AI继续进行完善。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "上图是妙多修改好的设计稿，可以看到妙多对语义理解非常准确，也能够正确映射到相应的设计样式上，这不操作消耗13积分。",
+        "text_length": 57
+      },
+      {
+        "index": 27,
+        "paragraph_index": 29,
+        "paragraph_text": "上图是妙多修改好的设计稿，可以看到妙多对语义理解非常准确，也能够正确映射到相应的设计样式上，这不操作消耗13积分。但是这一步出现了文字错位的问题，尝试使用AI继续进行完善。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "但是这一步出现了文字错位的问题，尝试使用AI继续进行完善。",
+        "text_length": 29
+      },
+      {
+        "index": 28,
+        "paragraph_index": 32,
+        "paragraph_text": "部分缺失有修复，但是还存在一部分问题没有修复好，本步骤消耗7积分。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "部分缺失有修复，但是还存在一部分问题没有修复好，本步骤消耗7积分。",
+        "text_length": 33
+      },
+      {
+        "index": 29,
+        "paragraph_index": 34,
+        "paragraph_text": "设计系统生成",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "设计系统生成",
+        "text_length": 6
+      },
+      {
+        "index": 30,
+        "paragraph_index": 35,
+        "paragraph_text": "我们利用妙多提供的素材尝试设计系统的自动生成。设计系统的维护是很多比较大型的公司都会比较头疼的，却又是必须要做的一件事情。单纯的界面生成可能价值并没有很高，但如果妙多能够对设计系统的生成和维护起到帮助那么对于中大型公司来说将会非常有价值。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "我们利用妙多提供的素材尝试设计系统的自动生成。",
+        "text_length": 23
+      },
+      {
+        "index": 31,
+        "paragraph_index": 35,
+        "paragraph_text": "我们利用妙多提供的素材尝试设计系统的自动生成。设计系统的维护是很多比较大型的公司都会比较头疼的，却又是必须要做的一件事情。单纯的界面生成可能价值并没有很高，但如果妙多能够对设计系统的生成和维护起到帮助那么对于中大型公司来说将会非常有价值。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "设计系统的维护是很多比较大型的公司都会比较头疼的，却又是必须要做的一件事情。",
+        "text_length": 38
+      },
+      {
+        "index": 32,
+        "paragraph_index": 35,
+        "paragraph_text": "我们利用妙多提供的素材尝试设计系统的自动生成。设计系统的维护是很多比较大型的公司都会比较头疼的，却又是必须要做的一件事情。单纯的界面生成可能价值并没有很高，但如果妙多能够对设计系统的生成和维护起到帮助那么对于中大型公司来说将会非常有价值。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "单纯的界面生成可能价值并没有很高，但如果妙多能够对设计系统的生成和维护起到帮助那么对于中大型公司来说将会非常有价值。",
+        "text_length": 58
+      },
+      {
+        "index": 33,
+        "paragraph_index": 37,
+        "paragraph_text": "如上图所示，妙多提供的素材是一个完整的音乐类APP界面，只需要点击右上角的AI设计系统创建按钮然后选择需要让妙多参考的设计稿妙多就会开始对设计稿进行识别。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "如上图所示，妙多提供的素材是一个完整的音乐类APP界面，只需要点击右上角的AI设计系统创建按钮然后选择需要让妙多参考的设计稿妙多就会开始对设计稿进行识别。",
+        "text_length": 77
+      },
+      {
+        "index": 34,
+        "paragraph_index": 40,
+        "paragraph_text": "识别出来的结果如下图：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "识别出来的结果如下图：",
+        "text_length": 11
+      },
+      {
+        "index": 35,
+        "paragraph_index": 46,
+        "paragraph_text": "妙多将设计稿的组件进行了功能性区分和提炼，产生了颜色、排版、效果和图标四个分类，总的来说效果超出我的意料，但还是存在问题。提炼出来的内容并不全面，例如按钮的样式并没有提炼出来，这个缺点使这个功能有些食之无味弃之可惜。不过优点是妙多通过AI生成设计系统并没有消耗很多积分。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "妙多将设计稿的组件进行了功能性区分和提炼，产生了颜色、排版、效果和图标四个分类，总的来说效果超出我的意料，但还是存在问题。",
+        "text_length": 61
+      },
+      {
+        "index": 36,
+        "paragraph_index": 46,
+        "paragraph_text": "妙多将设计稿的组件进行了功能性区分和提炼，产生了颜色、排版、效果和图标四个分类，总的来说效果超出我的意料，但还是存在问题。提炼出来的内容并不全面，例如按钮的样式并没有提炼出来，这个缺点使这个功能有些食之无味弃之可惜。不过优点是妙多通过AI生成设计系统并没有消耗很多积分。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "提炼出来的内容并不全面，例如按钮的样式并没有提炼出来，这个缺点使这个功能有些食之无味弃之可惜。",
+        "text_length": 47
+      },
+      {
+        "index": 37,
+        "paragraph_index": 46,
+        "paragraph_text": "妙多将设计稿的组件进行了功能性区分和提炼，产生了颜色、排版、效果和图标四个分类，总的来说效果超出我的意料，但还是存在问题。提炼出来的内容并不全面，例如按钮的样式并没有提炼出来，这个缺点使这个功能有些食之无味弃之可惜。不过优点是妙多通过AI生成设计系统并没有消耗很多积分。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "不过优点是妙多通过AI生成设计系统并没有消耗很多积分。",
+        "text_length": 27
+      },
+      {
+        "index": 38,
+        "paragraph_index": 48,
+        "paragraph_text": "流程顺畅性：注册流程极简，支持浏览器直接访问，新手引导覆盖了AI面板的核心操作。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "流程顺畅性：注册流程极简，支持浏览器直接访问，新手引导覆盖了AI面板的核心操作。",
+        "text_length": 40
+      },
+      {
+        "index": 39,
+        "paragraph_index": 49,
+        "paragraph_text": "界面与交互：UI界面与主流设计工具相似，降低了迁移成本。AI面板作为独立交互核心，操作反馈实时可见。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "界面与交互：UI界面与主流设计工具相似，降低了迁移成本。",
+        "text_length": 28
+      },
+      {
+        "index": 40,
+        "paragraph_index": 49,
+        "paragraph_text": "界面与交互：UI界面与主流设计工具相似，降低了迁移成本。AI面板作为独立交互核心，操作反馈实时可见。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI面板作为独立交互核心，操作反馈实时可见。",
+        "text_length": 22
+      },
+      {
+        "index": 41,
+        "paragraph_index": 50,
+        "paragraph_text": "问题记录：虽然文字生成UI效果惊艳，但在部分情况下仍然会出现界面错乱的问题，生成的布局仍需人工微调。对于设计系统的生成上也仍然存在欠缺，距离人手工进行样式的整理还有一定的差距，而这点也使得这个功能被采用的可能性大大降低。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "问题记录：虽然文字生成UI效果惊艳，但在部分情况下仍然会出现界面错乱的问题，生成的布局仍需人工微调。",
+        "text_length": 50
+      },
+      {
+        "index": 42,
+        "paragraph_index": 50,
+        "paragraph_text": "问题记录：虽然文字生成UI效果惊艳，但在部分情况下仍然会出现界面错乱的问题，生成的布局仍需人工微调。对于设计系统的生成上也仍然存在欠缺，距离人手工进行样式的整理还有一定的差距，而这点也使得这个功能被采用的可能性大大降低。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "对于设计系统的生成上也仍然存在欠缺，距离人手工进行样式的整理还有一定的差距，而这点也使得这个功能被采用的可能性大大降低。",
+        "text_length": 60
+      },
+      {
+        "index": 43,
+        "paragraph_index": 51,
+        "paragraph_text": "5.竞品对比分析",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "5.竞品对比分析",
+        "text_length": 8
+      },
+      {
+        "index": 44,
+        "paragraph_index": 52,
+        "paragraph_text": "直接竞品：Figma,Adobe XD,MasterGo。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "直接竞品：Figma,Adobe XD,MasterGo。",
+        "text_length": 29
+      },
+      {
+        "index": 45,
+        "paragraph_index": 53,
+        "paragraph_text": "对比维度：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "对比维度：",
+        "text_length": 5
+      },
+      {
+        "index": 46,
+        "paragraph_index": 54,
+        "paragraph_text": "性能：妙多支持100万级图层，优于Figma的80万上限。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "性能：妙多支持100万级图层，优于Figma的80万上限。",
+        "text_length": 29
+      },
+      {
+        "index": 47,
+        "paragraph_index": 55,
+        "paragraph_text": "AI深度：Figma的AI偏向辅助插件，二妙多是AI驱动，具备更强的风格学习能力，AI功能对UI设计的赋能更加直接和全面。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI深度：Figma的AI偏向辅助插件，二妙多是AI驱动，具备更强的风格学习能力，AI功能对UI设计的赋能更加直接和全面。",
+        "text_length": 61
+      },
+      {
+        "index": 48,
+        "paragraph_index": 56,
+        "paragraph_text": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "text_length": 32
+      },
+      {
+        "index": 49,
+        "paragraph_index": 57,
+        "paragraph_text": "差异化优势：可以感受到妙多是对标Figma进行的开发，因此大部分Figma拥有的功能妙多都支持，同时妙多支持将公网网址一键转化为可编辑的设计稿、并且可以直接选择设计稿进行设计系统的生成，这两个功能属于兴奋型需求。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "差异化优势：可以感受到妙多是对标Figma进行的开发，因此大部分Figma拥有的功能妙多都支持，同时妙多支持将公网网址一键转化为可编辑的设计稿、并且可以直接选择设计稿进行设计系统的生成，这两个功能属于兴奋型需求。",
+        "text_length": 106
+      },
+      {
+        "index": 50,
+        "paragraph_index": 58,
+        "paragraph_text": "6.优势与不足",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "6.优势与不足",
+        "text_length": 7
+      },
+      {
+        "index": 51,
+        "paragraph_index": 59,
+        "paragraph_text": "核心优势：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "核心优势：",
+        "text_length": 5
+      },
+      {
+        "index": 52,
+        "paragraph_index": 60,
+        "paragraph_text": "AI生成能力不仅美观且具备生产级结构（非单纯贴图）。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI生成能力不仅美观且具备生产级结构（非单纯贴图）。",
+        "text_length": 26
+      },
+      {
+        "index": 53,
+        "paragraph_index": 61,
+        "paragraph_text": "设计系统自动维护功能极大降低了企业管理成本，并且降低了设计师的压力，也易于设计标准的建立和执行。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "设计系统自动维护功能极大降低了企业管理成本，并且降低了设计师的压力，也易于设计标准的建立和执行。",
+        "text_length": 48
+      },
+      {
+        "index": 54,
+        "paragraph_index": 62,
+        "paragraph_text": "主要不足：",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "主要不足：",
+        "text_length": 5
+      },
+      {
+        "index": 55,
+        "paragraph_index": 63,
+        "paragraph_text": "当前版本在生成UI设计稿时，偶有内容缺失或错位。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "当前版本在生成UI设计稿时，偶有内容缺失或错位。",
+        "text_length": 24
+      },
+      {
+        "index": 56,
+        "paragraph_index": 64,
+        "paragraph_text": "当前AI所能生成的UI风格偏模板化，更加偏实用性而非设计感，另外在用户体验的把握上还有所欠缺，需要人类设计师来补全这部分内容。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "当前AI所能生成的UI风格偏模板化，更加偏实用性而非设计感，另外在用户体验的把握上还有所欠缺，需要人类设计师来补全这部分内容。",
+        "text_length": 63
+      },
+      {
+        "index": 57,
+        "paragraph_index": 65,
+        "paragraph_text": "虽然AI生成设计系统是一个兴奋性需求，但是该功能目前有比较明显的欠缺，AI提炼的UI样式并不全面。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "虽然AI生成设计系统是一个兴奋性需求，但是该功能目前有比较明显的欠缺，AI提炼的UI样式并不全面。",
+        "text_length": 49
+      },
+      {
+        "index": 58,
+        "paragraph_index": 66,
+        "paragraph_text": "品牌生态（插件社区）相比Figma仍有差距，此外Figma在行业中的地位难以撼动。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "品牌生态（插件社区）相比Figma仍有差距，此外Figma在行业中的地位难以撼动。",
+        "text_length": 41
+      },
+      {
+        "index": 59,
+        "paragraph_index": 67,
+        "paragraph_text": "价格与性价比",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "价格与性价比",
+        "text_length": 6
+      },
+      {
+        "index": 60,
+        "paragraph_index": 69,
+        "paragraph_text": "定价模式：采用“基础免费+订阅”模式。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "定价模式：采用“基础免费+订阅”模式。",
+        "text_length": 19
+      },
+      {
+        "index": 61,
+        "paragraph_index": 70,
+        "paragraph_text": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "具体价格：基础版免费，每月100积分；",
+        "text_length": 19
+      },
+      {
+        "index": 62,
+        "paragraph_index": 70,
+        "paragraph_text": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "专业版¥90/月；",
+        "text_length": 9
+      },
+      {
+        "index": 63,
+        "paragraph_index": 70,
+        "paragraph_text": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "企业版¥200/月；",
+        "text_length": 10
+      },
+      {
+        "index": 64,
+        "paragraph_index": 70,
+        "paragraph_text": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "集团版¥300/月。",
+        "text_length": 10
+      },
+      {
+        "index": 65,
+        "paragraph_index": 71,
+        "paragraph_text": "性价比评估：一般。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "性价比评估：一般。",
+        "text_length": 9
+      },
+      {
+        "index": 66,
+        "paragraph_index": 72,
+        "paragraph_text": "虽然目前妙多已经解决了设计师的部分痛点需求，但是其投入产出比仍需考虑，另外目前妙多所生产出来的质量仍然处于比较基础的UI甚至是原型的水平，在目前企业对于UI和UX的质量要求越来越高的时期可能妙多能起到的作用仍然有限。并且目前的UI大多需要动效的配合，在这方面上妙多还有所欠缺。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "虽然目前妙多已经解决了设计师的部分痛点需求，但是其投入产出比仍需考虑，另外目前妙多所生产出来的质量仍然处于比较基础的UI甚至是原型的水平，在目前企业对于UI和UX的质量要求越来越高的时期可能妙多能起到的作用仍然有限。",
+        "text_length": 108
+      },
+      {
+        "index": 67,
+        "paragraph_index": 72,
+        "paragraph_text": "虽然目前妙多已经解决了设计师的部分痛点需求，但是其投入产出比仍需考虑，另外目前妙多所生产出来的质量仍然处于比较基础的UI甚至是原型的水平，在目前企业对于UI和UX的质量要求越来越高的时期可能妙多能起到的作用仍然有限。并且目前的UI大多需要动效的配合，在这方面上妙多还有所欠缺。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "并且目前的UI大多需要动效的配合，在这方面上妙多还有所欠缺。",
+        "text_length": 30
+      },
+      {
+        "index": 68,
+        "paragraph_index": 73,
+        "paragraph_text": "8.结论与推荐建议",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "8.结论与推荐建议",
+        "text_length": 9
+      },
+      {
+        "index": 69,
+        "paragraph_index": 74,
+        "paragraph_text": "推荐结论：比较推荐。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "推荐结论：比较推荐。",
+        "text_length": 10
+      },
+      {
+        "index": 70,
+        "paragraph_index": 75,
+        "paragraph_text": "适用场景：适合寻求AI提效的设计团队、初创公司及需要快速响应海外多语言市场的项目。",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "适用场景：适合寻求AI提效的设计团队、初创公司及需要快速响应海外多语言市场的项目。",
+        "text_length": 41
+      },
+      {
+        "index": 71,
+        "paragraph_index": 77,
+        "paragraph_text": "Motiff AI Product Research Report",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "Motiff AI Product Research Report",
+        "text_length": 33
+      },
+      {
+        "index": 72,
+        "paragraph_index": 78,
+        "paragraph_text": "1. Product Overview",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "1. Product Overview",
+        "text_length": 19
+      },
+      {
+        "index": 73,
+        "paragraph_index": 79,
+        "paragraph_text": "Basic Information: Motiff is the next-generation AI-native interface design tool incubated by the Yuanfudao team and officially released in 2024.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Basic Information: Motiff is the next-generation AI-native interface design tool incubated by the Yuanfudao team and officially released in 2024.",
+        "text_length": 145
+      },
+      {
+        "index": 74,
+        "paragraph_index": 80,
+        "paragraph_text": "Type & Positioning: This is a Web-based AI-native UI/UX design platform, positioned as a \"Design Tool for the AI Era,\" aiming to surpass traditional collaboration tools (like Figma) and drive productivity transformation through AI.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Type & Positioning: This is a Web-based AI-native UI/UX design platform, positioned as a \"Design Tool for the AI Era,\" aiming to surpass traditional collaboration tools (like Figma) and drive productivity transformation…",
+        "text_length": 231
+      },
+      {
+        "index": 75,
+        "paragraph_index": 81,
+        "paragraph_text": "Core Value: Through its self-developed UI Large Model, it helps designers liberate themselves from tedious repetitive labor, achieving the leap from \"Intention to Design,\" and significantly improving efficiency in initial draft generation and system maintenance.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Core Value: Through its self-developed UI Large Model, it helps designers liberate themselves from tedious repetitive labor, achieving the leap from \"Intention to Design,\" and significantly improving efficiency in initi…",
+        "text_length": 262
+      },
+      {
+        "index": 76,
+        "paragraph_index": 82,
+        "paragraph_text": "2. Target User & Market Positioning",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "2. Target User & Market Positioning",
+        "text_length": 35
+      },
+      {
+        "index": 77,
+        "paragraph_index": 83,
+        "paragraph_text": "Target Users:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Target Users:",
+        "text_length": 13
+      },
+      {
+        "index": 78,
+        "paragraph_index": 84,
+        "paragraph_text": "Occupation: UI/UX Designers, Product Managers, Front-end Developers.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Occupation: UI/UX Designers, Product Managers, Front-end Developers.",
+        "text_length": 68
+      },
+      {
+        "index": 79,
+        "paragraph_index": 85,
+        "paragraph_text": "Typical Scenarios: Rapid prototyping, large-scale design system maintenance, multi-language adaptation for overseas products, and automated implementation from design drafts to code.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Typical Scenarios: Rapid prototyping, large-scale design system maintenance, multi-language adaptation for overseas products, and automated implementation from design drafts to code.",
+        "text_length": 182
+      },
+      {
+        "index": 80,
+        "paragraph_index": 86,
+        "paragraph_text": "Core Pain Points: Although traditional tools (like Figma) solved collaboration issues, designers still spend a large amount of time on manual layout, component alignment, and the maintenance of complex documentation and design systems.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Core Pain Points: Although traditional tools (like Figma) solved collaboration issues, designers still spend a large amount of time on manual layout, component alignment, and the maintenance of complex documentation and…",
+        "text_length": 235
+      },
+      {
+        "index": 81,
+        "paragraph_index": 87,
+        "paragraph_text": "Market Potential:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Market Potential:",
+        "text_length": 17
+      },
+      {
+        "index": 82,
+        "paragraph_index": 88,
+        "paragraph_text": "Industry Scale Expansion: The global User Experience (UX) services market was 4.68 billion USD in 2024. It is expected to grow to 6.40 billion USD by 2025 and reach 54.93 billion USD by 2032, with a compound annual growth rate (CAGR) of 36%.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Industry Scale Expansion: The global User Experience (UX) services market was 4.68 billion USD in 2024.",
+        "text_length": 103
+      },
+      {
+        "index": 83,
+        "paragraph_index": 88,
+        "paragraph_text": "Industry Scale Expansion: The global User Experience (UX) services market was 4.68 billion USD in 2024. It is expected to grow to 6.40 billion USD by 2025 and reach 54.93 billion USD by 2032, with a compound annual growth rate (CAGR) of 36%.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "It is expected to grow to 6.40 billion USD by 2025 and reach 54.93 billion USD by 2032, with a compound annual growth rate (CAGR) of 36%.",
+        "text_length": 137
+      },
+      {
+        "index": 84,
+        "paragraph_index": 89,
+        "paragraph_text": "3. Core Functions & Features",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "3. Core Functions & Features",
+        "text_length": 28
+      },
+      {
+        "index": 85,
+        "paragraph_index": 90,
+        "paragraph_text": "AI UI Generation: Supports \"Text-to-Design\" and \"Image Reference Generation.\" Users input a requirement (e.g., \"Plant Care App Homepage\"), and the system automatically generates a high-fidelity design draft with a complete structure, allowing users to adjust styles via text at any time.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI UI Generation: Supports \"Text-to-Design\" and \"Image Reference Generation.\" Users input a requirement (e.g., \"Plant Care App Homepage\"), and the system automatically generates a high-fidelity design draft with a compl…",
+        "text_length": 287
+      },
+      {
+        "index": 86,
+        "paragraph_index": 91,
+        "paragraph_text": "AI Design System: Includes design style learning, automatic creation, maintenance, and consistency checking of design systems. It can automatically extract components and styles from historical drafts.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI Design System: Includes design style learning, automatic creation, maintenance, and consistency checking of design systems.",
+        "text_length": 126
+      },
+      {
+        "index": 87,
+        "paragraph_index": 91,
+        "paragraph_text": "AI Design System: Includes design style learning, automatic creation, maintenance, and consistency checking of design systems. It can automatically extract components and styles from historical drafts.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "It can automatically extract components and styles from historical drafts.",
+        "text_length": 74
+      },
+      {
+        "index": 88,
+        "paragraph_index": 92,
+        "paragraph_text": "Smart Editing & Magic Box: \"Smart Editing\" allows direct layout modification via commands; the \"Magic Box\" allows users to select any area and generate suggested modules.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Smart Editing & Magic Box: \"Smart Editing\" allows direct layout modification via commands;",
+        "text_length": 90
+      },
+      {
+        "index": 89,
+        "paragraph_index": 92,
+        "paragraph_text": "Smart Editing & Magic Box: \"Smart Editing\" allows direct layout modification via commands; the \"Magic Box\" allows users to select any area and generate suggested modules.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "the \"Magic Box\" allows users to select any area and generate suggested modules.",
+        "text_length": 79
+      },
+      {
+        "index": 90,
+        "paragraph_index": 93,
+        "paragraph_text": "MCP: Integrates design data into local IDEs via API, working with AI programming tools (like Claude-3.5-Sonnet) to directly generate code such as React.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "MCP: Integrates design data into local IDEs via API, working with AI programming tools (like Claude-3.5-Sonnet) to directly generate code such as React.",
+        "text_length": 152
+      },
+      {
+        "index": 91,
+        "paragraph_index": 94,
+        "paragraph_text": "4. Actual User Experience",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "4. Actual User Experience",
+        "text_length": 25
+      },
+      {
+        "index": 92,
+        "paragraph_index": 95,
+        "paragraph_text": "Interface Generation Test",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "Interface Generation Test",
+        "text_length": 25
+      },
+      {
+        "index": 93,
+        "paragraph_index": 96,
+        "paragraph_text": "Testing with the creation of a Digital Personal Finance Management App as a case study.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Testing with the creation of a Digital Personal Finance Management App as a case study.",
+        "text_length": 87
+      },
+      {
+        "index": 94,
+        "paragraph_index": 97,
+        "paragraph_text": "First, I used the following prompt hoping Motiff could help me generate the homepage UI:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "First, I used the following prompt hoping Motiff could help me generate the homepage UI:",
+        "text_length": 88
+      },
+      {
+        "index": 95,
+        "paragraph_index": 100,
+        "paragraph_text": "Motiff quickly generated a product homepage interface that completely met my prompt requirements. This operation consumed 14 credits.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Motiff quickly generated a product homepage interface that completely met my prompt requirements.",
+        "text_length": 97
+      },
+      {
+        "index": 96,
+        "paragraph_index": 100,
+        "paragraph_text": "Motiff quickly generated a product homepage interface that completely met my prompt requirements. This operation consumed 14 credits.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "This operation consumed 14 credits.",
+        "text_length": 35
+      },
+      {
+        "index": 97,
+        "paragraph_index": 101,
+        "paragraph_text": "Testing Style Modification Functions:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Testing Style Modification Functions:",
+        "text_length": 37
+      },
+      {
+        "index": 98,
+        "paragraph_index": 102,
+        "paragraph_text": "I selected the \"Recent Transactions\" part and told the AI my requirements as follows:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "I selected the \"Recent Transactions\" part and told the AI my requirements as follows:",
+        "text_length": 85
+      },
+      {
+        "index": 99,
+        "paragraph_index": 105,
+        "paragraph_text": "The image above shows the design draft modified by Motiff. It can be seen that Motiff's semantic understanding is very accurate and can correctly map to the corresponding design styles. This operation consumed 13 credits. However, a text misalignment issue occurred in this step, so I attempted to use AI to continue refining it.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The image above shows the design draft modified by Motiff.",
+        "text_length": 58
+      },
+      {
+        "index": 100,
+        "paragraph_index": 105,
+        "paragraph_text": "The image above shows the design draft modified by Motiff. It can be seen that Motiff's semantic understanding is very accurate and can correctly map to the corresponding design styles. This operation consumed 13 credits. However, a text misalignment issue occurred in this step, so I attempted to use AI to continue refining it.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "It can be seen that Motiff's semantic understanding is very accurate and can correctly map to the corresponding design styles.",
+        "text_length": 126
+      },
+      {
+        "index": 101,
+        "paragraph_index": 105,
+        "paragraph_text": "The image above shows the design draft modified by Motiff. It can be seen that Motiff's semantic understanding is very accurate and can correctly map to the corresponding design styles. This operation consumed 13 credits. However, a text misalignment issue occurred in this step, so I attempted to use AI to continue refining it.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "This operation consumed 13 credits.",
+        "text_length": 35
+      },
+      {
+        "index": 102,
+        "paragraph_index": 105,
+        "paragraph_text": "The image above shows the design draft modified by Motiff. It can be seen that Motiff's semantic understanding is very accurate and can correctly map to the corresponding design styles. This operation consumed 13 credits. However, a text misalignment issue occurred in this step, so I attempted to use AI to continue refining it.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "However, a text misalignment issue occurred in this step, so I attempted to use AI to continue refining it.",
+        "text_length": 107
+      },
+      {
+        "index": 103,
+        "paragraph_index": 107,
+        "paragraph_text": "Some parts were fixed, but there are still some issues that were not fully repaired. This step consumed 7 credits.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Some parts were fixed, but there are still some issues that were not fully repaired.",
+        "text_length": 84
+      },
+      {
+        "index": 104,
+        "paragraph_index": 107,
+        "paragraph_text": "Some parts were fixed, but there are still some issues that were not fully repaired. This step consumed 7 credits.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "This step consumed 7 credits.",
+        "text_length": 29
+      },
+      {
+        "index": 105,
+        "paragraph_index": 109,
+        "paragraph_text": "Design System Generation",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "Design System Generation",
+        "text_length": 24
+      },
+      {
+        "index": 106,
+        "paragraph_index": 110,
+        "paragraph_text": "We used assets provided by Motiff to attempt the automatic generation of a design system. Maintenance of design systems is a headache for many large companies but is a necessary task. Pure interface generation might not have high value, but if Motiff can help with the generation and maintenance of design systems, it would be very valuable for medium-to-large companies.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "We used assets provided by Motiff to attempt the automatic generation of a design system.",
+        "text_length": 89
+      },
+      {
+        "index": 107,
+        "paragraph_index": 110,
+        "paragraph_text": "We used assets provided by Motiff to attempt the automatic generation of a design system. Maintenance of design systems is a headache for many large companies but is a necessary task. Pure interface generation might not have high value, but if Motiff can help with the generation and maintenance of design systems, it would be very valuable for medium-to-large companies.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Maintenance of design systems is a headache for many large companies but is a necessary task.",
+        "text_length": 93
+      },
+      {
+        "index": 108,
+        "paragraph_index": 110,
+        "paragraph_text": "We used assets provided by Motiff to attempt the automatic generation of a design system. Maintenance of design systems is a headache for many large companies but is a necessary task. Pure interface generation might not have high value, but if Motiff can help with the generation and maintenance of design systems, it would be very valuable for medium-to-large companies.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Pure interface generation might not have high value, but if Motiff can help with the generation and maintenance of design systems, it would be very valuable for medium-to-large companies.",
+        "text_length": 187
+      },
+      {
+        "index": 109,
+        "paragraph_index": 111,
+        "paragraph_text": "As shown in the image above, the asset provided by Motiff is a complete Music App interface. You only need to click the \"AI Design System Creation\" button in the top right corner and select the design draft Motiff should reference, and Motiff will begin recognizing the design draft.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "As shown in the image above, the asset provided by Motiff is a complete Music App interface.",
+        "text_length": 92
+      },
+      {
+        "index": 110,
+        "paragraph_index": 111,
+        "paragraph_text": "As shown in the image above, the asset provided by Motiff is a complete Music App interface. You only need to click the \"AI Design System Creation\" button in the top right corner and select the design draft Motiff should reference, and Motiff will begin recognizing the design draft.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "You only need to click the \"AI Design System Creation\" button in the top right corner and select the design draft Motiff should reference, and Motiff will begin recognizing the design draft.",
+        "text_length": 190
+      },
+      {
+        "index": 111,
+        "paragraph_index": 113,
+        "paragraph_text": "The recognition results are shown below:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The recognition results are shown below:",
+        "text_length": 40
+      },
+      {
+        "index": 112,
+        "paragraph_index": 118,
+        "paragraph_text": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon. Overall, the effect exceeded my expectations, but issues still exist. The extracted content is not comprehensive; for example, button styles were not extracted. This flaw makes this function somewhat \"tasteless\" (good in concept but lacking in execution). However, the advantage is that Motiff did not consume many credits for generating the design system via AI.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon.",
+        "text_length": 147
+      },
+      {
+        "index": 113,
+        "paragraph_index": 118,
+        "paragraph_text": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon. Overall, the effect exceeded my expectations, but issues still exist. The extracted content is not comprehensive; for example, button styles were not extracted. This flaw makes this function somewhat \"tasteless\" (good in concept but lacking in execution). However, the advantage is that Motiff did not consume many credits for generating the design system via AI.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Overall, the effect exceeded my expectations, but issues still exist.",
+        "text_length": 69
+      },
+      {
+        "index": 114,
+        "paragraph_index": 118,
+        "paragraph_text": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon. Overall, the effect exceeded my expectations, but issues still exist. The extracted content is not comprehensive; for example, button styles were not extracted. This flaw makes this function somewhat \"tasteless\" (good in concept but lacking in execution). However, the advantage is that Motiff did not consume many credits for generating the design system via AI.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The extracted content is not comprehensive;",
+        "text_length": 43
+      },
+      {
+        "index": 115,
+        "paragraph_index": 118,
+        "paragraph_text": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon. Overall, the effect exceeded my expectations, but issues still exist. The extracted content is not comprehensive; for example, button styles were not extracted. This flaw makes this function somewhat \"tasteless\" (good in concept but lacking in execution). However, the advantage is that Motiff did not consume many credits for generating the design system via AI.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "for example, button styles were not extracted.",
+        "text_length": 46
+      },
+      {
+        "index": 116,
+        "paragraph_index": 118,
+        "paragraph_text": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon. Overall, the effect exceeded my expectations, but issues still exist. The extracted content is not comprehensive; for example, button styles were not extracted. This flaw makes this function somewhat \"tasteless\" (good in concept but lacking in execution). However, the advantage is that Motiff did not consume many credits for generating the design system via AI.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "This flaw makes this function somewhat \"tasteless\" (good in concept but lacking in execution).",
+        "text_length": 94
+      },
+      {
+        "index": 117,
+        "paragraph_index": 118,
+        "paragraph_text": "Motiff distinguished and extracted the components of the design draft functionally, producing four categories: Color, Typography, Effect, and Icon. Overall, the effect exceeded my expectations, but issues still exist. The extracted content is not comprehensive; for example, button styles were not extracted. This flaw makes this function somewhat \"tasteless\" (good in concept but lacking in execution). However, the advantage is that Motiff did not consume many credits for generating the design system via AI.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "However, the advantage is that Motiff did not consume many credits for generating the design system via AI.",
+        "text_length": 107
+      },
+      {
+        "index": 118,
+        "paragraph_index": 119,
+        "paragraph_text": "Process Smoothness: The registration process is extremely minimal, supports direct browser access, and the novice guide covers the core operations of the AI panel.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Process Smoothness: The registration process is extremely minimal, supports direct browser access, and the novice guide covers the core operations of the AI panel.",
+        "text_length": 163
+      },
+      {
+        "index": 119,
+        "paragraph_index": 120,
+        "paragraph_text": "Interface & Interaction: The UI interface is similar to mainstream design tools, reducing migration costs. The AI panel serves as an independent interaction core, with real-time feedback visibility.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Interface & Interaction: The UI interface is similar to mainstream design tools, reducing migration costs.",
+        "text_length": 106
+      },
+      {
+        "index": 120,
+        "paragraph_index": 120,
+        "paragraph_text": "Interface & Interaction: The UI interface is similar to mainstream design tools, reducing migration costs. The AI panel serves as an independent interaction core, with real-time feedback visibility.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The AI panel serves as an independent interaction core, with real-time feedback visibility.",
+        "text_length": 91
+      },
+      {
+        "index": 121,
+        "paragraph_index": 121,
+        "paragraph_text": "Issue Record: Although the Text-to-UI effect is stunning, interface disorder still occurs in some cases, and generated layouts still require manual fine-tuning. There are also deficiencies in the generation of design systems; there is still a gap compared to manual style curation, which significantly lowers the likelihood of this feature being adopted.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Issue Record: Although the Text-to-UI effect is stunning, interface disorder still occurs in some cases, and generated layouts still require manual fine-tuning.",
+        "text_length": 160
+      },
+      {
+        "index": 122,
+        "paragraph_index": 121,
+        "paragraph_text": "Issue Record: Although the Text-to-UI effect is stunning, interface disorder still occurs in some cases, and generated layouts still require manual fine-tuning. There are also deficiencies in the generation of design systems; there is still a gap compared to manual style curation, which significantly lowers the likelihood of this feature being adopted.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "There are also deficiencies in the generation of design systems;",
+        "text_length": 64
+      },
+      {
+        "index": 123,
+        "paragraph_index": 121,
+        "paragraph_text": "Issue Record: Although the Text-to-UI effect is stunning, interface disorder still occurs in some cases, and generated layouts still require manual fine-tuning. There are also deficiencies in the generation of design systems; there is still a gap compared to manual style curation, which significantly lowers the likelihood of this feature being adopted.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "there is still a gap compared to manual style curation, which significantly lowers the likelihood of this feature being adopted.",
+        "text_length": 128
+      },
+      {
+        "index": 124,
+        "paragraph_index": 122,
+        "paragraph_text": "5. Competitor Comparison Analysis",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "5. Competitor Comparison Analysis",
+        "text_length": 33
+      },
+      {
+        "index": 125,
+        "paragraph_index": 123,
+        "paragraph_text": "Direct Competitors: Figma, Adobe XD, MasterGo.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Direct Competitors: Figma, Adobe XD, MasterGo.",
+        "text_length": 46
+      },
+      {
+        "index": 126,
+        "paragraph_index": 124,
+        "paragraph_text": "Comparison Dimensions:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Comparison Dimensions:",
+        "text_length": 22
+      },
+      {
+        "index": 127,
+        "paragraph_index": 125,
+        "paragraph_text": "Performance: Motiff supports 1 million layers, superior to Figma's 800,000 limit.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Performance: Motiff supports 1 million layers, superior to Figma's 800,000 limit.",
+        "text_length": 81
+      },
+      {
+        "index": 128,
+        "paragraph_index": 126,
+        "paragraph_text": "AI Depth: Figma's AI leans towards auxiliary plugins, whereas Motiff is AI-driven with stronger style learning capabilities, making AI empowerment for UI design more direct and comprehensive.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI Depth: Figma's AI leans towards auxiliary plugins, whereas Motiff is AI-driven with stronger style learning capabilities, making AI empowerment for UI design more direct and comprehensive.",
+        "text_length": 191
+      },
+      {
+        "index": 129,
+        "paragraph_index": 127,
+        "paragraph_text": "Price: Motiff Pro is only ¥24/month, significantly lower than Figma's pricing system.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Price: Motiff Pro is only ¥24/month, significantly lower than Figma's pricing system.",
+        "text_length": 85
+      },
+      {
+        "index": 130,
+        "paragraph_index": 128,
+        "paragraph_text": "Differentiation Advantage: It is palpable that Motiff was developed with Figma as a benchmark; therefore, Motiff supports most features Figma has. Additionally, Motiff supports one-click conversion of public URLs into editable design drafts and direct selection of design drafts for design system generation. These two features fall under \"Excitement Needs\" (Delighters).",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Differentiation Advantage: It is palpable that Motiff was developed with Figma as a benchmark;",
+        "text_length": 94
+      },
+      {
+        "index": 131,
+        "paragraph_index": 128,
+        "paragraph_text": "Differentiation Advantage: It is palpable that Motiff was developed with Figma as a benchmark; therefore, Motiff supports most features Figma has. Additionally, Motiff supports one-click conversion of public URLs into editable design drafts and direct selection of design drafts for design system generation. These two features fall under \"Excitement Needs\" (Delighters).",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "therefore, Motiff supports most features Figma has.",
+        "text_length": 51
+      },
+      {
+        "index": 132,
+        "paragraph_index": 128,
+        "paragraph_text": "Differentiation Advantage: It is palpable that Motiff was developed with Figma as a benchmark; therefore, Motiff supports most features Figma has. Additionally, Motiff supports one-click conversion of public URLs into editable design drafts and direct selection of design drafts for design system generation. These two features fall under \"Excitement Needs\" (Delighters).",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Additionally, Motiff supports one-click conversion of public URLs into editable design drafts and direct selection of design drafts for design system generation.",
+        "text_length": 161
+      },
+      {
+        "index": 133,
+        "paragraph_index": 128,
+        "paragraph_text": "Differentiation Advantage: It is palpable that Motiff was developed with Figma as a benchmark; therefore, Motiff supports most features Figma has. Additionally, Motiff supports one-click conversion of public URLs into editable design drafts and direct selection of design drafts for design system generation. These two features fall under \"Excitement Needs\" (Delighters).",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "These two features fall under \"Excitement Needs\" (Delighters).",
+        "text_length": 62
+      },
+      {
+        "index": 134,
+        "paragraph_index": 129,
+        "paragraph_text": "6. Advantages & Disadvantages",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "6. Advantages & Disadvantages",
+        "text_length": 29
+      },
+      {
+        "index": 135,
+        "paragraph_index": 130,
+        "paragraph_text": "Core Advantages:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Core Advantages:",
+        "text_length": 16
+      },
+      {
+        "index": 136,
+        "paragraph_index": 131,
+        "paragraph_text": "AI generation capabilities are not only aesthetic but possess production-grade structure (not simple flat images).",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "AI generation capabilities are not only aesthetic but possess production-grade structure (not simple flat images).",
+        "text_length": 114
+      },
+      {
+        "index": 137,
+        "paragraph_index": 132,
+        "paragraph_text": "The automatic design system maintenance function greatly reduces enterprise management costs, lowers pressure on designers, and facilitates the establishment and execution of design standards.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The automatic design system maintenance function greatly reduces enterprise management costs, lowers pressure on designers, and facilitates the establishment and execution of design standards.",
+        "text_length": 192
+      },
+      {
+        "index": 138,
+        "paragraph_index": 133,
+        "paragraph_text": "Main Deficiencies:",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Main Deficiencies:",
+        "text_length": 18
+      },
+      {
+        "index": 139,
+        "paragraph_index": 134,
+        "paragraph_text": "In the current version, content is occasionally missing or misaligned when generating UI design drafts.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "In the current version, content is occasionally missing or misaligned when generating UI design drafts.",
+        "text_length": 103
+      },
+      {
+        "index": 140,
+        "paragraph_index": 135,
+        "paragraph_text": "The current UI styles generated by AI tend to be template-like, leaning more towards utility than \"design feel.\" There is also a lack of grasp on user experience, requiring human designers to complete this part.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The current UI styles generated by AI tend to be template-like, leaning more towards utility than \"design feel.\" There is also a lack of grasp on user experience, requiring human designers to complete this part.",
+        "text_length": 211
+      },
+      {
+        "index": 141,
+        "paragraph_index": 136,
+        "paragraph_text": "Although AI design system generation is an \"Excitement Need,\" the function currently has obvious deficiencies, as the UI styles extracted by AI are not comprehensive.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Although AI design system generation is an \"Excitement Need,\" the function currently has obvious deficiencies, as the UI styles extracted by AI are not comprehensive.",
+        "text_length": 166
+      },
+      {
+        "index": 142,
+        "paragraph_index": 137,
+        "paragraph_text": "The brand ecosystem (plugin community) still lags behind Figma, and Figma's status in the industry is difficult to shake.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The brand ecosystem (plugin community) still lags behind Figma, and Figma's status in the industry is difficult to shake.",
+        "text_length": 121
+      },
+      {
+        "index": 143,
+        "paragraph_index": 138,
+        "paragraph_text": "7. Price & Cost-Effectiveness",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "7. Price & Cost-Effectiveness",
+        "text_length": 29
+      },
+      {
+        "index": 144,
+        "paragraph_index": 140,
+        "paragraph_text": "Pricing Model: Uses a \"Basic Free + Subscription\" model.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Pricing Model: Uses a \"Basic Free + Subscription\" model.",
+        "text_length": 56
+      },
+      {
+        "index": 145,
+        "paragraph_index": 141,
+        "paragraph_text": "Specific Prices: Basic Version is free (100 credits/month); Professional Version ¥90/month; Enterprise Version ¥200/month; Group Version ¥300/month.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Specific Prices: Basic Version is free (100 credits/month);",
+        "text_length": 59
+      },
+      {
+        "index": 146,
+        "paragraph_index": 141,
+        "paragraph_text": "Specific Prices: Basic Version is free (100 credits/month); Professional Version ¥90/month; Enterprise Version ¥200/month; Group Version ¥300/month.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Professional Version ¥90/month;",
+        "text_length": 31
+      },
+      {
+        "index": 147,
+        "paragraph_index": 141,
+        "paragraph_text": "Specific Prices: Basic Version is free (100 credits/month); Professional Version ¥90/month; Enterprise Version ¥200/month; Group Version ¥300/month.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Enterprise Version ¥200/month;",
+        "text_length": 30
+      },
+      {
+        "index": 148,
+        "paragraph_index": 141,
+        "paragraph_text": "Specific Prices: Basic Version is free (100 credits/month); Professional Version ¥90/month; Enterprise Version ¥200/month; Group Version ¥300/month.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Group Version ¥300/month.",
+        "text_length": 25
+      },
+      {
+        "index": 149,
+        "paragraph_index": 142,
+        "paragraph_text": "Cost-Effectiveness Assessment: Average.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Cost-Effectiveness Assessment: Average.",
+        "text_length": 39
+      },
+      {
+        "index": 150,
+        "paragraph_index": 143,
+        "paragraph_text": "Although Motiff has solved some of the designers' pain point needs, its Return on Investment (ROI) still needs consideration. Additionally, the quality currently produced by Motiff remains at a relatively basic UI or even prototype level. In a period where enterprise requirements for UI and UX quality are increasingly high, the role Motiff can play may still be limited. Furthermore, current UIs mostly require the coordination of motion effects, which Motiff lacks.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Although Motiff has solved some of the designers' pain point needs, its Return on Investment (ROI) still needs consideration.",
+        "text_length": 125
+      },
+      {
+        "index": 151,
+        "paragraph_index": 143,
+        "paragraph_text": "Although Motiff has solved some of the designers' pain point needs, its Return on Investment (ROI) still needs consideration. Additionally, the quality currently produced by Motiff remains at a relatively basic UI or even prototype level. In a period where enterprise requirements for UI and UX quality are increasingly high, the role Motiff can play may still be limited. Furthermore, current UIs mostly require the coordination of motion effects, which Motiff lacks.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Additionally, the quality currently produced by Motiff remains at a relatively basic UI or even prototype level.",
+        "text_length": 112
+      },
+      {
+        "index": 152,
+        "paragraph_index": 143,
+        "paragraph_text": "Although Motiff has solved some of the designers' pain point needs, its Return on Investment (ROI) still needs consideration. Additionally, the quality currently produced by Motiff remains at a relatively basic UI or even prototype level. In a period where enterprise requirements for UI and UX quality are increasingly high, the role Motiff can play may still be limited. Furthermore, current UIs mostly require the coordination of motion effects, which Motiff lacks.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "In a period where enterprise requirements for UI and UX quality are increasingly high, the role Motiff can play may still be limited.",
+        "text_length": 133
+      },
+      {
+        "index": 153,
+        "paragraph_index": 143,
+        "paragraph_text": "Although Motiff has solved some of the designers' pain point needs, its Return on Investment (ROI) still needs consideration. Additionally, the quality currently produced by Motiff remains at a relatively basic UI or even prototype level. In a period where enterprise requirements for UI and UX quality are increasingly high, the role Motiff can play may still be limited. Furthermore, current UIs mostly require the coordination of motion effects, which Motiff lacks.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Furthermore, current UIs mostly require the coordination of motion effects, which Motiff lacks.",
+        "text_length": 95
+      },
+      {
+        "index": 154,
+        "paragraph_index": 144,
+        "paragraph_text": "8. Conclusion & Recommendations",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "8. Conclusion & Recommendations",
+        "text_length": 31
+      },
+      {
+        "index": 155,
+        "paragraph_index": 145,
+        "paragraph_text": "Recommendation Conclusion: Relatively Recommended.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Recommendation Conclusion: Relatively Recommended.",
+        "text_length": 50
+      },
+      {
+        "index": 156,
+        "paragraph_index": 146,
+        "paragraph_text": "Applicable Scenarios: Suitable for design teams seeking AI efficiency, startups, and projects requiring rapid response for overseas multi-language markets.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Applicable Scenarios: Suitable for design teams seeking AI efficiency, startups, and projects requiring rapid response for overseas multi-language markets.",
+        "text_length": 155
+      }
+    ]
+  },
+  "analysis_result": {
+    "document_id": "",
+    "document_title": "妙多AI产品调研报告-Michael",
+    "analysis_type": "full",
+    "timestamp": "2026-04-02T10:55:41.143943",
+    "fact_check_results": [
+      {
+        "id": "fcr_20260402105435497767",
+        "original_text": "妙多AI（英文名：Motiff）是由猿辅导团队孵化，于2024年正式发布的下一代AI原生界面设计工具。",
+        "claim_type": "organization",
+        "claim_content": "妙多AI（英文名：Motiff）是由猿辅导团队孵化，于2024年正式发布的下一代AI原生界面设计工具。",
+        "verification_status": "confirmed",
+        "confidence": 0.0,
+        "evidence": [],
+        "sources": [],
+        "suggestion": "",
+        "position": {
+          "char_start": 33,
+          "char_end": 84,
+          "paragraph_index": 2
+        },
+        "search_trace": {
+          "performed": true,
+          "provider": "tavily",
+          "raw_count": 0,
+          "filtered_count": 0,
+          "query": "妙多AI（英文名：Motiff）是由猿辅导团队孵化，于2024年正式发布的下一代AI原生界面设计工具。 妙多AI产品调研报告-Michael",
+          "error": ""
+        },
+        "created_at": "2026-04-02T10:54:35.497787",
+        "verified_at": "2026-04-02T10:54:35.497756"
+      },
+      {
+        "id": "fcr_20260402105450555972",
+        "original_text": "妙多支持100万级图层，优于Figma的80万上限。",
+        "claim_type": "number",
+        "claim_content": "妙多支持100万级图层，优于Figma的80万上限。",
+        "verification_status": "confirmed",
+        "confidence": 0.9,
+        "evidence": [
+          "作为直接运行在浏览器上的设计编辑器，单个画布上可以容纳的最大图层数是衡量性能的重要指标。Motiff妙多当下可支持图层数量达到100万级别，而Figma目前最多可支持80万图层。",
+          "Motiff妙多当下可支持图层数量达到100万级别，也是全球唯一在单画布100万图层下仍可持续流畅编辑的高性能产品。"
+        ],
+        "sources": [
+          {
+            "title": "中国企业级AI应用Motiff妙多在新加坡首发，对标国际巨头Figma-多知网",
+            "url": "http://www.duozhi.com/industry/insight/2024060516280.shtml",
+            "snippet": "作为直接运行在浏览器上的设计编辑器，单个画布上可以容纳的最大图层数是衡量性能的重要指标。许多团队的大型项目，也会因为图层变多、运行越来越慢导致体验问题。Motiff妙多当下可支持图层数量达到100万级别，而Figma目前最多可支持80万图层。"
+          },
+          {
+            "title": "AI设计工具Motiff妙多发布，定位Figma下一代的企业级AI应用- 菲龙网",
+            "url": "https://www.flw.ph/thread-1300439-1-1.html",
+            "snippet": "此外，Motiff妙多展示了自研的图形渲染引擎。这是继Figma之后全球第二家、也是国内首家自研Web端图形渲染引擎的产品。测试数据显示，Motiff妙多在流畅性和速度方面表现极为优异。流畅度方面，在专业评测中，Motiff妙多的FPS（画面每秒帧数）保持在50以上优秀区间，Figma该指标为40左右，这意味着Motiff妙多比Figma更为流畅。同时，Motiff妙多当下可支持图层数量达到100万级别，也是全球唯一在单画布100万图层下仍可持续流畅编辑的高性能产品，同样环境"
+          }
+        ],
+        "suggestion": "检索到的公开信息直接证实了妙多支持100万级图层且优于Figma的80万上限。",
+        "position": {
+          "char_start": 1661,
+          "char_end": 1687,
+          "paragraph_index": 37
+        },
+        "search_trace": {
+          "provider": "tavily",
+          "raw_count": 5,
+          "filtered_count": 3,
+          "performed": true,
+          "query": "妙多支持100万级图层，优于Figma的80万上限。 妙多AI产品调研报告-Michael"
+        },
+        "created_at": "2026-04-02T10:54:50.555988",
+        "verified_at": "2026-04-02T10:54:50.555963"
+      },
+      {
+        "id": "fcr_20260402105456066839",
+        "original_text": "Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "claim_type": "number",
+        "claim_content": "Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "verification_status": "confirmed",
+        "confidence": 0.0,
+        "evidence": [],
+        "sources": [],
+        "suggestion": "",
+        "position": {
+          "char_start": 1755,
+          "char_end": 1784,
+          "paragraph_index": 39
+        },
+        "search_trace": {
+          "provider": "tavily",
+          "raw_count": 1,
+          "filtered_count": 0,
+          "performed": true,
+          "query": "Motiff专业版仅¥24/月，远低于Figma价格体系。 妙多AI产品调研报告-Michael"
+        },
+        "created_at": "2026-04-02T10:54:56.066857",
+        "verified_at": "2026-04-02T10:54:56.066831"
+      },
+      {
+        "id": "fcr_20260402105457800295",
+        "original_text": "基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "claim_type": "number",
+        "claim_content": "基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "verification_status": "confirmed",
+        "confidence": 0.0,
+        "evidence": [],
+        "sources": [],
+        "suggestion": "",
+        "position": {
+          "char_start": 2214,
+          "char_end": 2257,
+          "paragraph_index": 52
+        },
+        "search_trace": {
+          "performed": true,
+          "provider": "tavily",
+          "raw_count": 0,
+          "filtered_count": 0,
+          "query": "基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。 妙多AI产品调研报告-Michael",
+          "error": "Server disconnected without sending a response."
+        },
+        "created_at": "2026-04-02T10:54:57.800311",
+        "verified_at": "2026-04-02T10:54:57.800287"
+      }
+    ],
+    "structure_match_result": {
+      "overall_score": 1.0,
+      "section_matches": [
+        {
+          "template_section": "产品概述",
+          "document_section": "产品概述",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "目标用户与市场定位",
+          "document_section": "目标用户与市场定位",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "核心功能与特性",
+          "document_section": "核心功能与特性",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "实际使用体验",
+          "document_section": "实际使用体验",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "竞品对比分析",
+          "document_section": "竞品对比分析",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "优势与不足",
+          "document_section": "优势与不足",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "价格与性价比",
+          "document_section": "价格与性价比",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "结论与推荐建议",
+          "document_section": "结论与推荐建议",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        }
+      ]
+    },
+    "quality_report": {
+      "overall_score": 83.33,
+      "overall_level": "good",
+      "dimension_scores": [
+        {
+          "dimension": "content_completeness",
+          "score": 85.0,
+          "weight": 0.2,
+          "level": "good",
+          "strengths": [
+            "报告结构清晰，覆盖了产品概述、目标用户、核心功能、实际体验、竞品分析、优劣势、定价和结论等关键章节。",
+            "实际使用体验部分提供了具体的测试案例和操作细节，体现了真实试用过程，而非单纯转述官网信息。",
+            "内容具有实质性，例如在核心功能、竞品对比和优劣势分析中提供了具体数据和深入见解。"
+          ],
+          "weaknesses": [
+            "部分章节内容略显单薄，例如“价格与性价比”部分的分析深度不足，结论“性价比评估：一般”缺乏足够的数据或对比支撑。",
+            "“实际使用体验”部分在中文版本中似乎被截断，英文版本也未完整呈现，导致体验描述的完整性受损。",
+            "“市场潜力”部分引用了数据但未注明具体来源，影响了事实核查的便利性。"
+          ],
+          "suggestions": [
+            "建议扩充“价格与性价比”部分，增加与竞品的详细价格对比、积分消耗成本分析或不同规模团队的成本测算，使结论更有说服力。",
+            "建议检查并补全“实际使用体验”章节的内容，确保中英文版本均完整描述了测试过程、结果和发现的问题。",
+            "建议在引用市场数据等外部信息时，尽可能注明来源，以增强报告的可信度和可验证性。"
+          ]
+        },
+        {
+          "dimension": "logical_clarity",
+          "score": 85.0,
+          "weight": 0.15,
+          "level": "excellent",
+          "strengths": [
+            "报告结构清晰，遵循标准产品调研报告框架，从产品概述到结论建议逻辑递进",
+            "章节划分明确，标题层级分明，便于读者按顺序理解产品全貌",
+            "内容组织有序，每个部分聚焦一个主题，如目标用户、核心功能、实际体验等，衔接自然"
+          ],
+          "weaknesses": [
+            "第4节“实际使用体验”部分内容不完整，英文版本在关键描述处中断，影响阅读连贯性",
+            "部分小节（如“价格与性价比”）的评估分析略显简略，逻辑深度可进一步加强"
+          ],
+          "suggestions": [
+            "补充第4节“实际使用体验”的完整内容，确保中英文版本一致，避免中断影响逻辑完整性",
+            "在“优势与不足”等分析性章节中，可增加更具体的案例或数据支撑，使论证更严密"
+          ]
+        },
+        {
+          "dimension": "argumentation_quality",
+          "score": 85.0,
+          "weight": 0.15,
+          "level": "good",
+          "strengths": [
+            "报告结论基于实际测试案例（如个人财务管理App生成），提供了具体操作步骤和积分消耗等细节证据。",
+            "竞品对比分析（如与Figma在性能、AI深度、价格等方面）提供了明确的比较维度，增强了论证的说服力。",
+            "对产品优势与不足的分析结合了测试体验（如设计系统生成的功能效果和问题），使结论更客观。",
+            "报告结构清晰，从产品概述到实际体验再到竞品分析，逻辑连贯，支持最终结论。"
+          ],
+          "weaknesses": [
+            "部分结论缺乏量化数据支持，例如'AI生成能力不仅美观且具备生产级结构'，未提供具体的美观度或结构完整性指标。",
+            "市场潜力部分引用了行业数据，但未明确说明这些数据如何直接支持妙多AI的市场机会，推理略显跳跃。",
+            "在'优势与不足'部分，对'品牌生态差距'的陈述较笼统，未与竞品进行具体功能或用户数量的对比。",
+            "实际体验中提到的'文字错位问题'和'设计系统生成不全面'，未深入分析这些问题的普遍性或对产品价值的实际影响。"
+          ],
+          "suggestions": [
+            "在结论中补充更多测试数据，例如生成UI的准确率、用户满意度评分，使证据更坚实。",
+            "加强市场数据与产品定位的关联分析，明确说明行业增长如何转化为妙多AI的具体机遇。",
+            "对不足点的描述可更具体，例如对比Figma的插件数量或社区活跃度，以增强论证深度。",
+            "建议在'实际使用体验'部分增加更多样化的测试案例，以全面评估产品在不同场景下的表现。"
+          ]
+        },
+        {
+          "dimension": "data_accuracy",
+          "score": 75.0,
+          "weight": 0.15,
+          "level": "good",
+          "strengths": [
+            "报告对产品功能、市场数据、使用体验的描述较为具体，提供了实际测试案例和积分消耗等细节，增强了可信度。",
+            "报告在描述产品不足时，结合了自身测试体验，如指出UI错位、设计系统提炼不全面等问题，体现了客观性。",
+            "核心市场数据（如市场规模、增长率）提供了具体数值和年份，表述清晰。"
+          ],
+          "weaknesses": [
+            "部分数据表述存在不一致。例如，中文部分提到“全球用户体验（UX）服务市场在2024年为46.8亿美元”，而英文部分为“4.68 billion USD”，单位“十亿”与“亿”存在换算不一致。",
+            "部分事实性描述缺乏来源标注，如“妙多支持100万级图层，优于Figma的80万上限”，其数据来源未说明，难以验证。",
+            "价格部分存在模糊表述。中文提到“专业版¥24/月”，但后文“具体价格”中又列出“专业版¥90/月”，前后矛盾。"
+          ],
+          "suggestions": [
+            "核对并统一中英文版本中的数值表述，确保单位换算一致。例如，将“46.8亿美元”与“4.68 billion USD”统一为一种表述方式。",
+            "为关键性能对比数据（如图层支持数量）补充可验证的来源或说明，或标注为“据产品宣称”，以区分客观事实与产品宣传。",
+            "仔细检查并修正报告内部矛盾的数据，特别是产品定价部分，确保前后一致。"
+          ]
+        },
+        {
+          "dimension": "language_expression",
+          "score": 85.0,
+          "weight": 0.15,
+          "level": "good",
+          "strengths": [
+            "报告整体语言专业，使用了行业术语（如“AI原生”、“高保真设计稿”、“设计系统”、“复合年增长率”）且使用准确。",
+            "结构清晰，章节划分明确，逻辑连贯，从概述到结论层层递进。",
+            "表达较为简洁，对产品功能、体验和竞品的描述直接明了，没有冗余的修饰。"
+          ],
+          "weaknesses": [
+            "存在少量表达不够精确或口语化的地方，例如“食之无味弃之可惜”、“还是比较基础的UI甚至是原型的水平”。",
+            "英文部分存在一处明显的语法错误：“First, I used the following”句子不完整，缺少宾语或后续内容。",
+            "部分句子较长，可读性有提升空间，例如关于市场潜力的描述句子结构较为复杂。"
+          ],
+          "suggestions": [
+            "将“食之无味弃之可惜”等口语化表达调整为更专业的书面语，如“功能价值有限”。",
+            "检查并补全英文部分不完整的句子，确保语法正确和语义完整。",
+            "可将部分长句拆分，使表达更清晰流畅，例如将市场数据描述拆分为更短的句子。"
+          ]
+        },
+        {
+          "dimension": "format_compliance",
+          "score": 85.0,
+          "weight": 0.1,
+          "level": "good",
+          "strengths": [
+            "报告结构清晰，包含产品概述、目标用户、核心功能、使用体验、竞品分析、优劣势、定价、结论等标准章节，逻辑完整。",
+            "中英文版本内容基本对应，确保了双语报告的一致性。",
+            "标题层级分明，使用数字编号，易于阅读和导航。"
+          ],
+          "weaknesses": [
+            "英文部分在'Actual User Experience'章节末尾突然中断，内容不完整，存在明显的结构缺失。",
+            "部分章节（如'价格与性价比'）的标题编号与前后不连续（应为第7节），存在轻微的编号错误。",
+            "使用体验部分的中文描述较为口语化，与前后较正式的商业报告风格略有脱节。"
+          ],
+          "suggestions": [
+            "请检查并补全英文版本中'Actual User Experience'及其他可能缺失的章节内容，确保中英文报告在结构和信息量上完全一致。",
+            "统一全文的标题编号序列，确保逻辑顺序正确无误。",
+            "可考虑将使用体验部分的叙述风格稍作调整，使其与整体报告的专业语调更协调。"
+          ]
+        }
+      ],
+      "weighted_average": 83.33,
+      "summary": "本文整体质量评分为 83.3/100。 在 6 个维度中，优秀 1 项，良好 5 项，待改进或较弱 0 项。 表现最好的是 content_completeness（85.0 分）。 最需要补强的是 data_accuracy（75.0 分）。",
+      "detailed_analysis": "# 详细质量分析报告\n\n## content_completeness: 85.0/100 (good)\n**优势**\n- 报告结构清晰，覆盖了产品概述、目标用户、核心功能、实际体验、竞品分析、优劣势、定价和结论等关键章节。\n- 实际使用体验部分提供了具体的测试案例和操作细节，体现了真实试用过程，而非单纯转述官网信息。\n- 内容具有实质性，例如在核心功能、竞品对比和优劣势分析中提供了具体数据和深入见解。\n**问题**\n- 部分章节内容略显单薄，例如“价格与性价比”部分的分析深度不足，结论“性价比评估：一般”缺乏足够的数据或对比支撑。\n- “实际使用体验”部分在中文版本中似乎被截断，英文版本也未完整呈现，导致体验描述的完整性受损。\n- “市场潜力”部分引用了数据但未注明具体来源，影响了事实核查的便利性。\n**建议**\n- 建议扩充“价格与性价比”部分，增加与竞品的详细价格对比、积分消耗成本分析或不同规模团队的成本测算，使结论更有说服力。\n- 建议检查并补全“实际使用体验”章节的内容，确保中英文版本均完整描述了测试过程、结果和发现的问题。\n- 建议在引用市场数据等外部信息时，尽可能注明来源，以增强报告的可信度和可验证性。\n\n## logical_clarity: 85.0/100 (excellent)\n**优势**\n- 报告结构清晰，遵循标准产品调研报告框架，从产品概述到结论建议逻辑递进\n- 章节划分明确，标题层级分明，便于读者按顺序理解产品全貌\n- 内容组织有序，每个部分聚焦一个主题，如目标用户、核心功能、实际体验等，衔接自然\n**问题**\n- 第4节“实际使用体验”部分内容不完整，英文版本在关键描述处中断，影响阅读连贯性\n- 部分小节（如“价格与性价比”）的评估分析略显简略，逻辑深度可进一步加强\n**建议**\n- 补充第4节“实际使用体验”的完整内容，确保中英文版本一致，避免中断影响逻辑完整性\n- 在“优势与不足”等分析性章节中，可增加更具体的案例或数据支撑，使论证更严密\n\n## argumentation_quality: 85.0/100 (good)\n**优势**\n- 报告结论基于实际测试案例（如个人财务管理App生成），提供了具体操作步骤和积分消耗等细节证据。\n- 竞品对比分析（如与Figma在性能、AI深度、价格等方面）提供了明确的比较维度，增强了论证的说服力。\n- 对产品优势与不足的分析结合了测试体验（如设计系统生成的功能效果和问题），使结论更客观。\n- 报告结构清晰，从产品概述到实际体验再到竞品分析，逻辑连贯，支持最终结论。\n**问题**\n- 部分结论缺乏量化数据支持，例如'AI生成能力不仅美观且具备生产级结构'，未提供具体的美观度或结构完整性指标。\n- 市场潜力部分引用了行业数据，但未明确说明这些数据如何直接支持妙多AI的市场机会，推理略显跳跃。\n- 在'优势与不足'部分，对'品牌生态差距'的陈述较笼统，未与竞品进行具体功能或用户数量的对比。\n- 实际体验中提到的'文字错位问题'和'设计系统生成不全面'，未深入分析这些问题的普遍性或对产品价值的实际影响。\n**建议**\n- 在结论中补充更多测试数据，例如生成UI的准确率、用户满意度评分，使证据更坚实。\n- 加强市场数据与产品定位的关联分析，明确说明行业增长如何转化为妙多AI的具体机遇。\n- 对不足点的描述可更具体，例如对比Figma的插件数量或社区活跃度，以增强论证深度。\n- 建议在'实际使用体验'部分增加更多样化的测试案例，以全面评估产品在不同场景下的表现。\n\n## data_accuracy: 75.0/100 (good)\n**优势**\n- 报告对产品功能、市场数据、使用体验的描述较为具体，提供了实际测试案例和积分消耗等细节，增强了可信度。\n- 报告在描述产品不足时，结合了自身测试体验，如指出UI错位、设计系统提炼不全面等问题，体现了客观性。\n- 核心市场数据（如市场规模、增长率）提供了具体数值和年份，表述清晰。\n**问题**\n- 部分数据表述存在不一致。例如，中文部分提到“全球用户体验（UX）服务市场在2024年为46.8亿美元”，而英文部分为“4.68 billion USD”，单位“十亿”与“亿”存在换算不一致。\n- 部分事实性描述缺乏来源标注，如“妙多支持100万级图层，优于Figma的80万上限”，其数据来源未说明，难以验证。\n- 价格部分存在模糊表述。中文提到“专业版¥24/月”，但后文“具体价格”中又列出“专业版¥90/月”，前后矛盾。\n**建议**\n- 核对并统一中英文版本中的数值表述，确保单位换算一致。例如，将“46.8亿美元”与“4.68 billion USD”统一为一种表述方式。\n- 为关键性能对比数据（如图层支持数量）补充可验证的来源或说明，或标注为“据产品宣称”，以区分客观事实与产品宣传。\n- 仔细检查并修正报告内部矛盾的数据，特别是产品定价部分，确保前后一致。\n\n## language_expression: 85.0/100 (good)\n**优势**\n- 报告整体语言专业，使用了行业术语（如“AI原生”、“高保真设计稿”、“设计系统”、“复合年增长率”）且使用准确。\n- 结构清晰，章节划分明确，逻辑连贯，从概述到结论层层递进。\n- 表达较为简洁，对产品功能、体验和竞品的描述直接明了，没有冗余的修饰。\n**问题**\n- 存在少量表达不够精确或口语化的地方，例如“食之无味弃之可惜”、“还是比较基础的UI甚至是原型的水平”。\n- 英文部分存在一处明显的语法错误：“First, I used the following”句子不完整，缺少宾语或后续内容。\n- 部分句子较长，可读性有提升空间，例如关于市场潜力的描述句子结构较为复杂。\n**建议**\n- 将“食之无味弃之可惜”等口语化表达调整为更专业的书面语，如“功能价值有限”。\n- 检查并补全英文部分不完整的句子，确保语法正确和语义完整。\n- 可将部分长句拆分，使表达更清晰流畅，例如将市场数据描述拆分为更短的句子。\n\n## format_compliance: 85.0/100 (good)\n**优势**\n- 报告结构清晰，包含产品概述、目标用户、核心功能、使用体验、竞品分析、优劣势、定价、结论等标准章节，逻辑完整。\n- 中英文版本内容基本对应，确保了双语报告的一致性。\n- 标题层级分明，使用数字编号，易于阅读和导航。\n**问题**\n- 英文部分在'Actual User Experience'章节末尾突然中断，内容不完整，存在明显的结构缺失。\n- 部分章节（如'价格与性价比'）的标题编号与前后不连续（应为第7节），存在轻微的编号错误。\n- 使用体验部分的中文描述较为口语化，与前后较正式的商业报告风格略有脱节。\n**建议**\n- 请检查并补全英文版本中'Actual User Experience'及其他可能缺失的章节内容，确保中英文报告在结构和信息量上完全一致。\n- 统一全文的标题编号序列，确保逻辑顺序正确无误。\n- 可考虑将使用体验部分的叙述风格稍作调整，使其与整体报告的专业语调更协调。\n",
+      "priority_improvements": [],
+      "created_at": "2026-04-02T10:55:41.143753",
+      "metadata": {
+        "text_length": 10551,
+        "evaluated_dimensions": [
+          "content_completeness",
+          "logical_clarity",
+          "argumentation_quality",
+          "data_accuracy",
+          "language_expression",
+          "format_compliance"
+        ],
+        "evaluation_version": "2.0",
+        "combined_quality_call": false
+      }
+    },
+    "language_issues": [
+      {
+        "issue_type": "language",
+        "severity": "low",
+        "title": "标点符号误用",
+        "description": "中文标题中使用了英文连字符“-”，不符合中文标点规范。",
+        "suggestion": "建议将“-”改为中文破折号“——”。",
+        "source_excerpt": "妙多AI产品调研报告-Michael",
+        "location": {
+          "char_start": 0,
+          "char_end": 18,
+          "paragraph_index": 0
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "medium",
+        "title": "数字格式不一致",
+        "description": "数字“46.8亿美元”和“64.0亿美元”使用了小数点，而“549.3亿美元”也使用了小数点，但“36%”的复合年增长率描述可能引起歧义，通常应明确是“年复合增长率（CAGR）”。",
+        "suggestion": "建议统一数字格式，并明确“36%的复合年增长率”为“年复合增长率（CAGR）为36%”。",
+        "source_excerpt": "全球用户体验（UX）服务市场在2024年为46.8亿美元，预计2025年将增至64.0亿美元，并以36%的复合年增长率在2032年达到549.3亿美元",
+        "location": {
+          "char_start": 404,
+          "char_end": 479,
+          "paragraph_index": 11
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "low",
+        "title": "口语化表达",
+        "description": "“食之无味弃之可惜”是成语，但在此上下文中显得口语化，可能不适合正式报告。",
+        "suggestion": "建议改为更正式的表述，例如“该功能的价值因此大打折扣”或“该功能因此显得不够完善”。",
+        "source_excerpt": "这个缺点使这个功能有些食之无味弃之可惜。",
+        "location": {
+          "char_start": 1355,
+          "char_end": 1375,
+          "paragraph_index": 30
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "high",
+        "title": "错别字",
+        "description": "“二妙多”应为“而妙多”。",
+        "suggestion": "建议将“二”改为“而”。",
+        "source_excerpt": "Figma的AI偏向辅助插件，二妙多是AI驱动，具备更强的风格学习能力，AI功能对UI设计的赋能更加直接和全面。",
+        "location": {
+          "char_start": 1694,
+          "char_end": 1750,
+          "paragraph_index": 38
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "medium",
+        "title": "术语不一致",
+        "description": "“兴奋型需求”在前文中使用“兴奋性需求”，术语不统一。",
+        "suggestion": "建议统一术语，例如均使用“兴奋型需求”或“愉悦型需求”。",
+        "source_excerpt": "可以感受到妙多是对标Figma进行的开发，因此大部分Figma拥有的功能妙多都支持，同时妙多支持将公网网址一键转化为可编辑的设计稿、并且可以直接选择设计稿进行设计系统的生成，这两个功能属于兴奋型需求。",
+        "location": {
+          "char_start": 1792,
+          "char_end": 1892,
+          "paragraph_index": 40
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "medium",
+        "title": "英文表达不准确",
+        "description": "“significantly lower than Figma's pricing system”比较对象不恰当，价格应与价格比较，而非定价系统。",
+        "suggestion": "建议改为“significantly lower than Figma's equivalent plan”或“significantly more affordable than Figma”。",
+        "source_excerpt": "Motiff Pro is only ¥24/month, significantly lower than Figma's pricing system.",
+        "location": {
+          "char_start": 8120,
+          "char_end": 8198,
+          "paragraph_index": 97
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      }
+    ],
+    "consistency_issues": [
+      {
+        "issue_type": "consistency",
+        "severity": "high",
+        "title": "前后矛盾",
+        "description": "报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "suggestion": "请核实并统一妙多AI专业版的准确月费价格。",
+        "source_excerpt": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "location": {
+          "char_start": 1752,
+          "char_end": 1784,
+          "paragraph_index": 39
+        },
+        "confidence": 0.7,
+        "metadata": {
+          "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+          "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+          "anchor_side": "a"
+        }
+      },
+      {
+        "issue_type": "consistency",
+        "severity": "high",
+        "title": "前后矛盾",
+        "description": "报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "suggestion": "请核实并统一妙多AI专业版的准确月费价格。",
+        "source_excerpt": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "location": {
+          "char_start": 2209,
+          "char_end": 2257,
+          "paragraph_index": 52
+        },
+        "confidence": 0.7,
+        "metadata": {
+          "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+          "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+          "anchor_side": "b"
+        }
+      }
+    ],
+    "review_issues": [
+      {
+        "issue_type": "quality",
+        "severity": "medium",
+        "title": "整体质量建议",
+        "description": "以下维度仍需加强：数据准确性。",
+        "suggestion": "核对并统一中英文版本中的数值表述，确保单位换算一致。例如，将“46.8亿美元”与“4.68 billion USD”统一为一种表述方式。",
+        "source_excerpt": "",
+        "location": {},
+        "confidence": 0.75,
+        "metadata": {
+          "dimensions": [
+            "data_accuracy"
+          ],
+          "scores": {
+            "data_accuracy": 75.0
+          },
+          "anchor_preference": "document_end"
+        }
+      },
+      {
+        "issue_type": "consistency",
+        "severity": "high",
+        "title": "前后矛盾",
+        "description": "报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "suggestion": "请核实并统一妙多AI专业版的准确月费价格。",
+        "source_excerpt": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "location": {
+          "char_start": 1752,
+          "char_end": 1784,
+          "paragraph_index": 39
+        },
+        "confidence": 0.7,
+        "metadata": {
+          "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+          "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+          "anchor_side": "a"
+        }
+      },
+      {
+        "issue_type": "consistency",
+        "severity": "high",
+        "title": "前后矛盾",
+        "description": "报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "suggestion": "请核实并统一妙多AI专业版的准确月费价格。",
+        "source_excerpt": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "location": {
+          "char_start": 2209,
+          "char_end": 2257,
+          "paragraph_index": 52
+        },
+        "confidence": 0.7,
+        "metadata": {
+          "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+          "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+          "anchor_side": "b"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "low",
+        "title": "标点符号误用",
+        "description": "中文标题中使用了英文连字符“-”，不符合中文标点规范。",
+        "suggestion": "建议将“-”改为中文破折号“——”。",
+        "source_excerpt": "妙多AI产品调研报告-Michael",
+        "location": {
+          "char_start": 0,
+          "char_end": 18,
+          "paragraph_index": 0
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "medium",
+        "title": "数字格式不一致",
+        "description": "数字“46.8亿美元”和“64.0亿美元”使用了小数点，而“549.3亿美元”也使用了小数点，但“36%”的复合年增长率描述可能引起歧义，通常应明确是“年复合增长率（CAGR）”。",
+        "suggestion": "建议统一数字格式，并明确“36%的复合年增长率”为“年复合增长率（CAGR）为36%”。",
+        "source_excerpt": "全球用户体验（UX）服务市场在2024年为46.8亿美元，预计2025年将增至64.0亿美元，并以36%的复合年增长率在2032年达到549.3亿美元",
+        "location": {
+          "char_start": 404,
+          "char_end": 479,
+          "paragraph_index": 11
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "low",
+        "title": "口语化表达",
+        "description": "“食之无味弃之可惜”是成语，但在此上下文中显得口语化，可能不适合正式报告。",
+        "suggestion": "建议改为更正式的表述，例如“该功能的价值因此大打折扣”或“该功能因此显得不够完善”。",
+        "source_excerpt": "这个缺点使这个功能有些食之无味弃之可惜。",
+        "location": {
+          "char_start": 1355,
+          "char_end": 1375,
+          "paragraph_index": 30
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "high",
+        "title": "错别字",
+        "description": "“二妙多”应为“而妙多”。",
+        "suggestion": "建议将“二”改为“而”。",
+        "source_excerpt": "Figma的AI偏向辅助插件，二妙多是AI驱动，具备更强的风格学习能力，AI功能对UI设计的赋能更加直接和全面。",
+        "location": {
+          "char_start": 1694,
+          "char_end": 1750,
+          "paragraph_index": 38
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "medium",
+        "title": "术语不一致",
+        "description": "“兴奋型需求”在前文中使用“兴奋性需求”，术语不统一。",
+        "suggestion": "建议统一术语，例如均使用“兴奋型需求”或“愉悦型需求”。",
+        "source_excerpt": "可以感受到妙多是对标Figma进行的开发，因此大部分Figma拥有的功能妙多都支持，同时妙多支持将公网网址一键转化为可编辑的设计稿、并且可以直接选择设计稿进行设计系统的生成，这两个功能属于兴奋型需求。",
+        "location": {
+          "char_start": 1792,
+          "char_end": 1892,
+          "paragraph_index": 40
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      },
+      {
+        "issue_type": "language",
+        "severity": "medium",
+        "title": "英文表达不准确",
+        "description": "“significantly lower than Figma's pricing system”比较对象不恰当，价格应与价格比较，而非定价系统。",
+        "suggestion": "建议改为“significantly lower than Figma's equivalent plan”或“significantly more affordable than Figma”。",
+        "source_excerpt": "Motiff Pro is only ¥24/month, significantly lower than Figma's pricing system.",
+        "location": {
+          "char_start": 8120,
+          "char_end": 8198,
+          "paragraph_index": 97
+        },
+        "confidence": 0.75,
+        "metadata": {
+          "source": "llm"
+        }
+      }
+    ],
+    "review_report": {
+      "summary": "Quality score 83.3/100 (good). Structure match 100.0%. Fact check reviewed 4 claims, with 0 flagged. Found 2 potential consistency issues.",
+      "recommendations": [
+        "请复核 2 处前后表述是否一致。"
+      ],
+      "issues": [
+        {
+          "issue_type": "quality",
+          "severity": "medium",
+          "title": "整体质量建议",
+          "description": "以下维度仍需加强：数据准确性。",
+          "suggestion": "核对并统一中英文版本中的数值表述，确保单位换算一致。例如，将“46.8亿美元”与“4.68 billion USD”统一为一种表述方式。",
+          "source_excerpt": "",
+          "location": {},
+          "confidence": 0.75,
+          "metadata": {
+            "dimensions": [
+              "data_accuracy"
+            ],
+            "scores": {
+              "data_accuracy": 75.0
+            },
+            "anchor_preference": "document_end"
+          }
+        },
+        {
+          "issue_type": "consistency",
+          "severity": "high",
+          "title": "前后矛盾",
+          "description": "报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+          "suggestion": "请核实并统一妙多AI专业版的准确月费价格。",
+          "source_excerpt": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+          "location": {
+            "char_start": 1752,
+            "char_end": 1784,
+            "paragraph_index": 39
+          },
+          "confidence": 0.7,
+          "metadata": {
+            "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+            "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+            "anchor_side": "a"
+          }
+        },
+        {
+          "issue_type": "consistency",
+          "severity": "high",
+          "title": "前后矛盾",
+          "description": "报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+          "suggestion": "请核实并统一妙多AI专业版的准确月费价格。",
+          "source_excerpt": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+          "location": {
+            "char_start": 2209,
+            "char_end": 2257,
+            "paragraph_index": 52
+          },
+          "confidence": 0.7,
+          "metadata": {
+            "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+            "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+            "anchor_side": "b"
+          }
+        },
+        {
+          "issue_type": "language",
+          "severity": "low",
+          "title": "标点符号误用",
+          "description": "中文标题中使用了英文连字符“-”，不符合中文标点规范。",
+          "suggestion": "建议将“-”改为中文破折号“——”。",
+          "source_excerpt": "妙多AI产品调研报告-Michael",
+          "location": {
+            "char_start": 0,
+            "char_end": 18,
+            "paragraph_index": 0
+          },
+          "confidence": 0.75,
+          "metadata": {
+            "source": "llm"
+          }
+        },
+        {
+          "issue_type": "language",
+          "severity": "medium",
+          "title": "数字格式不一致",
+          "description": "数字“46.8亿美元”和“64.0亿美元”使用了小数点，而“549.3亿美元”也使用了小数点，但“36%”的复合年增长率描述可能引起歧义，通常应明确是“年复合增长率（CAGR）”。",
+          "suggestion": "建议统一数字格式，并明确“36%的复合年增长率”为“年复合增长率（CAGR）为36%”。",
+          "source_excerpt": "全球用户体验（UX）服务市场在2024年为46.8亿美元，预计2025年将增至64.0亿美元，并以36%的复合年增长率在2032年达到549.3亿美元",
+          "location": {
+            "char_start": 404,
+            "char_end": 479,
+            "paragraph_index": 11
+          },
+          "confidence": 0.75,
+          "metadata": {
+            "source": "llm"
+          }
+        },
+        {
+          "issue_type": "language",
+          "severity": "low",
+          "title": "口语化表达",
+          "description": "“食之无味弃之可惜”是成语，但在此上下文中显得口语化，可能不适合正式报告。",
+          "suggestion": "建议改为更正式的表述，例如“该功能的价值因此大打折扣”或“该功能因此显得不够完善”。",
+          "source_excerpt": "这个缺点使这个功能有些食之无味弃之可惜。",
+          "location": {
+            "char_start": 1355,
+            "char_end": 1375,
+            "paragraph_index": 30
+          },
+          "confidence": 0.75,
+          "metadata": {
+            "source": "llm"
+          }
+        },
+        {
+          "issue_type": "language",
+          "severity": "high",
+          "title": "错别字",
+          "description": "“二妙多”应为“而妙多”。",
+          "suggestion": "建议将“二”改为“而”。",
+          "source_excerpt": "Figma的AI偏向辅助插件，二妙多是AI驱动，具备更强的风格学习能力，AI功能对UI设计的赋能更加直接和全面。",
+          "location": {
+            "char_start": 1694,
+            "char_end": 1750,
+            "paragraph_index": 38
+          },
+          "confidence": 0.75,
+          "metadata": {
+            "source": "llm"
+          }
+        },
+        {
+          "issue_type": "language",
+          "severity": "medium",
+          "title": "术语不一致",
+          "description": "“兴奋型需求”在前文中使用“兴奋性需求”，术语不统一。",
+          "suggestion": "建议统一术语，例如均使用“兴奋型需求”或“愉悦型需求”。",
+          "source_excerpt": "可以感受到妙多是对标Figma进行的开发，因此大部分Figma拥有的功能妙多都支持，同时妙多支持将公网网址一键转化为可编辑的设计稿、并且可以直接选择设计稿进行设计系统的生成，这两个功能属于兴奋型需求。",
+          "location": {
+            "char_start": 1792,
+            "char_end": 1892,
+            "paragraph_index": 40
+          },
+          "confidence": 0.75,
+          "metadata": {
+            "source": "llm"
+          }
+        },
+        {
+          "issue_type": "language",
+          "severity": "medium",
+          "title": "英文表达不准确",
+          "description": "“significantly lower than Figma's pricing system”比较对象不恰当，价格应与价格比较，而非定价系统。",
+          "suggestion": "建议改为“significantly lower than Figma's equivalent plan”或“significantly more affordable than Figma”。",
+          "source_excerpt": "Motiff Pro is only ¥24/month, significantly lower than Figma's pricing system.",
+          "location": {
+            "char_start": 8120,
+            "char_end": 8198,
+            "paragraph_index": 97
+          },
+          "confidence": 0.75,
+          "metadata": {
+            "source": "llm"
+          }
+        }
+      ],
+      "metrics": {
+        "issue_count": 9,
+        "high_severity_count": 3,
+        "fact_check_count": 4,
+        "flagged_fact_count": 0,
+        "language_issue_count": 6,
+        "consistency_issue_count": 2,
+        "structure_score": 1.0,
+        "quality_score": 83.33,
+        "quality_level": "good"
+      },
+      "metadata": {
+        "document_length": 10551,
+        "has_template": true,
+        "analysis_config": {
+          "analysis_type": "full",
+          "enable_fact_check": true,
+          "enable_structure_match": true,
+          "enable_quality_eval": true,
+          "fact_check_config": {},
+          "structure_match_config": {},
+          "quality_eval_config": {},
+          "language_review_config": {},
+          "consistency_review_config": {},
+          "batch_size": 5,
+          "max_concurrency": 3,
+          "timeout": 300
+        }
+      }
+    },
+    "summary": "Quality score 83.3/100 (good). Structure match 100.0%. Fact check reviewed 4 claims, with 0 flagged. Found 2 potential consistency issues.",
+    "recommendations": [
+      "请复核 2 处前后表述是否一致。"
+    ],
+    "metadata": {
+      "document_length": 10551,
+      "has_template": true,
+      "analysis_config": {
+        "analysis_type": "full",
+        "enable_fact_check": true,
+        "enable_structure_match": true,
+        "enable_quality_eval": true,
+        "fact_check_config": {},
+        "structure_match_config": {},
+        "quality_eval_config": {},
+        "language_review_config": {},
+        "consistency_review_config": {},
+        "batch_size": 5,
+        "max_concurrency": 3,
+        "timeout": 300
+      }
+    }
+  },
+  "annotations": [
+    {
+      "paragraph_index": 146,
+      "title": "整体质量建议",
+      "comment": "问题：以下维度仍需加强：数据准确性。\n建议：核对并统一中英文版本中的数值表述，确保单位换算一致。例如，将“46.8亿美元”与“4.68 billion USD”统一为一种表述方式。",
+      "severity": "medium",
+      "source_excerpt": "",
+      "metadata": {
+        "dimensions": [
+          "data_accuracy"
+        ],
+        "scores": {
+          "data_accuracy": 75.0
+        },
+        "anchor_preference": "document_end",
+        "render_mode": "summary_block",
+        "anchor_reason": "document_end"
+      }
+    },
+    {
+      "paragraph_index": 56,
+      "title": "前后矛盾",
+      "comment": "问题：报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。\n建议：请核实并统一妙多AI专业版的准确月费价格。",
+      "severity": "high",
+      "source_excerpt": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+      "metadata": {
+        "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "anchor_side": "a"
+      }
+    },
+    {
+      "paragraph_index": 70,
+      "title": "前后矛盾",
+      "comment": "问题：报告中对妙多AI专业版的价格描述存在矛盾。一处描述为“仅¥24/月”，另一处描述为“¥90/月”。 另一处相关表述：价格：Motiff专业版仅¥24/月，远低于Figma价格体系。\n建议：请核实并统一妙多AI专业版的准确月费价格。",
+      "severity": "high",
+      "source_excerpt": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+      "metadata": {
+        "excerpt_a": "价格：Motiff专业版仅¥24/月，远低于Figma价格体系。",
+        "excerpt_b": "具体价格：基础版免费，每月100积分；专业版¥90/月；企业版¥200/月；集团版¥300/月。",
+        "anchor_side": "b"
+      }
+    },
+    {
+      "paragraph_index": 0,
+      "title": "标点符号误用",
+      "comment": "问题：中文标题中使用了英文连字符“-”，不符合中文标点规范。\n建议：建议将“-”改为中文破折号“——”。",
+      "severity": "low",
+      "source_excerpt": "妙多AI产品调研报告-Michael",
+      "metadata": {
+        "source": "llm"
+      }
+    },
+    {
+      "paragraph_index": 11,
+      "title": "数字格式不一致",
+      "comment": "问题：数字“46.8亿美元”和“64.0亿美元”使用了小数点，而“549.3亿美元”也使用了小数点，但“36%”的复合年增长率描述可能引起歧义，通常应明确是“年复合增长率（CAGR）”。\n建议：建议统一数字格式，并明确“36%的复合年增长率”为“年复合增长率（CAGR）为36%”。",
+      "severity": "medium",
+      "source_excerpt": "全球用户体验（UX）服务市场在2024年为46.8亿美元，预计2025年将增至64.0亿美元，并以36%的复合年增长率在2032年达到549.3亿美元",
+      "metadata": {
+        "source": "llm"
+      }
+    },
+    {
+      "paragraph_index": 46,
+      "title": "口语化表达",
+      "comment": "问题：“食之无味弃之可惜”是成语，但在此上下文中显得口语化，可能不适合正式报告。\n建议：建议改为更正式的表述，例如“该功能的价值因此大打折扣”或“该功能因此显得不够完善”。",
+      "severity": "low",
+      "source_excerpt": "这个缺点使这个功能有些食之无味弃之可惜。",
+      "metadata": {
+        "source": "llm"
+      }
+    },
+    {
+      "paragraph_index": 55,
+      "title": "错别字",
+      "comment": "问题：“二妙多”应为“而妙多”。\n建议：建议将“二”改为“而”。",
+      "severity": "high",
+      "source_excerpt": "Figma的AI偏向辅助插件，二妙多是AI驱动，具备更强的风格学习能力，AI功能对UI设计的赋能更加直接和全面。",
+      "metadata": {
+        "source": "llm"
+      }
+    },
+    {
+      "paragraph_index": 57,
+      "title": "术语不一致",
+      "comment": "问题：“兴奋型需求”在前文中使用“兴奋性需求”，术语不统一。\n建议：建议统一术语，例如均使用“兴奋型需求”或“愉悦型需求”。",
+      "severity": "medium",
+      "source_excerpt": "可以感受到妙多是对标Figma进行的开发，因此大部分Figma拥有的功能妙多都支持，同时妙多支持将公网网址一键转化为可编辑的设计稿、并且可以直接选择设计稿进行设计系统的生成，这两个功能属于兴奋型需求。",
+      "metadata": {
+        "source": "llm"
+      }
+    },
+    {
+      "paragraph_index": 127,
+      "title": "英文表达不准确",
+      "comment": "问题：“significantly lower than Figma's pricing system”比较对象不恰当，价格应与价格比较，而非定价系统。\n建议：建议改为“significantly lower than Figma's equivalent plan”或“significantly more affordable than Figma”。",
+      "severity": "medium",
+      "source_excerpt": "Motiff Pro is only ¥24/month, significantly lower than Figma's pricing system.",
+      "metadata": {
+        "source": "llm"
+      }
+    },
+    {
+      "paragraph_index": 0,
+      "title": "审核运行情况",
+      "comment": "审核时间：2026-04-02T10:55:41.143943\n审核模型：deepseek\n审核过程评分：100/100\n- 质量评估：正常，评分 83.3/100，等级 good\n- 结构核对：正常，匹配度 100.0%\n- 事实核查：正常，核查 4 条，联网检索 4 条，fallback 0 条\n- 语言审核：正常，发现 6 条，fallback 0 条\n- 矛盾检查：发现 2 条",
+      "severity": "low",
+      "source_excerpt": "",
+      "metadata": {
+        "render_mode": "summary_block",
+        "anchor_preference": "document_end"
+      }
+    }
+  ],
+  "artifacts": {
+    "annotated_word_path": "<HOME>\\.openclaw\\workspace\\downloads\\妙多AI产品调研报告-Michael-annotated.docx",
+    "upload_candidate_path": "<HOME>\\.openclaw\\workspace\\downloads\\妙多AI产品调研报告-Michael-annotated.docx",
+    "markdown_report_path": "<HOME>\\.openclaw\\workspace\\downloads\\妙多AI产品调研报告-Michael-annotated.review.md",
+    "compression_applied": false,
+    "compression_result_size": 6166743,
+    "compression_original_size": 6166743,
+    "compression_target_met": true
+  }
+}

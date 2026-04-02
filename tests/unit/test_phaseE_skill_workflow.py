@@ -40,7 +40,13 @@ class _FakeSkillClient:
             reference=reference,
             format=download_format,
             filename="source.docx",
-            text_content="Skill pipeline example content.",
+            text_content=(
+                "一、产品概述\n"
+                "Skill pipeline example content includes a realistic amount of body text for review. "
+                "It describes the product workflow, collaboration setup, and editing experience in enough detail.\n"
+                "二、结论与推荐建议\n"
+                "The report recommends continued evaluation and asks for a broader comparison against competing tools."
+            ),
             metadata={"source": "fake-skill-client", "used_text_fallback": True},
         )
 

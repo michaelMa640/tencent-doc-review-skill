@@ -1,4 +1,4 @@
-import json
+﻿import json
 import shutil
 import sys
 import unittest
@@ -24,9 +24,15 @@ class ReviewLocalDocxTests(unittest.IsolatedAsyncioTestCase):
 
             document = Document()
             document.add_heading("产品概述", level=1)
-            document.add_paragraph("该产品支持实时动画编辑，并提供多人协作能力。")
+            document.add_paragraph(
+                "该产品支持实时动画编辑，并提供多人协作能力。"
+                "在调研过程中，我们重点关注其工作流效率、资产管理方式以及团队协同场景下的可用性。"
+            )
             document.add_heading("结论与推荐建议", level=1)
-            document.add_paragraph("建议继续评估企业级协作场景。")
+            document.add_paragraph(
+                "建议继续评估企业级协作场景，并补充与竞品在价格、授权方式和渲染速度上的横向对比。"
+                "如果后续要进入团队落地阶段，还需要验证权限管理与资产复用策略。"
+            )
             document.save(source_path)
 
             artifacts = await SkillPipeline().review_local_docx(
@@ -55,6 +61,28 @@ class ReviewLocalDocxTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("redaction_notice", payload)
             self.assertEqual(payload["config_snapshot"]["llm_provider"], "deepseek")
             self.assertNotIn(str(PROJECT_ROOT), json.dumps(payload, ensure_ascii=False))
+        finally:
+            shutil.rmtree(tmp_path, ignore_errors=True)
+
+    async def test_review_local_docx_rejects_incomplete_source_document(self):
+        tmp_path = PROJECT_ROOT / "downloads" / f"test-review-local-{uuid.uuid4().hex[:8]}"
+        tmp_path.mkdir(parents=True, exist_ok=True)
+        try:
+            source_path = tmp_path / "sample-short.docx"
+
+            document = Document()
+            document.add_heading("Reela 产品调研报告", level=1)
+            document.add_paragraph("这是一句被错误下载出来的内容。")
+            document.save(source_path)
+
+            with self.assertRaisesRegex(ValueError, "Downloaded source document appears incomplete"):
+                await SkillPipeline().review_local_docx(
+                    input_path=source_path,
+                    title="Reela 产品调研报告-Michael",
+                    provider="mock",
+                    output_dir=tmp_path,
+                    debug_output_dir=str(tmp_path / "debug"),
+                )
         finally:
             shutil.rmtree(tmp_path, ignore_errors=True)
 

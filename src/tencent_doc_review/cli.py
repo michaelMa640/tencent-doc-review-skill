@@ -522,7 +522,13 @@ class _MockMCPClient:
             reference=reference,
             format=download_format,
             filename=f"{reference.doc_id}.docx",
-            text_content="Skill workflow placeholder content.",
+            text_content=(
+                "一、产品概述\n"
+                "Skill workflow placeholder content includes realistic body text so the review pipeline can run in tests. "
+                "It describes product workflow, collaboration model, and output characteristics in enough detail.\n"
+                "二、结论与推荐建议\n"
+                "The report recommends further evaluation and a structured comparison against competing products."
+            ),
             metadata={"source": "cli-skill-placeholder"},
         )
 

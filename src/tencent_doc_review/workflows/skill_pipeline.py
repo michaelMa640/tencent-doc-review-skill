@@ -98,6 +98,39 @@ class SkillPipeline:
         sanitized = "".join(char for char in (value or "").strip() if char not in '<>:"/\\|?*').strip().rstrip(".")
         return sanitized or fallback
 
+    def _collect_source_document_stats(self, parsed_document) -> dict[str, int]:
+        non_empty_paragraphs = [node for node in parsed_document.paragraphs if node.text.strip()]
+        body_paragraphs = [node for node in non_empty_paragraphs if not node.is_heading]
+        heading_paragraphs = [node for node in non_empty_paragraphs if node.is_heading]
+        body_chars = sum(len(node.text.strip()) for node in body_paragraphs)
+        return {
+            "paragraph_count": len(parsed_document.paragraphs),
+            "non_empty_paragraph_count": len(non_empty_paragraphs),
+            "heading_paragraph_count": len(heading_paragraphs),
+            "body_paragraph_count": len(body_paragraphs),
+            "sentence_count": len(parsed_document.sentences),
+            "body_character_count": body_chars,
+        }
+
+    def _validate_source_document_content(self, parsed_document, document_title: str) -> None:
+        stats = self._collect_source_document_stats(parsed_document)
+        has_structured_body = stats["body_paragraph_count"] >= 2 and stats["body_character_count"] >= 120
+        has_long_fallback_body = (
+            stats["body_paragraph_count"] >= 1
+            and stats["body_character_count"] >= 240
+            and stats["sentence_count"] >= 4
+        )
+        if has_structured_body or has_long_fallback_body:
+            return
+        raise ValueError(
+            "Downloaded source document appears incomplete and was not reviewed. "
+            f"title={document_title!r}, body_paragraphs={stats['body_paragraph_count']}, "
+            f"body_characters={stats['body_character_count']}, sentences={stats['sentence_count']}. "
+            "This usually means the Tencent Docs MCP resolved the wrong object from the provided link, "
+            "especially for team-space links like docs.qq.com/space/...?...resourceId=.... "
+            "Please retry with the real docs.qq.com/doc/... link or confirm the original document object before upload."
+        )
+
     async def review_local_docx(
         self,
         input_path: str | Path,
@@ -116,6 +149,7 @@ class SkillPipeline:
 
         parsed_document = self.word_parser.parse(source_path)
         document_title = title or parsed_document.title or source_path.stem
+        self._validate_source_document_content(parsed_document, document_title)
         document_text = self._render_document_text(parsed_document.paragraphs)
 
         request = SkillRequest(
@@ -211,6 +245,10 @@ class SkillPipeline:
         downloaded = self._ensure_stable_local_filename(downloaded, request)
 
         parsed_document = self.word_parser.parse(downloaded.file_path)
+        self._validate_source_document_content(
+            parsed_document,
+            parsed_document.title or request.source_document.display_name or request.source_document.doc_id,
+        )
         document_text = self._render_document_text(parsed_document.paragraphs)
         review_result = await self._review_document(
             request=request,
