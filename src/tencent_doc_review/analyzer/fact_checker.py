@@ -249,6 +249,158 @@ class SearchClient:
         return sources
 
 
+class AgentSearchClient:
+    """Placeholder agent-side search client for runtimes with native web access."""
+
+    def __init__(self, enabled: bool = False, provider: str = "agent") -> None:
+        self.enabled = enabled
+        self.provider = provider
+        self.last_search_trace: Dict[str, Any] = {}
+
+    async def search(self, query: str, num_results: int = 5) -> List[Dict[str, Any]]:
+        self.last_search_trace = {
+            "performed": True,
+            "provider": self.provider,
+            "raw_count": 0,
+            "filtered_count": 0,
+            "query": query,
+            "error": "Agent-side fact check is not implemented in this runtime.",
+        }
+        return []
+
+    async def verify_fact(self, claim: str, context: str = "") -> Dict[str, Any]:
+        return {
+            "status": "unverified",
+            "confidence": 0.0,
+            "evidence": [],
+            "sources": [],
+            "suggestion": "当前运行环境未接入 Agent 侧事实核查执行器。",
+        }
+
+    async def close(self) -> None:
+        return None
+
+
+class RoutedSearchClient:
+    """Route fact-check lookups across agent/api/offline modes with observable fallback."""
+
+    def __init__(
+        self,
+        mode: str,
+        agent_client: Optional[AgentSearchClient] = None,
+        api_client: Optional[SearchClient] = None,
+    ) -> None:
+        self.mode = (mode or "auto").strip().lower()
+        self.agent_client = agent_client or AgentSearchClient(enabled=False)
+        self.api_client = api_client or SearchClient(provider="disabled")
+        self.provider = self.mode
+        self.enabled = self.mode != "offline" and (self.agent_client.enabled or self.api_client.enabled or self.mode == "agent")
+        self.last_search_trace: Dict[str, Any] = {}
+
+    async def search(self, query: str, num_results: int = 5) -> List[Dict[str, Any]]:
+        if self.mode == "offline":
+            self.last_search_trace = {
+                "performed": False,
+                "provider": "offline",
+                "raw_count": 0,
+                "filtered_count": 0,
+                "mode": self.mode,
+                "actual_mode": "offline",
+            }
+            return []
+
+        if self.mode == "api":
+            return await self._search_api(query, num_results, fallback_from="")
+
+        if self.mode == "agent":
+            return await self._search_agent_only(query, num_results)
+
+        return await self._search_auto(query, num_results)
+
+    async def verify_fact(self, claim: str, context: str = "") -> Dict[str, Any]:
+        query = claim if not context else f"{claim} {context}"
+        results = await self.search(query)
+        if results:
+            return {
+                "status": "unverified",
+                "confidence": 0.35,
+                "evidence": [item.get("snippet", "") for item in results if item.get("snippet")][:3],
+                "sources": self._to_source_refs(results),
+                "suggestion": DEFAULT_RECHECK_SUGGESTION,
+            }
+        return {
+            "status": "unverified",
+            "confidence": 0.0,
+            "evidence": [],
+            "sources": [],
+            "suggestion": self.last_search_trace.get("error") or DEFAULT_RECHECK_SUGGESTION,
+        }
+
+    async def close(self) -> None:
+        if hasattr(self.api_client, "close"):
+            await self.api_client.close()
+        if hasattr(self.agent_client, "close"):
+            await self.agent_client.close()
+
+    def _to_source_refs(self, results: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+        if hasattr(self.api_client, "_to_source_refs"):
+            return self.api_client._to_source_refs(results)
+        return SearchClient()._to_source_refs(results)
+
+    async def _search_agent_only(self, query: str, num_results: int) -> List[Dict[str, Any]]:
+        results = await self.agent_client.search(query, num_results=num_results)
+        trace = dict(getattr(self.agent_client, "last_search_trace", {}))
+        trace.setdefault("mode", self.mode)
+        trace.setdefault("actual_mode", "agent")
+        trace.setdefault("performed", True)
+        self.last_search_trace = trace
+        return results
+
+    async def _search_api(self, query: str, num_results: int, fallback_from: str) -> List[Dict[str, Any]]:
+        if not self.api_client.enabled:
+            self.last_search_trace = {
+                "performed": True,
+                "provider": "api",
+                "raw_count": 0,
+                "filtered_count": 0,
+                "mode": self.mode,
+                "actual_mode": "api",
+                "fallback_triggered": bool(fallback_from),
+                "fallback_from": fallback_from or "",
+                "error": "API search is not configured. Please set SEARCH_API_KEY or switch FACT_CHECK_MODE.",
+            }
+            return []
+        results = await self.api_client.search(query, num_results=num_results)
+        self.last_search_trace = {
+            "performed": True,
+            "provider": getattr(self.api_client, "provider", "api"),
+            "raw_count": len(results),
+            "filtered_count": len(results),
+            "mode": self.mode,
+            "actual_mode": "api",
+            "fallback_triggered": bool(fallback_from),
+            "fallback_from": fallback_from or "",
+        }
+        return results
+
+    async def _search_auto(self, query: str, num_results: int) -> List[Dict[str, Any]]:
+        agent_results = await self.agent_client.search(query, num_results=num_results)
+        agent_trace = dict(getattr(self.agent_client, "last_search_trace", {}))
+        agent_trace.setdefault("mode", self.mode)
+        agent_trace.setdefault("actual_mode", "agent")
+        if agent_results:
+            agent_trace.setdefault("fallback_triggered", False)
+            self.last_search_trace = agent_trace
+            return agent_results
+        if self.api_client.enabled:
+            api_results = await self._search_api(query, num_results, fallback_from="agent")
+            self.last_search_trace.setdefault("fallback_reason", agent_trace.get("error") or "Agent-side search returned no results.")
+            return api_results
+        agent_trace.setdefault("fallback_triggered", False)
+        self.last_search_trace = agent_trace
+        return []
+
+
 class FactChecker:
     """Extract factual claims and verify them with search-backed LLM prompts."""
 
@@ -448,6 +600,8 @@ class FactChecker:
             raw_results = await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
             filtered_results, trace = self._filter_search_results(claim, context, raw_results)
             filtered_results = self._refine_search_result_snippets(claim, filtered_results)
+            base_trace = dict(getattr(self.search_client, "last_search_trace", {}))
+            trace.update({key: value for key, value in base_trace.items() if value not in (None, "")})
             trace["performed"] = True
             trace["query"] = query
             return filtered_results, trace

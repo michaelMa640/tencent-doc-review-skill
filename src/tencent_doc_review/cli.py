@@ -49,6 +49,10 @@ def _default_openclaw_bridge_script() -> Path:
     return Path(__file__).resolve().parent / "access" / "openclaw_bridge.py"
 
 
+def _default_claude_code_bridge_script() -> Path:
+    return Path(__file__).resolve().parent / "access" / "claude_code_bridge.py"
+
+
 def _detect_python_executable() -> str:
     if sys.executable:
         return sys.executable
@@ -68,6 +72,19 @@ def _detect_openclaw_executable() -> str:
     return ""
 
 
+def _detect_claude_executable() -> str:
+    for name in ("claude", "claude.cmd", "claude.exe"):
+        resolved = shutil.which(name)
+        if resolved:
+            return resolved
+
+    npm_global = Path.home() / "AppData" / "Roaming" / "npm" / "claude.cmd"
+    if npm_global.exists():
+        return str(npm_global)
+
+    return ""
+
+
 def _build_default_openclaw_bridge_args_text(openclaw_executable: str) -> str:
     bridge_script = _default_openclaw_bridge_script()
     args = [
@@ -77,6 +94,20 @@ def _build_default_openclaw_bridge_args_text(openclaw_executable: str) -> str:
         "--agent-id",
         "main",
         "--no-local",
+    ]
+    return subprocess.list2cmdline(args) if platform.system().lower() == "windows" else shlex.join(args)
+
+
+def _build_default_claude_code_bridge_args_text(claude_executable: str) -> str:
+    bridge_script = _default_claude_code_bridge_script()
+    args = [
+        str(bridge_script),
+        "--claude-executable",
+        claude_executable,
+        "--permission-mode",
+        "acceptEdits",
+        "--cwd",
+        str(Path.cwd()),
     ]
     return subprocess.list2cmdline(args) if platform.system().lower() == "windows" else shlex.join(args)
 
@@ -120,10 +151,12 @@ def doctor() -> None:
     click.echo(f"  FACT_CHECK_MODE: {settings.fact_check_mode}")
     click.echo(f"  SKILL_MCP_CLIENT: {settings.skill_mcp_client}")
     auto_openclaw = _detect_openclaw_executable()
+    auto_claude = _detect_claude_executable()
     auto_python = _detect_python_executable()
     click.echo(f"  OPENCLAW_MCP_BRIDGE_EXECUTABLE: {'set' if settings.openclaw_mcp_bridge_executable else 'auto' if auto_python else 'missing'}")
     click.echo(f"  OPENCLAW executable discoverable: {'yes' if auto_openclaw else 'no'}")
-    click.echo(f"  CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE: {'set' if settings.claude_code_mcp_bridge_executable else 'missing'}")
+    click.echo(f"  CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE: {'set' if settings.claude_code_mcp_bridge_executable else 'auto' if auto_python else 'missing'}")
+    click.echo(f"  Claude executable discoverable: {'yes' if auto_claude else 'no'}")
     click.echo(f"  REVIEW_DEBUG_OUTPUT_DIR: {get_effective_debug_output_dir(settings.review_debug_output_dir)}")
     click.echo(f"  REVIEW_RULES_TEMPLATE_PATH: {get_default_review_rules_path()}")
     click.echo(f"  REVIEW_STRUCTURE_TEMPLATE_PATH: {get_default_review_template_path()}")
@@ -195,7 +228,7 @@ def skill_info() -> None:
     payload["available_mcp_clients"] = {
         "mock": True,
         "openclaw": bool(settings.openclaw_mcp_bridge_executable or (_detect_python_executable() and _detect_openclaw_executable())),
-        "claude_code": bool(settings.claude_code_mcp_bridge_executable),
+        "claude_code": bool(settings.claude_code_mcp_bridge_executable or (_detect_python_executable() and _detect_claude_executable())),
     }
     click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
 
@@ -584,10 +617,25 @@ def _create_skill_mcp_client(
             )
         )
     if normalized_name == "claude_code":
-        executable = bridge_executable or settings.claude_code_mcp_bridge_executable
+        executable = bridge_executable or settings.claude_code_mcp_bridge_executable or _detect_python_executable()
         args_text = bridge_args or settings.claude_code_mcp_bridge_args
         if not executable:
-            raise click.UsageError("CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE is required for --mcp-client claude_code.")
+            raise click.UsageError(
+                "Unable to determine how to start the Claude Code bridge. "
+                "Please set CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE or pass --bridge-executable."
+            )
+        if not args_text:
+            claude_executable = _detect_claude_executable()
+            if not claude_executable:
+                raise click.UsageError(
+                    "Unable to locate the Claude Code executable automatically. "
+                    "Please make sure claude is in PATH, or set CLAUDE_CODE_MCP_BRIDGE_ARGS "
+                    "or pass --bridge-args explicitly."
+                )
+            bridge_script = _default_claude_code_bridge_script()
+            if not bridge_script.exists():
+                raise click.UsageError(f"Claude Code bridge script not found: {bridge_script}")
+            args_text = _build_default_claude_code_bridge_args_text(claude_executable)
         return CommandMCPClient(
             build_bridge_config(
                 client_name="claude_code",

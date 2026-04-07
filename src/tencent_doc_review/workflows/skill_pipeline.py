@@ -642,6 +642,19 @@ class SkillPipeline:
         raw_count = int(search_trace.get("raw_count") or 0)
         filtered_count = int(search_trace.get("filtered_count") or 0)
         lines = [f"- 已联网检索：{provider}，候选 {raw_count} 条，采纳 {filtered_count} 条"]
+        actual_mode = str(search_trace.get("actual_mode") or "").strip()
+        mode = str(search_trace.get("mode") or "").strip()
+        if mode:
+            if actual_mode and actual_mode != mode:
+                lines.append(f"- 事实核查模式：{mode}，本次实际执行：{actual_mode}")
+            else:
+                lines.append(f"- 事实核查模式：{mode}")
+        if search_trace.get("fallback_triggered"):
+            fallback_from = str(search_trace.get("fallback_from") or "unknown").strip()
+            fallback_reason = str(search_trace.get("fallback_reason") or "").strip()
+            lines.append(f"- 已触发 fallback：{fallback_from} -> {actual_mode or provider}")
+            if fallback_reason:
+                lines.append(f"- fallback 原因：{fallback_reason}")
         error = str(search_trace.get("error") or "").strip()
         if error:
             lines.append(f"- 检索异常：{error}")

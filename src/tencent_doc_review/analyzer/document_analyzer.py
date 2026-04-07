@@ -17,7 +17,7 @@ from ..domain import ReviewIssue, ReviewIssueType, ReviewReport, aggregate_revie
 from ..llm.base import LLMClient
 from ..mcp_client import Comment, TencentDocMCPClient
 from .consistency_reviewer import ConsistencyReviewer
-from .fact_checker import FactCheckResult, FactChecker, SearchClient
+from .fact_checker import AgentSearchClient, FactCheckResult, FactChecker, RoutedSearchClient, SearchClient
 from .language_reviewer import LanguageReviewer
 from .quality_evaluator import QualityEvaluator, QualityReport
 from .structure_matcher import StructureMatchResult, StructureMatcher
@@ -227,8 +227,9 @@ class DocumentAnalyzer:
 
     def _build_search_client(self, fact_check_config: Dict[str, Any]) -> SearchClient:
         settings = get_settings()
+        fact_check_mode = str(fact_check_config.get("fact_check_mode") or settings.fact_check_mode or "auto").strip().lower()
         provider = fact_check_config.get("search_provider") or settings.search_provider
-        return SearchClient(
+        api_client = SearchClient(
             api_key=fact_check_config.get("search_api_key") or settings.search_api_key,
             provider=provider,
             base_url=fact_check_config.get("search_base_url") or settings.search_base_url,
@@ -237,6 +238,13 @@ class DocumentAnalyzer:
             search_depth=str(fact_check_config.get("search_depth") or settings.search_depth),
             topic=str(fact_check_config.get("search_topic") or settings.search_topic),
         )
+        if fact_check_mode == "offline":
+            return RoutedSearchClient(mode="offline", api_client=api_client)
+        if fact_check_mode == "api":
+            return RoutedSearchClient(mode="api", api_client=api_client)
+        agent_enabled = bool(fact_check_config.get("agent_search_enabled", False))
+        agent_client = AgentSearchClient(enabled=agent_enabled)
+        return RoutedSearchClient(mode=fact_check_mode, agent_client=agent_client, api_client=api_client)
 
     async def analyze(
         self,
@@ -309,6 +317,7 @@ class DocumentAnalyzer:
             "document_length": len(document_text),
             "has_template": template_text is not None,
             "analysis_config": config.to_dict(),
+            "fact_check_mode": config.fact_check_config.get("fact_check_mode") or get_settings().fact_check_mode,
         }
         review_report = build_review_report(
             summary=summary,

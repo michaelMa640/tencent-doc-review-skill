@@ -208,7 +208,15 @@ FACT_CHECK_MODE=auto|agent|api|offline
 
 - 当前阶段已经先把配置模型与文档口径收口好了
 - `FACT_CHECK_MODE` 已加入配置体系和诊断输出
-- 运行时按模式调度与 `auto` fallback 的完整实现，会在后续阶段继续补齐
+- 运行时模式调度已经接入：
+  - `offline` 会跳过联网检索
+  - `api` 会直接走搜索 API
+  - `agent` 会保留 Agent 路径与留痕，但当前运行时还没有独立 Agent 搜索执行器
+  - `auto` 会优先尝试 Agent 路径，并在当前运行时自动 fallback 到 API
+- 因此当前 `auto` 的主要价值是：
+  - 保留统一模式语义
+  - 把 fallback 信息写进检索痕迹
+  - 为后续接入真实 Agent 侧事实核查执行器预留挂点
 
 ## 腾讯文档接入方式说明
 
@@ -576,6 +584,50 @@ OPENCLAW_MCP_BRIDGE_ARGS=
 
 也就是说，正常情况下你现在只需要填 `TENCENT_DOCS_TOKEN`，然后直接运行 `skill-run --mcp-client openclaw` 就够了。
 
+### Claude Code bridge
+
+阶段 C 之后，`claude_code` 已经不再只是占位入口，而是补上了最小 bridge 骨架：
+
+- 内置 [claude_code_bridge.py](/E:/VibeCoding/tencent-doc-review/src/tencent_doc_review/access/claude_code_bridge.py)
+- 默认会尝试自动探测：
+  - 当前 Python 解释器
+  - `claude` CLI
+- 自动生成 bridge 启动参数
+
+推荐最小配置：
+
+```env
+TENCENT_DOCS_TOKEN=your_tencent_docs_mcp_token
+SKILL_MCP_CLIENT=claude_code
+FACT_CHECK_MODE=auto
+CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE=
+CLAUDE_CODE_MCP_BRIDGE_ARGS=
+```
+
+当前默认自动推断依赖：
+
+- `claude` 命令在 PATH 中可用
+- 当前 Python 可用于启动 bridge 脚本
+
+如果自动探测失败，再手动填写：
+
+- `CLAUDE_CODE_MCP_BRIDGE_EXECUTABLE`
+  - Windows 通常填 `python`
+  - macOS 通常填 `python3`
+- `CLAUDE_CODE_MCP_BRIDGE_ARGS`
+  - 一般会包含：
+    - `claude_code_bridge.py` 的路径
+    - `--claude-executable`
+    - 你的 `claude` 路径
+    - `--permission-mode acceptEdits`
+    - `--cwd <project-root>`
+
+需要注意：
+
+- 这个 bridge 当前属于“最小闭环版本”，已经能承接统一下载 / 上传协议
+- 但它仍然需要后续实机联调来确认不同机器上的权限、MCP 调用和上传行为
+- 如果你的 Claude Code 环境在无头模式下仍然触发权限拦截，可能还需要按实际环境补充 bridge 参数
+
 ## 默认模板说明
 
 当前默认模板分两层：
@@ -637,6 +689,26 @@ tencent-doc-review skill-run \
   --provider deepseek
 ```
 
+### macOS + Claude Code
+
+```bash
+tencent-doc-review skill-run \
+  --doc-id "your_doc_id" \
+  --title "your_doc_title" \
+  --target-folder-id "your_target_folder_id" \
+  --target-space-type personal_space \
+  --target-path "/更改" \
+  --download-dir "/path/to/tencent-doc-review/downloads" \
+  --mcp-client claude_code \
+  --provider deepseek
+```
+
+这条命令默认依赖：
+
+- 你已经用 `claude mcp add ...` 配好了腾讯文档 MCP
+- 本机 `claude` 命令可用
+- 当前 Python 能启动 `claude_code_bridge.py`
+
 ## Claude Code 说明
 
 当前项目：
@@ -645,11 +717,13 @@ tencent-doc-review skill-run \
 - CLI 已支持 `--mcp-client claude_code`
 - 协议层与 bridge 层都已抽象
 - 配置层已支持 `FACT_CHECK_MODE`
+- 已补 `claude_code_bridge.py` 最小 bridge 骨架
+- 已补自动探测 `claude` CLI 与默认 bridge 参数生成逻辑
 
 但需要明确：
 
 - `OpenClaw` 已完成真实腾讯文档联调
-- `Claude Code` 目前还是“架构支持，待 bridge 实机联调”
+- `Claude Code` 现在是“已有最小 bridge 闭环，待实机联调验证”
 
 如果现在要稳定使用，仍然优先推荐 `OpenClaw`。
 

@@ -1,0 +1,436 @@
+{
+  "bundle_version": 1,
+  "redaction_notice": "This debug bundle is intended for issue uploads. Local paths, usernames, and docs.qq.com document IDs are redacted.",
+  "document_title": "Skill Demo",
+  "source_path": "<TMP>\\tencent-doc-review\\downloads\\doc-123\\Skill Demo.docx",
+  "generated_at": "2026-04-07T10:28:55.680532",
+  "config_snapshot": {
+    "llm_provider": "deepseek",
+    "review_rules_path": "E:\\VibeCoding\\tencent-doc-review\\templates\\default_product_research_review_rules.md",
+    "review_structure_template_path": "E:\\VibeCoding\\tencent-doc-review\\templates\\default_product_research_structure_template.md",
+    "review_debug_output_dir": ""
+  },
+  "parsed_document": {
+    "paragraphs": [
+      {
+        "index": 0,
+        "style_name": "Heading 1",
+        "is_heading": true,
+        "heading_level": 1,
+        "metadata": {},
+        "text_preview": "Skill Demo",
+        "text_length": 10
+      },
+      {
+        "index": 1,
+        "style_name": "Normal",
+        "is_heading": false,
+        "heading_level": 0,
+        "metadata": {},
+        "text_preview": "一、产品概述 Skill pipeline example content includes a realistic amount of body text for review. It describes the product workflow, collaboration setup, and editing experience in enough detail. 二、结论与推荐建议 The report recommends…",
+        "text_length": 299
+      }
+    ],
+    "sentences": [
+      {
+        "index": 0,
+        "paragraph_index": 0,
+        "paragraph_text": "Skill Demo",
+        "is_heading": true,
+        "metadata": {},
+        "text_preview": "Skill Demo",
+        "text_length": 10
+      },
+      {
+        "index": 1,
+        "paragraph_index": 1,
+        "paragraph_text": "一、产品概述\nSkill pipeline example content includes a realistic amount of body text for review. It describes the product workflow, collaboration setup, and editing experience in enough detail.\n二、结论与推荐建议\nThe report recommends continued evaluation and asks for a broader comparison against competing tools.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "一、产品概述",
+        "text_length": 6
+      },
+      {
+        "index": 2,
+        "paragraph_index": 1,
+        "paragraph_text": "一、产品概述\nSkill pipeline example content includes a realistic amount of body text for review. It describes the product workflow, collaboration setup, and editing experience in enough detail.\n二、结论与推荐建议\nThe report recommends continued evaluation and asks for a broader comparison against competing tools.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "Skill pipeline example content includes a realistic amount of body text for review.",
+        "text_length": 83
+      },
+      {
+        "index": 3,
+        "paragraph_index": 1,
+        "paragraph_text": "一、产品概述\nSkill pipeline example content includes a realistic amount of body text for review. It describes the product workflow, collaboration setup, and editing experience in enough detail.\n二、结论与推荐建议\nThe report recommends continued evaluation and asks for a broader comparison against competing tools.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "It describes the product workflow, collaboration setup, and editing experience in enough detail.",
+        "text_length": 96
+      },
+      {
+        "index": 4,
+        "paragraph_index": 1,
+        "paragraph_text": "一、产品概述\nSkill pipeline example content includes a realistic amount of body text for review. It describes the product workflow, collaboration setup, and editing experience in enough detail.\n二、结论与推荐建议\nThe report recommends continued evaluation and asks for a broader comparison against competing tools.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "二、结论与推荐建议",
+        "text_length": 9
+      },
+      {
+        "index": 5,
+        "paragraph_index": 1,
+        "paragraph_text": "一、产品概述\nSkill pipeline example content includes a realistic amount of body text for review. It describes the product workflow, collaboration setup, and editing experience in enough detail.\n二、结论与推荐建议\nThe report recommends continued evaluation and asks for a broader comparison against competing tools.",
+        "is_heading": false,
+        "metadata": {},
+        "text_preview": "The report recommends continued evaluation and asks for a broader comparison against competing tools.",
+        "text_length": 101
+      }
+    ]
+  },
+  "analysis_result": {
+    "document_id": "",
+    "document_title": "Skill Demo",
+    "analysis_type": "full",
+    "timestamp": "2026-04-07T10:28:55.662876",
+    "fact_check_results": [],
+    "structure_match_result": {
+      "overall_score": 0.25,
+      "section_matches": [
+        {
+          "template_section": "产品概述",
+          "document_section": "产品概述",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        },
+        {
+          "template_section": "目标用户与市场定位",
+          "document_section": null,
+          "status": "missing",
+          "similarity": 0.0,
+          "issues": [
+            "缺少章节：目标用户与市场定位"
+          ],
+          "suggestions": [
+            "请补充章节“目标用户与市场定位”。"
+          ]
+        },
+        {
+          "template_section": "核心功能与特性",
+          "document_section": null,
+          "status": "missing",
+          "similarity": 0.0,
+          "issues": [
+            "缺少章节：核心功能与特性"
+          ],
+          "suggestions": [
+            "请补充章节“核心功能与特性”。"
+          ]
+        },
+        {
+          "template_section": "实际使用体验",
+          "document_section": null,
+          "status": "missing",
+          "similarity": 0.0,
+          "issues": [
+            "缺少章节：实际使用体验"
+          ],
+          "suggestions": [
+            "请补充章节“实际使用体验”。"
+          ]
+        },
+        {
+          "template_section": "竞品对比分析",
+          "document_section": null,
+          "status": "missing",
+          "similarity": 0.0,
+          "issues": [
+            "缺少章节：竞品对比分析"
+          ],
+          "suggestions": [
+            "请补充章节“竞品对比分析”。"
+          ]
+        },
+        {
+          "template_section": "优势与不足",
+          "document_section": null,
+          "status": "missing",
+          "similarity": 0.0,
+          "issues": [
+            "缺少章节：优势与不足"
+          ],
+          "suggestions": [
+            "请补充章节“优势与不足”。"
+          ]
+        },
+        {
+          "template_section": "价格与性价比",
+          "document_section": null,
+          "status": "missing",
+          "similarity": 0.0,
+          "issues": [
+            "缺少章节：价格与性价比"
+          ],
+          "suggestions": [
+            "请补充章节“价格与性价比”。"
+          ]
+        },
+        {
+          "template_section": "结论与推荐建议",
+          "document_section": "结论与推荐建议",
+          "status": "matched",
+          "similarity": 1.0,
+          "issues": [],
+          "suggestions": []
+        }
+      ]
+    },
+    "quality_report": {
+      "overall_score": 82.0,
+      "overall_level": "good",
+      "dimension_scores": [
+        {
+          "dimension": "content_completeness",
+          "score": 82.0,
+          "weight": 0.2,
+          "level": "good",
+          "strengths": [
+            "结构清晰",
+            "表达基本完整"
+          ],
+          "weaknesses": [
+            "论据较少"
+          ],
+          "suggestions": [
+            "补充更多可验证的数据或案例"
+          ]
+        },
+        {
+          "dimension": "logical_clarity",
+          "score": 82.0,
+          "weight": 0.15,
+          "level": "good",
+          "strengths": [
+            "结构清晰",
+            "表达基本完整"
+          ],
+          "weaknesses": [
+            "论据较少"
+          ],
+          "suggestions": [
+            "补充更多可验证的数据或案例"
+          ]
+        },
+        {
+          "dimension": "argumentation_quality",
+          "score": 82.0,
+          "weight": 0.15,
+          "level": "good",
+          "strengths": [
+            "结构清晰",
+            "表达基本完整"
+          ],
+          "weaknesses": [
+            "论据较少"
+          ],
+          "suggestions": [
+            "补充更多可验证的数据或案例"
+          ]
+        },
+        {
+          "dimension": "data_accuracy",
+          "score": 82.0,
+          "weight": 0.15,
+          "level": "good",
+          "strengths": [
+            "结构清晰",
+            "表达基本完整"
+          ],
+          "weaknesses": [
+            "论据较少"
+          ],
+          "suggestions": [
+            "补充更多可验证的数据或案例"
+          ]
+        },
+        {
+          "dimension": "language_expression",
+          "score": 82.0,
+          "weight": 0.15,
+          "level": "good",
+          "strengths": [
+            "结构清晰",
+            "表达基本完整"
+          ],
+          "weaknesses": [
+            "论据较少"
+          ],
+          "suggestions": [
+            "补充更多可验证的数据或案例"
+          ]
+        },
+        {
+          "dimension": "format_compliance",
+          "score": 82.0,
+          "weight": 0.1,
+          "level": "good",
+          "strengths": [
+            "结构清晰",
+            "表达基本完整"
+          ],
+          "weaknesses": [
+            "论据较少"
+          ],
+          "suggestions": [
+            "补充更多可验证的数据或案例"
+          ]
+        }
+      ],
+      "weighted_average": 82.0,
+      "summary": "本文整体质量评分为 82.0/100。 在 6 个维度中，优秀 0 项，良好 6 项，待改进或较弱 0 项。 表现最好的是 content_completeness（82.0 分）。 最需要补强的是 format_compliance（82.0 分）。",
+      "detailed_analysis": "# 详细质量分析报告\n\n## content_completeness: 82.0/100 (good)\n**优势**\n- 结构清晰\n- 表达基本完整\n**问题**\n- 论据较少\n**建议**\n- 补充更多可验证的数据或案例\n\n## logical_clarity: 82.0/100 (good)\n**优势**\n- 结构清晰\n- 表达基本完整\n**问题**\n- 论据较少\n**建议**\n- 补充更多可验证的数据或案例\n\n## argumentation_quality: 82.0/100 (good)\n**优势**\n- 结构清晰\n- 表达基本完整\n**问题**\n- 论据较少\n**建议**\n- 补充更多可验证的数据或案例\n\n## data_accuracy: 82.0/100 (good)\n**优势**\n- 结构清晰\n- 表达基本完整\n**问题**\n- 论据较少\n**建议**\n- 补充更多可验证的数据或案例\n\n## language_expression: 82.0/100 (good)\n**优势**\n- 结构清晰\n- 表达基本完整\n**问题**\n- 论据较少\n**建议**\n- 补充更多可验证的数据或案例\n\n## format_compliance: 82.0/100 (good)\n**优势**\n- 结构清晰\n- 表达基本完整\n**问题**\n- 论据较少\n**建议**\n- 补充更多可验证的数据或案例\n",
+      "priority_improvements": [],
+      "created_at": "2026-04-07T10:28:55.661713",
+      "metadata": {
+        "text_length": 311,
+        "evaluated_dimensions": [
+          "content_completeness",
+          "logical_clarity",
+          "argumentation_quality",
+          "data_accuracy",
+          "language_expression",
+          "format_compliance"
+        ],
+        "evaluation_version": "2.0",
+        "combined_quality_call": false
+      }
+    },
+    "language_issues": [],
+    "consistency_issues": [],
+    "review_issues": [
+      {
+        "issue_type": "structure",
+        "severity": "medium",
+        "title": "结构建议",
+        "description": "当前与模板相比仍缺少这些部分：目标用户与市场定位、核心功能与特性、实际使用体验、竞品对比分析、优势与不足、价格与性价比。",
+        "suggestion": "建议优先在正文中补齐以下内容：补充“目标用户与市场定位”部分的内容；补充“核心功能与特性”部分的内容；补充“实际使用体验”部分的内容；补充“竞品对比分析”部分的内容；补充“优势与不足”部分的内容",
+        "source_excerpt": "",
+        "location": {},
+        "confidence": 0.0,
+        "metadata": {
+          "anchor_preference": "document_end"
+        }
+      }
+    ],
+    "review_report": {
+      "summary": "Quality score 82.0/100 (good). Structure match 25.0%.",
+      "recommendations": [
+        "请补齐这些缺失章节：目标用户与市场定位、核心功能与特性、实际使用体验、竞品对比分析、优势与不足、价格与性价比。"
+      ],
+      "issues": [
+        {
+          "issue_type": "structure",
+          "severity": "medium",
+          "title": "结构建议",
+          "description": "当前与模板相比仍缺少这些部分：目标用户与市场定位、核心功能与特性、实际使用体验、竞品对比分析、优势与不足、价格与性价比。",
+          "suggestion": "建议优先在正文中补齐以下内容：补充“目标用户与市场定位”部分的内容；补充“核心功能与特性”部分的内容；补充“实际使用体验”部分的内容；补充“竞品对比分析”部分的内容；补充“优势与不足”部分的内容",
+          "source_excerpt": "",
+          "location": {},
+          "confidence": 0.0,
+          "metadata": {
+            "anchor_preference": "document_end"
+          }
+        }
+      ],
+      "metrics": {
+        "issue_count": 1,
+        "high_severity_count": 0,
+        "fact_check_count": 0,
+        "flagged_fact_count": 0,
+        "language_issue_count": 0,
+        "consistency_issue_count": 0,
+        "structure_score": 0.25,
+        "quality_score": 82.0,
+        "quality_level": "good"
+      },
+      "metadata": {
+        "document_length": 311,
+        "has_template": true,
+        "analysis_config": {
+          "analysis_type": "full",
+          "enable_fact_check": true,
+          "enable_structure_match": true,
+          "enable_quality_eval": true,
+          "fact_check_config": {},
+          "structure_match_config": {},
+          "quality_eval_config": {},
+          "language_review_config": {},
+          "consistency_review_config": {},
+          "batch_size": 5,
+          "max_concurrency": 3,
+          "timeout": 300
+        },
+        "fact_check_mode": "auto"
+      }
+    },
+    "summary": "Quality score 82.0/100 (good). Structure match 25.0%.",
+    "recommendations": [
+      "请补齐这些缺失章节：目标用户与市场定位、核心功能与特性、实际使用体验、竞品对比分析、优势与不足、价格与性价比。"
+    ],
+    "metadata": {
+      "document_length": 311,
+      "has_template": true,
+      "analysis_config": {
+        "analysis_type": "full",
+        "enable_fact_check": true,
+        "enable_structure_match": true,
+        "enable_quality_eval": true,
+        "fact_check_config": {},
+        "structure_match_config": {},
+        "quality_eval_config": {},
+        "language_review_config": {},
+        "consistency_review_config": {},
+        "batch_size": 5,
+        "max_concurrency": 3,
+        "timeout": 300
+      },
+      "fact_check_mode": "auto"
+    }
+  },
+  "annotations": [
+    {
+      "paragraph_index": 1,
+      "title": "结构建议",
+      "comment": "问题：当前与模板相比仍缺少这些部分：目标用户与市场定位、核心功能与特性、实际使用体验、竞品对比分析、优势与不足、价格与性价比。\n建议：建议优先在正文中补齐以下内容：补充“目标用户与市场定位”部分的内容；补充“核心功能与特性”部分的内容；补充“实际使用体验”部分的内容；补充“竞品对比分析”部分的内容；补充“优势与不足”部分的内容",
+      "severity": "medium",
+      "source_excerpt": "",
+      "metadata": {
+        "anchor_preference": "document_end",
+        "render_mode": "summary_block",
+        "anchor_reason": "document_end"
+      }
+    },
+    {
+      "paragraph_index": 0,
+      "title": "审核运行情况",
+      "comment": "审核时间：2026-04-07T10:28:55.662876\n审核模型：mock\n审核过程评分：75/100\n- 质量评估：正常，评分 82.0/100，等级 good\n- 结构核对：正常，匹配度 25.0%\n- 事实核查：未生成结果，核查 0 条，联网检索 0 条，fallback 0 条\n- 语言审核：正常，发现 0 条，fallback 0 条\n- 矛盾检查：发现 0 条",
+      "severity": "low",
+      "source_excerpt": "",
+      "metadata": {
+        "render_mode": "summary_block",
+        "anchor_preference": "document_end"
+      }
+    }
+  ],
+  "artifacts": {
+    "annotated_word_path": "<TMP>\\tencent-doc-review\\downloads\\doc-123\\Skill Demo-annotated.docx",
+    "upload_candidate_path": "<TMP>\\tencent-doc-review\\downloads\\doc-123\\Skill Demo-annotated.docx",
+    "markdown_report_path": "<TMP>\\tencent-doc-review\\downloads\\doc-123\\Skill Demo-annotated.review.md",
+    "download_source_path": "",
+    "compression_applied": false,
+    "compression_target_bytes": 10485760,
+    "compression_result_size": 37497
+  }
+}
