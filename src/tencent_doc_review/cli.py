@@ -117,6 +117,7 @@ def doctor() -> None:
     click.echo(f"    TENCENT_DOCS_OPEN_ID: {'set' if settings.tencent_docs_open_id else 'missing'}")
     click.echo(f"  SEARCH_PROVIDER: {settings.search_provider}")
     click.echo(f"  SEARCH_API_KEY: {'set' if settings.search_api_key else 'missing'}")
+    click.echo(f"  FACT_CHECK_MODE: {settings.fact_check_mode}")
     click.echo(f"  SKILL_MCP_CLIENT: {settings.skill_mcp_client}")
     auto_openclaw = _detect_openclaw_executable()
     auto_python = _detect_python_executable()
@@ -147,6 +148,7 @@ def debug_config() -> None:
             "tencent_docs_token": bool(settings.tencent_docs_token),
             "search_provider": settings.search_provider,
             "search_api_key": bool(settings.search_api_key),
+            "fact_check_mode": settings.fact_check_mode,
             "skill_mcp_client": settings.skill_mcp_client,
             "review_debug_output_dir": get_effective_debug_output_dir(settings.review_debug_output_dir),
             "review_rules_template_path": get_default_review_rules_path(),
@@ -189,6 +191,7 @@ def skill_info() -> None:
     )
     payload = dict(runtime.__dict__)
     payload["default_mcp_client"] = settings.skill_mcp_client
+    payload["default_fact_check_mode"] = settings.fact_check_mode
     payload["available_mcp_clients"] = {
         "mock": True,
         "openclaw": bool(settings.openclaw_mcp_bridge_executable or (_detect_python_executable() and _detect_openclaw_executable())),
