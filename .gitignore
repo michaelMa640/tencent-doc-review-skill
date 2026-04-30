@@ -27,6 +27,8 @@ coverage.xml
 logs/
 *.log
 .tmp/
+debug-output/
+phase5-output/
 downloads/*
 !downloads/.gitkeep
 report.md
