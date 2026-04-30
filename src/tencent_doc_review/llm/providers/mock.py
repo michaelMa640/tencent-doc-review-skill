@@ -4,11 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..base import LLMResponse, UsageInfo
+from ..base import LLMCapabilities, LLMResponse, UsageInfo, WebSearchResponse
 
 
 class MockLLMClient:
     """Deterministic provider used for local CLI verification."""
+
+    def get_capabilities(self) -> LLMCapabilities:
+        return LLMCapabilities(
+            provider="mock",
+            model="mock",
+            supports_native_web_search=False,
+            notes="Mock provider does not execute live web search.",
+        )
 
     async def analyze(
         self,
@@ -44,6 +52,15 @@ class MockLLMClient:
             usage=UsageInfo(prompt_tokens=1, completion_tokens=1, total_tokens=2),
             raw_response={},
         )
+
+    async def web_search(
+        self,
+        query: str,
+        *,
+        max_results: int = 5,
+        **_: Any,
+    ) -> WebSearchResponse:
+        raise NotImplementedError("Mock provider does not support native web search")
 
     async def close(self) -> None:
         return None

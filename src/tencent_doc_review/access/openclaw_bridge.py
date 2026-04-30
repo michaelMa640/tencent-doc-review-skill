@@ -99,13 +99,21 @@ def upload_document(settings: OpenClawBridgeSettings, payload: Dict[str, Any]) -
     target = payload.get("target", {})
     local_path = Path(payload["local_path"])
     remote_filename = str(payload.get("remote_filename", "")).strip()
+    folder_id = str(target.get("folder_id", "")).strip()
+    target_parent_hint = folder_id.split("$", 1)[1] if "$" in folder_id else folder_id
     prompt = (
         "You are acting as a bridge for a Tencent Docs review skill. "
         "Upload the local Word document to the requested Tencent Docs destination. "
         f"Target space_type={target.get('space_type','')}, space_id={target.get('space_id','')}, "
-        f"folder_id={target.get('folder_id','')}, path_hint={target.get('path_hint','')}. "
+        f"folder_id={folder_id}, path_hint={target.get('path_hint','')}. "
         f"Local file path={local_path}. Required final visible document title={remote_filename}. "
+        "Important Tencent Docs MCP constraints: "
+        "manage.pre_import does not accept folder_id, so do not rely on pre_import to place the file into a folder. "
+        "If the destination is a team/workspace node, upload/import first, then move the imported file with "
+        f"manage.move_file_to_space using space_id={target.get('space_id','')} and target_parent_id={target_parent_hint}. "
+        "Do not pass folder_id to manage.move_file_to_space; that tool expects target_parent_id. "
         "If the initial upload uses a temporary or local filename, rename or move the uploaded document so the final visible title exactly matches the required title. "
+        "After upload/move/rename, verify by listing the exact target folder or node and confirm the new file is visible there before returning success. "
         "Do not explain. Do not use markdown code fences. "
         'Return exactly one JSON object on success: {"uploaded_name":"final_visible_uploaded_filename","remote_file_id":"remote_file_id","remote_url":"remote_url","metadata":{"source":"openclaw","mode":"upload"}}. '
         'On failure return exactly: {"error":"error_message"}.'

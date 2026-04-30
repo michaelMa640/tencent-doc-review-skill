@@ -17,7 +17,7 @@ from ..domain import ReviewIssue, ReviewIssueType, ReviewReport, aggregate_revie
 from ..llm.base import LLMClient
 from ..mcp_client import Comment, TencentDocMCPClient
 from .consistency_reviewer import ConsistencyReviewer
-from .fact_checker import AgentSearchClient, FactCheckResult, FactChecker, RoutedSearchClient, SearchClient
+from .fact_checker import FactCheckResult, FactChecker, NativeSearchClient, RoutedSearchClient, SearchClient
 from .language_reviewer import LanguageReviewer
 from .quality_evaluator import QualityEvaluator, QualityReport
 from .structure_matcher import StructureMatchResult, StructureMatcher
@@ -130,6 +130,8 @@ class AnalysisResult:
                     "",
                 ]
             )
+            lines.extend(self._render_structure_match_table(self.structure_match_result))
+            lines.append("")
             for match in self.structure_match_result.section_matches:
                 lines.append(f"- {match.template_section.title}: {match.status.value}")
             lines.append("")
@@ -182,6 +184,34 @@ class AnalysisResult:
             elif title:
                 parts.append(title)
         return "; ".join(parts)
+
+    def _render_structure_match_table(self, structure_match_result: StructureMatchResult) -> List[str]:
+        lines = [
+            "| 模板章节 | 当前文章是否已有 | 当前命中章节名 | 状态说明 |",
+            "| --- | --- | --- | --- |",
+        ]
+        for match in structure_match_result.section_matches:
+            status = match.status.value
+            status_label = {
+                "matched": "已覆盖",
+                "missing": "缺失",
+                "partial": "部分匹配",
+                "misplaced": "位置不对应",
+                "extra": "额外章节",
+            }.get(status, status)
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(match.template_section.title or "").strip(),
+                        "✓" if status == "matched" else "✗",
+                        str(match.document_section.title if match.document_section else "").strip(),
+                        status_label,
+                    ]
+                )
+                + " |"
+            )
+        return lines
 
 
 class DocumentAnalyzer:
@@ -238,13 +268,14 @@ class DocumentAnalyzer:
             search_depth=str(fact_check_config.get("search_depth") or settings.search_depth),
             topic=str(fact_check_config.get("search_topic") or settings.search_topic),
         )
+        native_client = NativeSearchClient(llm_client=self.llm_client)
         if fact_check_mode == "offline":
-            return RoutedSearchClient(mode="offline", api_client=api_client)
+            return RoutedSearchClient(mode="offline", native_client=native_client, api_client=api_client)
         if fact_check_mode == "api":
-            return RoutedSearchClient(mode="api", api_client=api_client)
-        agent_enabled = bool(fact_check_config.get("agent_search_enabled", False))
-        agent_client = AgentSearchClient(enabled=agent_enabled)
-        return RoutedSearchClient(mode=fact_check_mode, agent_client=agent_client, api_client=api_client)
+            return RoutedSearchClient(mode="api", native_client=native_client, api_client=api_client)
+        if fact_check_mode in {"native", "agent"}:
+            return RoutedSearchClient(mode="native", native_client=native_client, api_client=api_client)
+        return RoutedSearchClient(mode=fact_check_mode, native_client=native_client, api_client=api_client)
 
     async def analyze(
         self,
@@ -462,6 +493,34 @@ class DocumentAnalyzer:
                 if item.verification_status.value in {"disputed", "incorrect", "unverified", "partial"}
             )
             parts.append(f"Fact check reviewed {len(fact_check_results)} claims, with {issues} flagged.")
+            search_count = sum(1 for item in fact_check_results if item.search_trace.get("performed"))
+            actual_modes: dict[str, int] = {}
+            fallback_count = 0
+            reasons: List[str] = []
+            for item in fact_check_results:
+                trace = item.search_trace if isinstance(item.search_trace, dict) else {}
+                if trace.get("performed"):
+                    actual_mode = str(trace.get("actual_mode") or "").strip().lower()
+                    provider = str(trace.get("provider") or "").strip().lower()
+                    label = ""
+                    if actual_mode == "native" or provider == "openai":
+                        label = "native web search"
+                    elif actual_mode == "api" or provider == "tavily":
+                        label = "Tavily API"
+                    if label:
+                        actual_modes[label] = actual_modes.get(label, 0) + 1
+                if trace.get("fallback_triggered"):
+                    fallback_count += 1
+                reason = str(trace.get("reason") or trace.get("error") or "").strip()
+                if reason:
+                    reasons.append(reason)
+            if search_count > 0 and actual_modes:
+                execution_summary = ", ".join(f"{label}={count}" for label, count in actual_modes.items())
+                parts.append(f"Network search executed for {search_count} claims via {execution_summary}.")
+            if fallback_count > 0:
+                parts.append(f"Fallback triggered for {fallback_count} claims.")
+            if search_count == 0 and reasons:
+                parts.append(f"Network search executed for 0 claims. Reason: {reasons[0]}")
         if consistency_issues:
             parts.append(f"Found {len(consistency_issues)} potential consistency issues.")
         return " ".join(parts) if parts else "No analysis output generated."

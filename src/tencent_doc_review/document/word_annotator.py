@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from docx import Document
 from docx.document import Document as DocumentObject
+from docx.enum.style import WD_STYLE_TYPE
 from docx.text.run import Run
 
 
@@ -111,8 +112,46 @@ class WordAnnotator:
             title_paragraph = document.add_paragraph()
             title_paragraph.add_run(f"{index}. 【{annotation.title}】").bold = True
             if not annotation.comment:
+                pass
+            else:
+                for line in str(annotation.comment).splitlines():
+                    stripped = line.strip()
+                    if stripped:
+                        document.add_paragraph(stripped)
+
+            table_rows = annotation.metadata.get("summary_table")
+            if isinstance(table_rows, list) and table_rows:
+                self._append_summary_table(document, table_rows)
+
+    def _append_summary_table(self, document: DocumentObject, table_rows: List[object]) -> None:
+        normalized_rows: List[List[str]] = []
+        for row in table_rows:
+            if isinstance(row, list):
+                normalized_rows.append([str(cell) for cell in row])
+            elif isinstance(row, tuple):
+                normalized_rows.append([str(cell) for cell in row])
+        if not normalized_rows or not normalized_rows[0]:
+            return
+
+        column_count = len(normalized_rows[0])
+        table = document.add_table(rows=len(normalized_rows), cols=column_count)
+        style_name = self._resolve_summary_table_style(document)
+        if style_name:
+            table.style = style_name
+        for row_index, row in enumerate(normalized_rows):
+            for col_index in range(column_count):
+                value = row[col_index] if col_index < len(row) else ""
+                table.cell(row_index, col_index).text = value
+
+    def _resolve_summary_table_style(self, document: DocumentObject) -> Optional[str]:
+        for preferred_name in ("Table Grid", "TableGrid", "表网格"):
+            try:
+                document.styles[preferred_name]
+                return preferred_name
+            except KeyError:
                 continue
-            for line in str(annotation.comment).splitlines():
-                stripped = line.strip()
-                if stripped:
-                    document.add_paragraph(stripped)
+
+        for style in document.styles:
+            if getattr(style, "type", None) == WD_STYLE_TYPE.TABLE and getattr(style, "name", None):
+                return str(style.name)
+        return None

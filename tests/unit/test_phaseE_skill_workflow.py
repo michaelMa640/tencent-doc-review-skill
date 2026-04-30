@@ -24,6 +24,7 @@ from tencent_doc_review.cli import main
 from tencent_doc_review.analyzer.document_analyzer import AnalysisResult, AnalysisType
 from tencent_doc_review.analyzer.fact_checker import ClaimType, FactCheckResult, VerificationStatus
 from tencent_doc_review.analyzer.quality_evaluator import QualityLevel, QualityReport
+from tencent_doc_review.analyzer.structure_matcher import MatchStatus, Section, SectionMatch, StructureMatchResult
 from tencent_doc_review.document.word_parser import ParagraphNode, SentenceNode
 from tencent_doc_review.domain import ReviewIssue, ReviewIssueType, ReviewSeverity
 from tencent_doc_review.skill import SkillRequest
@@ -336,13 +337,98 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
             suggestion="检索到的网络信息未能直接证实该表述，建议依据下列来源核对后再保留。",
             source_excerpt="视频生成数字人：仅需15秒原始视频即可1:1复刻用户的形象与声音。",
             location={"paragraph_index": 1},
-            metadata={"search_trace": {"performed": True, "provider": "tavily", "raw_count": 5, "filtered_count": 2}},
+            metadata={
+                "search_trace": {
+                    "performed": True,
+                    "provider": "tavily",
+                    "mode": "auto",
+                    "actual_mode": "api",
+                    "raw_count": 5,
+                    "filtered_count": 2,
+                }
+            },
         )
 
         annotation = pipeline._to_word_annotation(paragraphs, [], issue)
 
         self.assertIn("检索痕迹：", annotation.comment)
+        self.assertIn("默认联网策略：模型原生 web search -> Tavily", annotation.comment)
+        self.assertIn("本次实际执行：Tavily API", annotation.comment)
         self.assertIn("已联网检索：tavily，候选 5 条，采纳 2 条", annotation.comment)
+
+    def test_word_comment_includes_non_network_reason_when_search_not_performed(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="Miaoda is built based on the Wenxin large model."),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="Miaoda is built based on the Wenxin large model.",
+            suggestion="建议补充可验证来源。",
+            source_excerpt="Miaoda is built based on the Wenxin large model.",
+            location={"paragraph_index": 1},
+            metadata={
+                "search_trace": {
+                    "performed": False,
+                    "provider": "auto",
+                    "mode": "auto",
+                    "native_supported": False,
+                    "llm_provider": "openai",
+                    "llm_model": "gpt-5.4",
+                    "reason": "模型原生 web search 不可用：当前审核模型未声明模型原生 web search 能力。；Tavily API 未配置，请设置 SEARCH_API_KEY。",
+                }
+            },
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, [], issue)
+
+        self.assertIn("检索痕迹：", annotation.comment)
+        self.assertIn("默认联网策略：模型原生 web search -> Tavily", annotation.comment)
+        self.assertIn("本次实际执行：未执行联网检索", annotation.comment)
+        self.assertIn("模型原生搜索能力：不可用", annotation.comment)
+        self.assertIn("未联网原因：模型原生 web search 不可用：当前审核模型未声明模型原生 web search 能力。；Tavily API 未配置，请设置 SEARCH_API_KEY。", annotation.comment)
+        self.assertIn("当前审核模型：openai / gpt-5.4", annotation.comment)
+
+    def test_word_comment_includes_fallback_detail_when_api_used_after_native(self):
+        pipeline = SkillPipeline()
+        paragraphs = [
+            ParagraphNode(index=0, text="标题", is_heading=True, heading_level=1),
+            ParagraphNode(index=1, text="该产品支持 OpenAI 兼容接口。"),
+        ]
+        issue = ReviewIssue(
+            issue_type=ReviewIssueType.FACT,
+            severity=ReviewSeverity.MEDIUM,
+            title="事实待核实",
+            description="该产品支持 OpenAI 兼容接口。",
+            suggestion="建议补充可验证来源。",
+            source_excerpt="该产品支持 OpenAI 兼容接口。",
+            location={"paragraph_index": 1},
+            metadata={
+                "search_trace": {
+                    "performed": True,
+                    "provider": "tavily",
+                    "mode": "auto",
+                    "actual_mode": "api",
+                    "raw_count": 4,
+                    "filtered_count": 1,
+                    "fallback_triggered": True,
+                    "fallback_from": "native",
+                    "fallback_reason": "当前审核模型未声明模型原生 web search 能力。",
+                    "llm_provider": "openai",
+                    "llm_model": "gpt-5.4",
+                }
+            },
+        )
+
+        annotation = pipeline._to_word_annotation(paragraphs, [], issue)
+
+        self.assertIn("默认联网策略：模型原生 web search -> Tavily", annotation.comment)
+        self.assertIn("本次实际执行：Tavily API", annotation.comment)
+        self.assertIn("已触发 fallback：native -> api", annotation.comment)
+        self.assertIn("fallback 原因：当前审核模型未声明模型原生 web search 能力。", annotation.comment)
 
     def test_sentence_level_anchor_prefers_original_sentence_mapping(self):
         pipeline = SkillPipeline()
@@ -388,6 +474,21 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
         review_result = AnalysisResult(
             analysis_type=AnalysisType.FULL,
             timestamp="2026-03-29T10:00:00",
+            structure_match_result=StructureMatchResult(
+                overall_score=0.5,
+                section_matches=[
+                    SectionMatch(
+                        template_section=Section(title="产品概述"),
+                        document_section=Section(title="产品概述"),
+                        status=MatchStatus.MATCHED,
+                    ),
+                    SectionMatch(
+                        template_section=Section(title="竞品对比分析"),
+                        document_section=None,
+                        status=MatchStatus.MISSING,
+                    ),
+                ],
+            ),
             fact_check_results=[
                 FactCheckResult(
                     original_text="生成的视频清晰度可达4K。",
@@ -403,7 +504,7 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
                             "snippet": "帮助中心提到支持高清导出，但未明确写 4K。",
                         }
                     ],
-                    search_trace={"performed": True, "provider": "tavily", "raw_count": 5, "filtered_count": 1},
+                    search_trace={"performed": True, "provider": "tavily", "mode": "auto", "actual_mode": "api", "raw_count": 5, "filtered_count": 1},
                 )
             ],
             review_issues=[],
@@ -418,14 +519,110 @@ class PhaseESkillWorkflowTests(unittest.IsolatedAsyncioTestCase):
 
         titles = [item.title for item in annotations]
         self.assertIn("审核运行情况", titles)
+        self.assertIn("结构模板相关性", titles)
         self.assertIn("事实核查详细情况", titles)
+        runtime_summary = next(item for item in annotations if item.title == "审核运行情况")
+        structure_summary = next(item for item in annotations if item.title == "结构模板相关性")
         fact_detail = next(item for item in annotations if item.title == "事实核查详细情况")
+        self.assertIn("默认联网策略：", runtime_summary.comment)
+        self.assertIn("本次联网执行：Tavily API 1 条", runtime_summary.comment)
+        self.assertEqual(structure_summary.metadata.get("render_mode"), "summary_block")
+        self.assertTrue(structure_summary.metadata.get("summary_table"))
+        self.assertIn("模板结构匹配度：", structure_summary.comment)
         self.assertEqual(fact_detail.metadata.get("render_mode"), "summary_block")
         self.assertIn("原文：生成的视频清晰度可达4K。", fact_detail.comment)
         self.assertIn("https://example.com/help", fact_detail.comment)
         self.assertIn("搜索源原文：帮助中心提到支持高清导出，但未明确写 4K。", fact_detail.comment)
         self.assertNotIn("1. 原文：", fact_detail.comment)
         self.assertIn("来源1：蝉镜帮助中心 - https://example.com/help", fact_detail.comment)
+
+    def test_build_structure_match_table_rows_marks_existing_and_missing_sections(self):
+        pipeline = SkillPipeline()
+        review_result = AnalysisResult(
+            analysis_type=AnalysisType.FULL,
+            structure_match_result=StructureMatchResult(
+                overall_score=0.5,
+                section_matches=[
+                    SectionMatch(
+                        template_section=Section(title="产品概述"),
+                        document_section=Section(title="产品概述"),
+                        status=MatchStatus.MATCHED,
+                    ),
+                    SectionMatch(
+                        template_section=Section(title="竞品对比分析"),
+                        document_section=None,
+                        status=MatchStatus.MISSING,
+                    ),
+                ],
+            ),
+        )
+
+        rows = pipeline._build_structure_match_table_rows(review_result)
+
+        self.assertEqual(rows[0], ["模板章节", "当前文章是否已有", "当前命中章节名", "状态说明"])
+        self.assertEqual(rows[1], ["产品概述", "✓", "产品概述", "已覆盖"])
+        self.assertEqual(rows[2], ["竞品对比分析", "✗", "", "缺失"])
+
+    def test_runtime_summary_reports_fallback_and_non_network_reason(self):
+        pipeline = SkillPipeline()
+        review_result = AnalysisResult(
+            analysis_type=AnalysisType.FULL,
+            timestamp="2026-04-24T09:30:00",
+            fact_check_results=[
+                FactCheckResult(
+                    original_text="该产品支持 OpenAI 兼容接口。",
+                    claim_type=ClaimType.OTHER,
+                    claim_content="该产品支持 OpenAI 兼容接口。",
+                    verification_status=VerificationStatus.UNVERIFIED,
+                    confidence=0.6,
+                    suggestion="建议补充来源。",
+                    search_trace={
+                        "performed": True,
+                        "provider": "tavily",
+                        "mode": "auto",
+                        "actual_mode": "api",
+                        "raw_count": 4,
+                        "filtered_count": 1,
+                        "fallback_triggered": True,
+                        "fallback_from": "native",
+                        "fallback_reason": "当前兼容网关不支持模型原生 web search。",
+                        "llm_provider": "openai",
+                        "llm_model": "gpt-5.4",
+                    },
+                ),
+                FactCheckResult(
+                    original_text="该产品发布于2025年。",
+                    claim_type=ClaimType.DATE_TIME,
+                    claim_content="该产品发布于2025年。",
+                    verification_status=VerificationStatus.UNVERIFIED,
+                    confidence=0.4,
+                    suggestion="建议补充来源。",
+                    search_trace={
+                        "performed": False,
+                        "provider": "auto",
+                        "mode": "auto",
+                        "native_supported": False,
+                        "reason": "模型原生 web search 不可用：当前审核模型未声明模型原生 web search 能力。；Tavily API 未配置，请设置 SEARCH_API_KEY。",
+                        "llm_provider": "openai",
+                        "llm_model": "gpt-5.4",
+                    },
+                ),
+            ],
+            review_issues=[],
+        )
+        request = SkillRequest(
+            source_document=TencentDocReference(doc_id="doc-123", title="Skill Demo"),
+            target_location=UploadTarget(folder_id="folder-456", space_type="personal_space", path_hint="/review-results"),
+            llm_provider="openai",
+        )
+
+        summary = pipeline._format_runtime_summary(review_result, request)
+
+        self.assertIn("审核模型：openai / gpt-5.4", summary)
+        self.assertIn("默认联网策略：模型原生 web search -> Tavily", summary)
+        self.assertIn("本次联网执行：Tavily API 1 条", summary)
+        self.assertIn("联网回退：发生 1 次", summary)
+        self.assertIn("回退原因：当前兼容网关不支持模型原生 web search。", summary)
 
 
 if __name__ == "__main__":

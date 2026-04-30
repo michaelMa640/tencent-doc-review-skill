@@ -86,6 +86,71 @@ class PhaseCWordAnnotationFlowTests(unittest.TestCase):
             names = set(package.namelist())
             self.assertIn("word/comments.xml", names)
 
+    def test_word_annotator_renders_summary_table(self):
+        source_path = self._create_sample_docx()
+        output_path = self.tmpdir / "annotated-table.docx"
+
+        WordAnnotator().annotate(
+            source_path=source_path,
+            output_path=output_path,
+            document_title="示例文档",
+            annotations=[
+                WordAnnotation(
+                    paragraph_index=3,
+                    title="结构模板相关性",
+                    comment="模板结构匹配度：75.0%",
+                    severity="low",
+                    metadata={
+                        "render_mode": "summary_block",
+                        "summary_table": [
+                            ["模板章节", "当前文章是否已有", "当前命中章节名", "状态说明"],
+                            ["产品概述", "✓", "产品概述", "已覆盖"],
+                            ["竞品对比分析", "✗", "", "缺失"],
+                        ],
+                    },
+                )
+            ],
+        )
+
+        rendered = Document(output_path)
+        self.assertEqual(len(rendered.tables), 1)
+        table = rendered.tables[0]
+        self.assertEqual(table.cell(0, 0).text, "模板章节")
+        self.assertEqual(table.cell(1, 1).text, "✓")
+        self.assertEqual(table.cell(2, 3).text, "缺失")
+
+    def test_word_annotator_renders_summary_table_without_preferred_table_style(self):
+        source_path = self._create_sample_docx()
+        output_path = self.tmpdir / "annotated-table-no-style.docx"
+
+        annotator = WordAnnotator()
+        annotator._resolve_summary_table_style = lambda document: None  # type: ignore[method-assign]
+
+        annotator.annotate(
+            source_path=source_path,
+            output_path=output_path,
+            document_title="示例文档",
+            annotations=[
+                WordAnnotation(
+                    paragraph_index=3,
+                    title="结构模板相关性",
+                    comment="模板结构匹配度：75.0%",
+                    severity="low",
+                    metadata={
+                        "render_mode": "summary_block",
+                        "summary_table": [
+                            ["模板章节", "当前文章是否已有", "当前命中章节名", "状态说明"],
+                            ["产品概述", "✓", "产品概述", "已覆盖"],
+                        ],
+                    },
+                )
+            ],
+        )
+
+        rendered = Document(output_path)
+        self.assertEqual(len(rendered.tables), 1)
+        self.assertEqual(rendered.tables[0].cell(1, 1).text, "✓")
+
 
 if __name__ == "__main__":
     unittest.main()

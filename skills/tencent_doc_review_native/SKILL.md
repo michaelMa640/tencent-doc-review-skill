@@ -1,4 +1,4 @@
-﻿---
+---
 name: tencent_doc_review_native
 description: 使用腾讯文档 MCP 下载 Word 文档，在本地生成带审核批注的 Word，再上传回腾讯文档。
 metadata:

@@ -458,6 +458,10 @@ class SkillPipeline:
             )
         ]
 
+        structure_annotation = self._build_structure_summary_annotation(review_result)
+        if structure_annotation is not None:
+            annotations.append(structure_annotation)
+
         for fact_comment in self._build_fact_detail_summaries(review_result):
             annotations.append(
                 WordAnnotation(
@@ -469,6 +473,63 @@ class SkillPipeline:
                 )
             )
         return annotations
+
+    def _build_structure_summary_annotation(self, review_result: AnalysisResult) -> Optional[WordAnnotation]:
+        structure_result = review_result.structure_match_result
+        if structure_result is None or not structure_result.section_matches:
+            return None
+
+        rows = self._build_structure_match_table_rows(review_result)
+        matched_count = sum(1 for match in structure_result.section_matches if match.status.value == "matched")
+        total_count = len(structure_result.section_matches)
+        missing_count = sum(1 for match in structure_result.section_matches if match.status.value != "matched")
+        comment_lines = [
+            f"模板结构匹配度：{structure_result.overall_score:.1%}",
+            f"已覆盖章节：{matched_count}/{total_count}",
+        ]
+        if missing_count:
+            comment_lines.append(f"仍缺失章节：{missing_count} 个")
+        else:
+            comment_lines.append("模板章节已全部覆盖。")
+
+        return WordAnnotation(
+            paragraph_index=0,
+            title="结构模板相关性",
+            comment="\n".join(comment_lines),
+            severity="low",
+            metadata={
+                "render_mode": "summary_block",
+                "anchor_preference": "document_end",
+                "summary_table": rows,
+            },
+        )
+
+    def _build_structure_match_table_rows(self, review_result: AnalysisResult) -> List[List[str]]:
+        structure_result = review_result.structure_match_result
+        if structure_result is None:
+            return []
+
+        rows: List[List[str]] = [["模板章节", "当前文章是否已有", "当前命中章节名", "状态说明"]]
+        for match in structure_result.section_matches:
+            status = match.status.value
+            rows.append(
+                [
+                    str(match.template_section.title or "").strip(),
+                    "✓" if status == "matched" else "✗",
+                    str(match.document_section.title if match.document_section else "").strip(),
+                    self._describe_structure_match_status(status),
+                ]
+            )
+        return rows
+
+    def _describe_structure_match_status(self, status: str) -> str:
+        return {
+            "matched": "已覆盖",
+            "missing": "缺失",
+            "partial": "部分匹配",
+            "misplaced": "位置不对应",
+            "extra": "额外章节",
+        }.get(status, status or "")
 
     def _format_issue_comment(self, issue: ReviewIssue, metadata: dict) -> str:
         lines: List[str] = []
@@ -492,10 +553,55 @@ class SkillPipeline:
 
         return "\n".join(lines).strip()
 
+    def _resolve_runtime_model_label(self, review_result: AnalysisResult, request: SkillRequest) -> str:
+        for item in review_result.fact_check_results:
+            trace = item.search_trace if isinstance(item.search_trace, dict) else {}
+            llm_provider = str(trace.get("llm_provider") or "").strip()
+            llm_model = str(trace.get("llm_model") or "").strip()
+            if llm_provider or llm_model:
+                return " / ".join(part for part in [llm_provider, llm_model] if part)
+        return (request.llm_provider or "deepseek").strip().lower()
+
+    def _collect_fact_check_trace_overview(self, review_result: AnalysisResult) -> dict[str, object]:
+        traces = [item.search_trace for item in review_result.fact_check_results if isinstance(item.search_trace, dict)]
+        mode = ""
+        executed_counts: dict[str, int] = {}
+        fallback_count = 0
+        first_reason = ""
+        first_fallback_reason = ""
+
+        for trace in traces:
+            if not mode:
+                mode = str(trace.get("mode") or "").strip()
+
+            if trace.get("performed"):
+                label = self._describe_actual_search_execution(trace)
+                if label:
+                    executed_counts[label] = executed_counts.get(label, 0) + 1
+
+            if trace.get("fallback_triggered"):
+                fallback_count += 1
+
+            if not first_reason:
+                first_reason = str(trace.get("reason") or trace.get("error") or "").strip()
+
+            if not first_fallback_reason:
+                first_fallback_reason = str(trace.get("fallback_reason") or "").strip()
+
+        return {
+            "mode": mode,
+            "default_strategy": self._describe_search_strategy(mode),
+            "executed_counts": executed_counts,
+            "fallback_count": fallback_count,
+            "reason": first_reason,
+            "fallback_reason": first_fallback_reason,
+        }
+
     def _format_runtime_summary(self, review_result: AnalysisResult, request: SkillRequest) -> str:
+        fact_trace_overview = self._collect_fact_check_trace_overview(review_result)
         lines: List[str] = [
             f"审核时间：{review_result.timestamp}",
-            f"审核模型：{(request.llm_provider or 'deepseek').strip().lower()}",
+            f"审核模型：{self._resolve_runtime_model_label(review_result, request)}",
             f"审核过程评分：{self._estimate_process_score(review_result):.0f}/100",
         ]
 
@@ -517,10 +623,25 @@ class SkillPipeline:
             if any("LLM verification failed" in evidence for evidence in item.evidence)
         )
         fact_search_count = sum(1 for item in review_result.fact_check_results if item.search_trace.get("performed"))
-        lines.append(
+        fact_line = (
             f"- 事实核查：{'正常' if review_result.fact_check_results else '未生成结果'}，"
-            f"核查 {len(review_result.fact_check_results)} 条，联网检索 {fact_search_count} 条，fallback {fact_fallback_count} 条"
+            f"核查 {len(review_result.fact_check_results)} 条，实际联网检索 {fact_search_count} 条，LLM fallback {fact_fallback_count} 条"
         )
+        lines.append(fact_line)
+        if fact_trace_overview["default_strategy"]:
+            lines.append(f"- 默认联网策略：{fact_trace_overview['default_strategy']}")
+        executed_counts = fact_trace_overview["executed_counts"] if isinstance(fact_trace_overview["executed_counts"], dict) else {}
+        if executed_counts:
+            executed_summary = "，".join(f"{label} {count} 条" for label, count in executed_counts.items())
+            lines.append(f"- 本次联网执行：{executed_summary}")
+        elif review_result.fact_check_results:
+            lines.append("- 本次联网执行：未执行联网检索")
+        if int(fact_trace_overview["fallback_count"] or 0) > 0:
+            lines.append(f"- 联网回退：发生 {fact_trace_overview['fallback_count']} 次")
+        if fact_trace_overview["fallback_reason"]:
+            lines.append(f"- 回退原因：{fact_trace_overview['fallback_reason']}")
+        if review_result.fact_check_results and fact_search_count == 0 and fact_trace_overview["reason"]:
+            lines.append(f"- 未联网原因：{fact_trace_overview['reason']}")
 
         language_fallback_count = sum(
             1 for item in review_result.language_issues if str(item.metadata.get('fallback_reason') or '').strip()
@@ -636,19 +757,48 @@ class SkillPipeline:
         return lines
 
     def _format_search_trace(self, search_trace: object) -> List[str]:
-        if not isinstance(search_trace, dict) or not search_trace.get("performed"):
+        if not isinstance(search_trace, dict):
             return []
+        strategy = self._describe_search_strategy(str(search_trace.get("mode") or "").strip())
+        actual_execution = self._describe_actual_search_execution(search_trace)
+        llm_provider = str(search_trace.get("llm_provider") or "").strip()
+        llm_model = str(search_trace.get("llm_model") or "").strip()
+
+        if not search_trace.get("performed"):
+            lines: List[str] = []
+            reason = str(search_trace.get("reason") or search_trace.get("error") or "").strip()
+            fallback_reason = str(search_trace.get("fallback_reason") or "").strip()
+            if strategy:
+                lines.append(f"- 默认联网策略：{strategy}")
+            lines.append("- 本次实际执行：未执行联网检索")
+            if "native_supported" in search_trace:
+                lines.append(f"- 模型原生搜索能力：{'可用' if search_trace.get('native_supported') else '不可用'}")
+            if fallback_reason:
+                lines.append(f"- 模型原生阶段结果：{fallback_reason}")
+            if reason:
+                lines.append(f"- 未联网原因：{reason}")
+            if llm_provider or llm_model:
+                model_label = " / ".join(item for item in [llm_provider, llm_model] if item)
+                lines.append(f"- 当前审核模型：{model_label}")
+            return lines
+
         provider = str(search_trace.get("provider") or "unknown").strip()
         raw_count = int(search_trace.get("raw_count") or 0)
         filtered_count = int(search_trace.get("filtered_count") or 0)
-        lines = [f"- 已联网检索：{provider}，候选 {raw_count} 条，采纳 {filtered_count} 条"]
+        lines: List[str] = []
+        if strategy:
+            lines.append(f"- 默认联网策略：{strategy}")
+        if actual_execution:
+            lines.append(f"- 本次实际执行：{actual_execution}")
+        lines.append(f"- 已联网检索：{provider}，候选 {raw_count} 条，采纳 {filtered_count} 条")
         actual_mode = str(search_trace.get("actual_mode") or "").strip()
         mode = str(search_trace.get("mode") or "").strip()
-        if mode:
-            if actual_mode and actual_mode != mode:
-                lines.append(f"- 事实核查模式：{mode}，本次实际执行：{actual_mode}")
-            else:
-                lines.append(f"- 事实核查模式：{mode}")
+        if llm_provider or llm_model:
+            model_label = " / ".join(item for item in [llm_provider, llm_model] if item)
+            lines.append(f"- 当前审核模型：{model_label}")
+        tool_type = str(search_trace.get("tool_type") or "").strip()
+        if tool_type:
+            lines.append(f"- 原生搜索工具：{tool_type}")
         if search_trace.get("fallback_triggered"):
             fallback_from = str(search_trace.get("fallback_from") or "unknown").strip()
             fallback_reason = str(search_trace.get("fallback_reason") or "").strip()
@@ -659,6 +809,32 @@ class SkillPipeline:
         if error:
             lines.append(f"- 检索异常：{error}")
         return lines
+
+    def _describe_search_strategy(self, mode: str) -> str:
+        normalized = (mode or "").strip().lower()
+        return {
+            "auto": "模型原生 web search -> Tavily",
+            "native": "仅模型原生 web search",
+            "api": "仅 Tavily API",
+            "offline": "关闭联网核查",
+        }.get(normalized, "")
+
+    def _describe_actual_search_execution(self, search_trace: dict) -> str:
+        if not isinstance(search_trace, dict):
+            return ""
+        actual_mode = str(search_trace.get("actual_mode") or "").strip().lower()
+        provider = str(search_trace.get("provider") or "").strip().lower()
+        if actual_mode == "native":
+            return "模型原生 web search"
+        if actual_mode == "api":
+            return "Tavily API"
+        if provider == "openai":
+            return "模型原生 web search"
+        if provider == "tavily":
+            return "Tavily API"
+        if actual_mode == "offline":
+            return "离线模式"
+        return ""
 
     def _resolve_paragraph_index(self, paragraphs: List[ParagraphNode], issue: ReviewIssue) -> int:
         return self._resolve_anchor(paragraphs, [], issue).paragraph_index

@@ -65,6 +65,14 @@ class PhaseGOpenClawBridgeParserTests(unittest.TestCase):
         self.assertIn("text_fallback", prompt)
         self.assertIn("C:/Users/testuser/Desktop/test", prompt)
 
+    def test_upload_prompt_mentions_target_parent_id_for_space_folder_nodes(self):
+        source = (PROJECT_ROOT / "src" / "tencent_doc_review" / "access" / "openclaw_bridge.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("target_parent_id=", source)
+        self.assertIn("Do not pass folder_id to manage.move_file_to_space", source)
+        self.assertIn("manage.pre_import does not accept folder_id", source)
+
 
 if __name__ == "__main__":
     unittest.main()

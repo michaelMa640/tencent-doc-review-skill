@@ -63,6 +63,12 @@ class Phase3LLMInterfaceTests(unittest.TestCase):
         self.assertIsNotNone(QualityEvaluator(llm_client=llm_client))
         self.assertIsNotNone(StructureMatcher(llm_client=llm_client))
 
+    def test_mock_provider_exposes_capabilities(self):
+        capabilities = MockLLMClient().get_capabilities()
+
+        self.assertEqual(capabilities.provider, "mock")
+        self.assertFalse(capabilities.supports_native_web_search)
+
 
 if __name__ == "__main__":
     unittest.main()

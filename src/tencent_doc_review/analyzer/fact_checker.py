@@ -18,7 +18,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - fallback for lean environments
     httpx = None
 
-from ..llm.base import LLMClient
+from ..llm.base import LLMCapabilities, LLMClient
 from ..llm.providers.mock import MockLLMClient as MockDeepSeekClient
 from ..llm.structured_output import extract_json_payload
 
@@ -157,10 +157,18 @@ class SearchClient:
         self._client = client
         self._owns_client = client is None
         self.enabled = self.provider != "disabled" and bool(self.api_key)
+        self.last_search_trace: Dict[str, Any] = {}
         logger.info("SearchClient initialized (provider={}, enabled={})", self.provider, self.enabled)
 
     async def search(self, query: str, num_results: int = 5) -> List[Dict[str, Any]]:
         if not self.enabled:
+            self.last_search_trace = {
+                "performed": False,
+                "provider": self.provider or "disabled",
+                "raw_count": 0,
+                "filtered_count": 0,
+                "reason": "API search is not configured. Please set SEARCH_API_KEY.",
+            }
             logger.warning("SearchClient is not enabled. Please configure search provider and API key.")
             return []
         if not query.strip():
@@ -234,6 +242,12 @@ class SearchClient:
                     "score": item.get("score"),
                 }
             )
+        self.last_search_trace = {
+            "performed": True,
+            "provider": self.provider,
+            "raw_count": len(results),
+            "filtered_count": len(results),
+        }
         return results
 
     def _to_source_refs(self, results: List[Dict[str, Any]]) -> List[Dict[str, str]]:
@@ -249,24 +263,54 @@ class SearchClient:
         return sources
 
 
-class AgentSearchClient:
-    """Placeholder agent-side search client for runtimes with native web access."""
+class NativeSearchClient:
+    """Native LLM web-search adapter."""
 
-    def __init__(self, enabled: bool = False, provider: str = "agent") -> None:
-        self.enabled = enabled
-        self.provider = provider
+    def __init__(
+        self,
+        llm_client: Optional[LLMClient] = None,
+        enabled: Optional[bool] = None,
+        provider: str = "native",
+    ) -> None:
+        self.llm_client = llm_client
+        self.capabilities = self._resolve_capabilities(llm_client)
+        self.provider = provider if provider != "native" else (self.capabilities.provider or "native")
+        self.supports_native_web_search = bool(self.capabilities.supports_native_web_search)
+        self.enabled = bool(enabled) if enabled is not None else self.supports_native_web_search
         self.last_search_trace: Dict[str, Any] = {}
 
     async def search(self, query: str, num_results: int = 5) -> List[Dict[str, Any]]:
-        self.last_search_trace = {
-            "performed": True,
-            "provider": self.provider,
-            "raw_count": 0,
-            "filtered_count": 0,
-            "query": query,
-            "error": "Agent-side fact check is not implemented in this runtime.",
-        }
-        return []
+        if not self.enabled:
+            self.last_search_trace = self.build_disabled_trace()
+            return []
+        if self.llm_client is None:
+            self.last_search_trace = self.build_disabled_trace("当前运行时没有可用的审核模型客户端。")
+            return []
+        try:
+            response = await self.llm_client.web_search(query, max_results=num_results)
+            results = response.to_result_dicts()
+            self.last_search_trace = {
+                "performed": True,
+                "provider": self.provider,
+                "raw_count": len(results),
+                "filtered_count": len(results),
+                "actual_mode": "native",
+                "native_supported": self.supports_native_web_search,
+                "native_strategy": self.capabilities.native_web_search_strategy,
+                "tool_type": response.tool_type,
+                "llm_provider": self.capabilities.provider or self.provider,
+                "llm_model": response.model or self.capabilities.model,
+            }
+            return results
+        except Exception as exc:
+            self.last_search_trace = self.build_disabled_trace(
+                reason=(
+                    "模型原生 web search 请求失败，当前兼容网关可能不支持该协议，"
+                    "或该模型在当前运行时未开放原生搜索能力。"
+                ),
+                error=str(exc),
+            )
+            return []
 
     async def verify_fact(self, claim: str, context: str = "") -> Dict[str, Any]:
         return {
@@ -274,27 +318,79 @@ class AgentSearchClient:
             "confidence": 0.0,
             "evidence": [],
             "sources": [],
-            "suggestion": "当前运行环境未接入 Agent 侧事实核查执行器。",
+            "suggestion": self.build_disabled_trace().get("reason") or DEFAULT_RECHECK_SUGGESTION,
         }
 
     async def close(self) -> None:
         return None
 
+    def build_disabled_trace(self, reason: str = "", error: str = "") -> Dict[str, Any]:
+        resolved_reason = reason or self._default_unavailable_reason()
+        trace = {
+            "performed": False,
+            "provider": self.provider,
+            "raw_count": 0,
+            "filtered_count": 0,
+            "actual_mode": "native",
+            "native_supported": self.supports_native_web_search,
+            "native_strategy": self.capabilities.native_web_search_strategy,
+            "reason": resolved_reason,
+        }
+        if self.capabilities.provider:
+            trace["llm_provider"] = self.capabilities.provider
+        if self.capabilities.model:
+            trace["llm_model"] = self.capabilities.model
+        if error:
+            trace["error"] = error
+        return trace
+
+    def _default_unavailable_reason(self) -> str:
+        if self.llm_client is None:
+            return "当前运行时没有可用的审核模型客户端。"
+        if not self.supports_native_web_search:
+            return "当前审核模型未声明模型原生 web search 能力。"
+        return "模型原生 web search 当前未启用。"
+
+    def _resolve_capabilities(self, llm_client: Optional[LLMClient]) -> LLMCapabilities:
+        if llm_client is None or not hasattr(llm_client, "get_capabilities"):
+            return LLMCapabilities()
+        try:
+            capabilities = llm_client.get_capabilities()
+            if isinstance(capabilities, LLMCapabilities):
+                return capabilities
+        except Exception:
+            return LLMCapabilities()
+        return LLMCapabilities()
+
+
+class AgentSearchClient(NativeSearchClient):
+    """Backward-compatible alias for earlier agent-side search naming."""
+
+    def __init__(self, enabled: bool = False, provider: str = "agent", llm_client: Optional[LLMClient] = None) -> None:
+        super().__init__(llm_client=llm_client, enabled=enabled, provider=provider)
+
 
 class RoutedSearchClient:
-    """Route fact-check lookups across agent/api/offline modes with observable fallback."""
+    """Route fact-check lookups across native/api/offline modes with observable fallback."""
 
     def __init__(
         self,
         mode: str,
+        native_client: Optional[NativeSearchClient] = None,
         agent_client: Optional[AgentSearchClient] = None,
         api_client: Optional[SearchClient] = None,
     ) -> None:
-        self.mode = (mode or "auto").strip().lower()
-        self.agent_client = agent_client or AgentSearchClient(enabled=False)
+        requested_mode = (mode or "auto").strip().lower()
+        self.mode = "native" if requested_mode == "agent" else requested_mode
+        self.requested_mode = requested_mode
+        self.native_client = native_client or agent_client or NativeSearchClient(enabled=False)
+        self.agent_client = agent_client or self.native_client
         self.api_client = api_client or SearchClient(provider="disabled")
         self.provider = self.mode
-        self.enabled = self.mode != "offline" and (self.agent_client.enabled or self.api_client.enabled or self.mode == "agent")
+        self.enabled = self.mode != "offline" and (
+            (self.mode in {"native", "auto"} and bool(getattr(self.native_client, "enabled", False)))
+            or (self.mode in {"api", "auto"} and bool(self.api_client.enabled))
+        )
         self.last_search_trace: Dict[str, Any] = {}
 
     async def search(self, query: str, num_results: int = 5) -> List[Dict[str, Any]]:
@@ -312,8 +408,8 @@ class RoutedSearchClient:
         if self.mode == "api":
             return await self._search_api(query, num_results, fallback_from="")
 
-        if self.mode == "agent":
-            return await self._search_agent_only(query, num_results)
+        if self.mode == "native":
+            return await self._search_native_only(query, num_results)
 
         return await self._search_auto(query, num_results)
 
@@ -339,66 +435,155 @@ class RoutedSearchClient:
     async def close(self) -> None:
         if hasattr(self.api_client, "close"):
             await self.api_client.close()
-        if hasattr(self.agent_client, "close"):
-            await self.agent_client.close()
+        if hasattr(self.native_client, "close"):
+            await self.native_client.close()
 
     def _to_source_refs(self, results: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         if hasattr(self.api_client, "_to_source_refs"):
             return self.api_client._to_source_refs(results)
         return SearchClient()._to_source_refs(results)
 
-    async def _search_agent_only(self, query: str, num_results: int) -> List[Dict[str, Any]]:
-        results = await self.agent_client.search(query, num_results=num_results)
-        trace = dict(getattr(self.agent_client, "last_search_trace", {}))
+    def build_disabled_trace(self) -> Dict[str, Any]:
+        if self.mode == "offline":
+            return {
+                "performed": False,
+                "provider": "offline",
+                "raw_count": 0,
+                "filtered_count": 0,
+                "mode": self.mode,
+                "actual_mode": "offline",
+            }
+        if self.mode == "api":
+            return {
+                "performed": False,
+                "provider": getattr(self.api_client, "provider", "disabled") or "disabled",
+                "raw_count": 0,
+                "filtered_count": 0,
+                "mode": self.mode,
+                "actual_mode": "api",
+                "reason": "Tavily API 未配置，请设置 SEARCH_API_KEY。",
+            }
+
+        native_trace = (
+            self.native_client.build_disabled_trace()
+            if hasattr(self.native_client, "build_disabled_trace")
+            else {
+                "performed": False,
+                "provider": "native",
+                "raw_count": 0,
+                "filtered_count": 0,
+                "reason": "当前审核模型未声明模型原生 web search 能力。",
+            }
+        )
+        if self.mode == "native":
+            native_trace.setdefault("mode", self.mode)
+            return native_trace
+
+        reason_parts = []
+        native_reason = str(native_trace.get("reason") or "").strip()
+        if native_reason:
+            reason_parts.append(f"模型原生 web search 不可用：{native_reason}")
+        if not self.api_client.enabled:
+            reason_parts.append("Tavily API 未配置，请设置 SEARCH_API_KEY。")
+        trace = {
+            "performed": False,
+            "provider": "auto",
+            "raw_count": 0,
+            "filtered_count": 0,
+            "mode": self.mode,
+            "actual_mode": "",
+            "reason": "；".join(reason_parts) if reason_parts else "当前运行时没有可用的联网事实核查能力。",
+            "native_supported": native_trace.get("native_supported", False),
+        }
+        for key in ("llm_provider", "llm_model", "native_strategy"):
+            if native_trace.get(key):
+                trace[key] = native_trace[key]
+        return trace
+
+    async def _search_native_only(self, query: str, num_results: int) -> List[Dict[str, Any]]:
+        if not getattr(self.native_client, "enabled", False):
+            self.last_search_trace = self.build_disabled_trace()
+            self.last_search_trace.setdefault("actual_mode", "native")
+            return []
+        results = await self.native_client.search(query, num_results=num_results)
+        trace = dict(getattr(self.native_client, "last_search_trace", {}))
         trace.setdefault("mode", self.mode)
-        trace.setdefault("actual_mode", "agent")
-        trace.setdefault("performed", True)
+        trace.setdefault("actual_mode", "native")
+        trace.setdefault("provider", getattr(self.native_client, "provider", "native"))
         self.last_search_trace = trace
         return results
 
-    async def _search_api(self, query: str, num_results: int, fallback_from: str) -> List[Dict[str, Any]]:
+    async def _search_api(
+        self,
+        query: str,
+        num_results: int,
+        fallback_from: str,
+        fallback_reason: str = "",
+    ) -> List[Dict[str, Any]]:
         if not self.api_client.enabled:
             self.last_search_trace = {
-                "performed": True,
-                "provider": "api",
+                "performed": False,
+                "provider": getattr(self.api_client, "provider", "disabled") or "disabled",
                 "raw_count": 0,
                 "filtered_count": 0,
                 "mode": self.mode,
                 "actual_mode": "api",
                 "fallback_triggered": bool(fallback_from),
                 "fallback_from": fallback_from or "",
-                "error": "API search is not configured. Please set SEARCH_API_KEY or switch FACT_CHECK_MODE.",
+                "reason": "Tavily API 未配置，请设置 SEARCH_API_KEY。",
             }
+            if fallback_reason:
+                self.last_search_trace["fallback_reason"] = fallback_reason
             return []
         results = await self.api_client.search(query, num_results=num_results)
+        base_trace_value = getattr(self.api_client, "last_search_trace", {})
+        base_trace = dict(base_trace_value) if isinstance(base_trace_value, dict) else {}
         self.last_search_trace = {
-            "performed": True,
+            "performed": base_trace.get("performed", True),
             "provider": getattr(self.api_client, "provider", "api"),
-            "raw_count": len(results),
-            "filtered_count": len(results),
+            "raw_count": base_trace.get("raw_count", len(results)),
+            "filtered_count": base_trace.get("filtered_count", len(results)),
             "mode": self.mode,
             "actual_mode": "api",
             "fallback_triggered": bool(fallback_from),
             "fallback_from": fallback_from or "",
         }
+        if fallback_reason:
+            self.last_search_trace["fallback_reason"] = fallback_reason
         return results
 
     async def _search_auto(self, query: str, num_results: int) -> List[Dict[str, Any]]:
-        agent_results = await self.agent_client.search(query, num_results=num_results)
-        agent_trace = dict(getattr(self.agent_client, "last_search_trace", {}))
-        agent_trace.setdefault("mode", self.mode)
-        agent_trace.setdefault("actual_mode", "agent")
-        if agent_results:
-            agent_trace.setdefault("fallback_triggered", False)
-            self.last_search_trace = agent_trace
-            return agent_results
-        if self.api_client.enabled:
-            api_results = await self._search_api(query, num_results, fallback_from="agent")
-            self.last_search_trace.setdefault("fallback_reason", agent_trace.get("error") or "Agent-side search returned no results.")
+        native_results: List[Dict[str, Any]] = []
+        if getattr(self.native_client, "enabled", False):
+            native_results = await self.native_client.search(query, num_results=num_results)
+            native_trace = dict(getattr(self.native_client, "last_search_trace", {}))
+        else:
+            native_trace = (
+                self.native_client.build_disabled_trace()
+                if hasattr(self.native_client, "build_disabled_trace")
+                else self.build_disabled_trace()
+            )
+        native_trace.setdefault("mode", self.mode)
+        native_trace.setdefault("actual_mode", "native")
+        native_trace.setdefault("provider", getattr(self.native_client, "provider", "native"))
+        if native_results:
+            native_trace.setdefault("fallback_triggered", False)
+            self.last_search_trace = native_trace
+            return native_results
+
+        should_fallback_to_api = bool(self.api_client.enabled) and not native_trace.get("performed")
+        if should_fallback_to_api:
+            api_results = await self._search_api(
+                query,
+                num_results,
+                fallback_from="native",
+                fallback_reason=str(native_trace.get("reason") or native_trace.get("error") or "").strip(),
+            )
             return api_results
-        agent_trace.setdefault("fallback_triggered", False)
-        self.last_search_trace = agent_trace
-        return []
+
+        native_trace.setdefault("fallback_triggered", False)
+        self.last_search_trace = native_trace
+        return native_results
 
 
 class FactChecker:
@@ -594,15 +779,16 @@ class FactChecker:
 
     async def _search_claim(self, claim: Claim, context: Dict[str, Any]) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
         if not getattr(self.search_client, "enabled", False):
-            return [], {"performed": False, "provider": getattr(self.search_client, "provider", "disabled"), "raw_count": 0, "filtered_count": 0}
+            return [], self._build_search_disabled_trace()
         query = self._build_search_query(claim, context)
         try:
             raw_results = await self.search_client.search(query, num_results=int(self.config.get("search_max_results", 5)))
             filtered_results, trace = self._filter_search_results(claim, context, raw_results)
             filtered_results = self._refine_search_result_snippets(claim, filtered_results)
-            base_trace = dict(getattr(self.search_client, "last_search_trace", {}))
+            base_trace_value = getattr(self.search_client, "last_search_trace", {})
+            base_trace = dict(base_trace_value) if isinstance(base_trace_value, dict) else {}
             trace.update({key: value for key, value in base_trace.items() if value not in (None, "")})
-            trace["performed"] = True
+            trace["performed"] = bool(base_trace.get("performed", True))
             trace["query"] = query
             return filtered_results, trace
         except Exception as exc:  # pragma: no cover - provider/network path
@@ -615,6 +801,35 @@ class FactChecker:
                 "query": query,
                 "error": str(exc),
             }
+
+    def _build_search_disabled_trace(self) -> Dict[str, Any]:
+        if hasattr(self.search_client, "build_disabled_trace"):
+            trace = self.search_client.build_disabled_trace()
+            if isinstance(trace, dict) and trace:
+                return trace
+        provider = str(getattr(self.search_client, "provider", "disabled") or "disabled").strip()
+        mode = str(getattr(self.search_client, "mode", "") or "").strip()
+        llm_provider = str(self.config.get("llm_provider", "") or "").strip()
+        llm_model = str(self.config.get("llm_model", "") or "").strip()
+        reason = (
+            "当前运行时未接入可用的联网事实核查执行器。"
+            "本项目当前通过普通模型 API 调用进行审核，未启用模型内建 web search；"
+            "若需联网核查，请配置 SEARCH_PROVIDER/SEARCH_API_KEY，或接入 Agent 侧事实核查执行器。"
+        )
+        trace = {
+            "performed": False,
+            "provider": provider or "disabled",
+            "raw_count": 0,
+            "filtered_count": 0,
+            "mode": mode,
+            "actual_mode": "",
+            "reason": reason,
+        }
+        if llm_provider:
+            trace["llm_provider"] = llm_provider
+        if llm_model:
+            trace["llm_model"] = llm_model
+        return trace
 
     def _build_search_query(self, claim: Claim, context: Dict[str, Any]) -> str:
         hints: List[str] = []

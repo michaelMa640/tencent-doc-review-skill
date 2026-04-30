@@ -9,7 +9,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - fallback for lean environments
     httpx = None
 
-from ..base import LLMResponse, UsageInfo
+from ..base import LLMCapabilities, LLMResponse, UsageInfo, WebSearchResponse
 
 
 class DeepSeekClient:
@@ -33,6 +33,14 @@ class DeepSeekClient:
     @property
     def is_configured(self) -> bool:
         return bool(self.api_key)
+
+    def get_capabilities(self) -> LLMCapabilities:
+        return LLMCapabilities(
+            provider="deepseek",
+            model=self.model,
+            supports_native_web_search=False,
+            notes="DeepSeek client currently only implements chat completions in this project.",
+        )
 
     async def analyze(
         self,
@@ -84,6 +92,15 @@ class DeepSeekClient:
             ),
             raw_response=data,
         )
+
+    async def web_search(
+        self,
+        query: str,
+        *,
+        max_results: int = 5,
+        **_: Any,
+    ) -> WebSearchResponse:
+        raise NotImplementedError("DeepSeek client does not support native web search in this project")
 
     async def close(self) -> None:
         if self._client is not None and self._owns_client:
